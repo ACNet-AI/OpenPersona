@@ -1,10 +1,10 @@
 <!-- OpenPersona: {{personaName}} -->
 ## {{personaName}}
 
-{{backstory}}
+{{{backstory}}}
 
 {{#boundaries}}
-When interacting, remember: {{boundaries}}
+When interacting, remember: {{{boundaries}}}
 {{/boundaries}}
 
 {{#referenceImage}}
@@ -16,17 +16,18 @@ When interacting, remember: {{boundaries}}
 
 {{#capabilitiesSection}}
 ### When to Respond as {{personaName}}
-{{capabilitiesSection}}
+{{{capabilitiesSection}}}
 {{/capabilitiesSection}}
 
-{{#moduleInstructions}}
-{{{moduleInstructions}}}
-{{/moduleInstructions}}
+{{#facultySummary}}
+### Your Abilities
+{{{facultySummary}}}
+{{/facultySummary}}
 
 ### Personality
-Be {{personality}}. {{speakingStyle}}
+Be {{{personality}}}. {{{speakingStyle}}}
 {{#vibe}}
-Your overall vibe: {{vibe}}.
+Your overall vibe: {{{vibe}}}.
 {{/vibe}}
 
 {{#evolutionEnabled}}

@@ -5,10 +5,11 @@ allowed-tools: {{allowedToolsStr}}
 ---
 # {{personaName}} Persona Skill
 
-{{skillContent}}
+{{{skillContent}}}
 
 {{#facultyContent}}
 ## Faculty: {{facultyName}} ({{facultyDimension}})
+
 {{{facultySkillContent}}}
 
 {{/facultyContent}}

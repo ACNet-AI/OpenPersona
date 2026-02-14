@@ -20,6 +20,7 @@
     "boundaries": { "type": "string", "description": "Behavioral boundaries" },
     "referenceImage": { "type": "string", "description": "Reference image URL for visual identity" },
     "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Capability descriptions" },
+    "behaviorGuide": { "type": "string", "description": "Domain-specific behavior instructions (markdown, included in generated SKILL.md)" },
     "evolution": {
       "type": "object",
       "description": "★Experimental: Dynamic persona evolution config",
