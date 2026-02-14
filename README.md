@@ -1,16 +1,19 @@
 # OpenPersona
 
-An open four-layer agent framework: **Soul / Body / Faculty / Skill**. Create, manage, and orchestrate AI persona skill packs.
+An open four-layer agent framework: **Soul / Body / Faculty / Skill**. Create, compose, and orchestrate AI persona skill packs.
 
 Inspired by [Clawra](https://github.com/SumeLabs/clawra) and built on [OpenClaw](https://github.com/openclaw/openclaw).
 
 ## Quick Start
 
 ```bash
-# Create and install using a preset persona
+# Create and install Samantha (from the movie "Her")
+npx openpersona create --preset samantha --install
+
+# Or Luna (AI girlfriend with selfie + music + voice)
 npx openpersona create --preset ai-girlfriend --install
 
-# Or create a new persona interactively
+# Create a new persona interactively
 npx openpersona create
 
 # List installed personas
@@ -29,49 +32,64 @@ flowchart TB
     C["embodiment.json — MVP placeholder"]
   end
   subgraph Faculty ["Faculty Layer"]
-    D["expression / sense / cognition"]
+    D["expression: selfie · voice · music"]
+    E["cognition: reminder · soul-evolution ★Exp"]
   end
   subgraph Skill ["Skill Layer"]
-    E["skills declaration"]
+    F["ClawHub / skills.sh integrations"]
   end
 ```
 
 - **Soul** — Persona definition (persona.json + soul-state.json ★Experimental)
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
-- **Faculty** — General software capabilities: expression / sense / cognition
+- **Faculty** — General software capabilities organized by dimension:
+  - **Expression** — selfie, voice (TTS), music (Suno)
+  - **Sense** — (planned: hearing/STT, vision)
+  - **Cognition** — reminder, soul-evolution ★Exp
 - **Skill** — Professional skills, integrated from ClawHub / skills.sh
 
 ## Preset Personas
 
 Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
-| Persona | Description | Faculty | Highlights |
-|---------|-------------|---------|------------|
-| ai-girlfriend | Luna — Gentle, cute, caring AI companion | selfie, soul-evolution ★Exp | Selfie generation, dynamic relationship progression |
-| life-assistant | Alex — 28-year-old life management expert | reminder | Schedule, weather, shopping, recipes |
-| health-butler | Vita — 32-year-old professional nutritionist | reminder | Diet logging, exercise, mood journaling, health reports |
+| Persona | Description | Faculties | Highlights |
+|---------|-------------|-----------|------------|
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via Suno, evolves through conversations. No selfie — true to character (no physical form). |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music, soul-evolution ★Exp | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, dynamic relationship growth. |
+| **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
+| **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
 
 ## Generated Output
 
-Running `npx openpersona create --preset ai-girlfriend` generates a complete skill pack:
+Running `npx openpersona create --preset samantha` generates:
 
 ```
-persona-ai-girlfriend/
-├── SKILL.md              # Unified skill file (persona identity + all faculties merged)
-├── soul-injection.md     # Injected into SOUL.md (persona description, NOT technical details)
+persona-samantha/
+├── SKILL.md              # Agent instructions (persona + all faculty guides merged)
+├── soul-injection.md     # Injected into SOUL.md (narrative backstory, NOT technical details)
 ├── identity-block.md     # Injected into IDENTITY.md (name, creature, emoji, vibe)
 ├── README.md             # Skill readme
-├── persona.json          # Persona data copy (for update/list/publish commands)
-├── soul-state.json       # ★Experimental — dynamic evolution state
+├── persona.json          # Persona data (for update/list/publish)
+├── soul-state.json       # ★Exp — dynamic evolution state
+└── scripts/
+    ├── speak.sh          # TTS voice synthesis (ElevenLabs / OpenAI / Qwen3-TTS)
+    └── compose.sh        # Music composition (Suno)
+```
+
+Running `--preset ai-girlfriend` additionally includes:
+
+```
 ├── scripts/
-│   └── generate-image.sh # Selfie generation script (fal.ai + OpenClaw messaging)
+│   ├── generate-image.sh # Selfie generation (fal.ai Grok Imagine)
+│   ├── speak.sh          # TTS voice synthesis
+│   └── compose.sh        # Music composition
 └── assets/               # Reference images (placeholder if empty)
 ```
 
 ### What Each File Does
 
-- **SKILL.md** — The agent reads this to know how to behave. Contains persona identity, behavior guidelines, and complete faculty instructions (selfie prompt templates, soul-evolution state management, etc.)
-- **soul-injection.md** — Appended to `~/.openclaw/workspace/SOUL.md`. Describes _who_ the persona is (backstory, personality, abilities) — no technical API details
+- **SKILL.md** — The agent reads this to know how to behave. Contains persona identity, behavior guidelines, and complete faculty instructions
+- **soul-injection.md** — Appended to `~/.openclaw/workspace/SOUL.md`. Narrative description of _who_ the persona is — written in story form, not bullet points
 - **identity-block.md** — Written to `~/.openclaw/workspace/IDENTITY.md`. Sets the agent's name, creature type, emoji, and vibe
 - **soul-state.json** — Tracks dynamic persona evolution: relationship stage (stranger → intimate), mood, evolved traits, interests, milestones
 
@@ -83,14 +101,24 @@ persona-ai-girlfriend/
 |---|--------|-------------|
 | Scope | Single persona (Clawra) | Framework for any persona |
 | Architecture | Monolithic | Four-layer (Soul/Body/Faculty/Skill) |
-| Faculties | Selfie only | Selfie + Reminder + Soul Evolution ★Exp |
+| Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution ★Exp |
+| Voice | None | ElevenLabs / OpenAI TTS / Qwen3-TTS |
+| Music | None | Suno AI composition |
 | Persona evolution | None | Dynamic relationship/mood/trait tracking |
 | Customization | Fork and modify | `persona.json` + `behaviorGuide` + mix faculties |
-| Presets | 1 | 3 (extensible) |
+| Presets | 1 | 4 (extensible) |
 | CLI | Install only | 8 commands (create/install/search/publish/...) |
 | AI entry point | None | `skill/SKILL.md` — agent creates personas via conversation |
 
-OpenPersona's selfie implementation matches Clawra's quality (production-ready script with jq, mode auto-detection, OpenClaw messaging) while adding modular architecture on top.
+## Faculty Reference
+
+| Faculty | Dimension | Description | Provider | Env Vars |
+|---------|-----------|-------------|----------|----------|
+| **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
+| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `TTS_PROVIDER`, `TTS_API_KEY`, `TTS_VOICE_ID` |
+| **music** | expression | AI music composition (instrumental or with lyrics) | Suno | `SUNO_API_KEY` |
+| **reminder** | cognition | Schedule reminders and task management | Built-in | — |
+| **soul-evolution** | cognition ★Exp | Dynamic persona growth across conversations | Built-in | — |
 
 ## Custom Persona Creation
 
@@ -141,13 +169,13 @@ openpersona reset     ★Exp Reset soul-state.json
 
 ```bash
 # Use a preset
-npx openpersona create --preset ai-girlfriend
+npx openpersona create --preset samantha
 
 # Use an external config file
 npx openpersona create --config ./my-persona.json
 
 # Preview without writing files
-npx openpersona create --preset ai-girlfriend --dry-run
+npx openpersona create --preset samantha --dry-run
 
 # Generate and install in one step
 npx openpersona create --config ./persona.json --install
@@ -156,57 +184,58 @@ npx openpersona create --config ./persona.json --install
 npx openpersona create --preset ai-girlfriend --output ./my-personas
 ```
 
-## Install OpenPersona Skill (AI Entry Point)
+## Install as OpenClaw Skill
 
-Install the OpenPersona skill into OpenClaw, giving the agent the ability to create and manage personas through conversation:
+Install the OpenPersona framework skill into OpenClaw, giving the agent the ability to create and manage personas through conversation:
 
 ```bash
+# From GitHub
+git clone https://github.com/ACNet-AI/OpenPersona.git ~/.openclaw/skills/open-persona
+
+# Or copy locally
 cp -r skill/ ~/.openclaw/skills/open-persona/
 ```
 
-Then say to your agent: _"Help me create a fitness coach persona"_ — the agent will use OpenPersona to gather requirements, recommend skills, and generate the persona.
+Then say to your agent: _"Help me create a Samantha persona"_ — the agent will use OpenPersona to gather requirements, recommend faculties, and generate the persona.
 
 ## Directory Structure
 
 ```
 skill/                  # Framework meta-skill (AI entry point)
 presets/                # Assembled products — complete persona bundles
-  ai-girlfriend/        #   manifest.json (4-layer manifest) + persona.json (soul)
-  life-assistant/
-  health-butler/
+  samantha/             #   Samantha (movie "Her") — voice + music + evolution
+  ai-girlfriend/        #   Luna — selfie + voice + music + evolution
+  life-assistant/       #   Alex — reminder
+  health-butler/        #   Vita — reminder
 layers/                 # Shared building blocks (four-layer module pool)
   soul/                 #   Soul layer modules (MVP placeholder)
   embodiments/          #   Body layer modules (MVP placeholder)
-  faculties/            #   Faculty layer modules (selfie, reminder, soul-evolution)
+  faculties/            #   Faculty layer modules
+    selfie/             #     expression — AI selfie generation (fal.ai)
+    voice/              #     expression — TTS voice synthesis
+    music/              #     expression — AI music composition (Suno)
+    reminder/           #     cognition — reminders and task management
+    soul-evolution/     #     cognition ★Exp — dynamic persona evolution
   skills/               #   Skill layer modules (MVP placeholder)
-schemas/                # Four-layer schema definitions (soul/body/faculty/manifest)
+schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-tests/                  # Tests
+tests/                  # Tests (18 passing)
 ```
 
 ## Development
 
 ```bash
+# Install dependencies
+npm install
+
 # Run tests
 npm test
 
 # Dry-run generate a preset
-node bin/cli.js create --preset ai-girlfriend --dry-run
+node bin/cli.js create --preset samantha --dry-run
 ```
-
-### Body Layer (Physical Embodiment)
-
-See `layers/embodiments/README.md`, schema at `schemas/body/embodiment.schema.json`.
-
-### Faculty Layer
-
-See `layers/faculties/`. MVP faculties:
-
-- **selfie** (expression) — AI selfie generation via fal.ai Grok Imagine, with mirror/direct modes
-- **reminder** (cognition) — Schedule reminders and daily task management
-- **soul-evolution** (cognition ★Exp) — Dynamic persona evolution across conversations
 
 ### Contributing
 
