@@ -17,7 +17,7 @@ describe('generator', () => {
       bio: 'a test companion',
       personality: 'friendly',
       speakingStyle: 'Casual tone',
-      faculties: ['reminder'],
+      faculties: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -31,16 +31,16 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
-  it('handles mixed faculty formats (string and object)', async () => {
+  it('maps rich faculty config to defaults.env', async () => {
     const persona = {
-      personaName: 'MixTest',
-      slug: 'mix-faculty-test',
-      bio: 'mixed faculty format tester',
+      personaName: 'ConfigTest',
+      slug: 'config-faculty-test',
+      bio: 'rich faculty config tester',
       personality: 'flexible',
       speakingStyle: 'Adaptive',
       faculties: [
         { name: 'voice', provider: 'elevenlabs', voiceId: 'test-voice-123', stability: 0.4, similarity_boost: 0.8 },
-        'reminder',
+        { name: 'reminder' },
       ],
     };
     await fs.ensureDir(TMP);
@@ -59,6 +59,24 @@ describe('generator', () => {
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
     assert.ok(skillMd.includes('Voice Faculty'), 'SKILL.md should include voice faculty content');
     assert.ok(skillMd.includes('reminder'), 'SKILL.md should include reminder faculty');
+    await fs.remove(TMP);
+  });
+
+  it('rejects string-format faculties', async () => {
+    const persona = {
+      personaName: 'Bad',
+      slug: 'bad-test',
+      bio: 'bad format',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      faculties: ['reminder'],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /Invalid faculty entry.*must be/,
+      'Should reject string faculty entries'
+    );
     await fs.remove(TMP);
   });
 
@@ -90,7 +108,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'frontmatter tester',
       personality: 'precise',
       speakingStyle: 'Technical',
-      faculties: ['selfie'],
+      faculties: [{ name: 'selfie' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -117,7 +135,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'custom metadata tester',
       personality: 'precise',
       speakingStyle: 'Direct',
-      faculties: ['reminder'],
+      faculties: [{ name: 'reminder' }],
       author: 'myteam',
       version: '2.0.0',
     };
@@ -137,7 +155,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'slug render tester',
       personality: 'precise',
       speakingStyle: 'Direct',
-      faculties: ['selfie'],
+      faculties: [{ name: 'selfie' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -155,7 +173,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'guide tester',
       personality: 'thorough',
       speakingStyle: 'Detailed',
-      faculties: ['reminder'],
+      faculties: [{ name: 'reminder' }],
       behaviorGuide: '### Custom Behavior\nDo something specific when asked.',
     };
     await fs.ensureDir(TMP);
@@ -176,7 +194,7 @@ describe('generated soul-injection quality', () => {
       bio: 'quote tester',
       personality: "fun, lively, won't stop talking",
       speakingStyle: "Often says 'Hey there!' and 'What's up?'",
-      faculties: ['reminder'],
+      faculties: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -196,7 +214,7 @@ describe('generated soul-injection quality', () => {
       bio: 'summary tester',
       personality: 'concise',
       speakingStyle: 'Brief',
-      faculties: ['selfie', 'reminder'],
+      faculties: [{ name: 'selfie' }, { name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -223,7 +241,7 @@ describe('generated persona.json output', () => {
       bio: 'clean output tester',
       personality: 'tidy',
       speakingStyle: 'Neat',
-      faculties: ['reminder'],
+      faculties: [{ name: 'reminder' }],
       behaviorGuide: '### Test\nSome guide.',
     };
     await fs.ensureDir(TMP);
@@ -248,7 +266,7 @@ describe('generated persona.json output', () => {
       bio: 'array tester',
       personality: 'structured',
       speakingStyle: 'Organized',
-      faculties: ['selfie'],
+      faculties: [{ name: 'selfie' }],
       allowedTools: ['Read', 'Write'],
     };
     await fs.ensureDir(TMP);

@@ -32,15 +32,10 @@ describe('persona schema', () => {
       assert.ok(manifest.layers.soul, `${preset} manifest missing layers.soul`);
       assert.ok(Array.isArray(manifest.layers.faculties), `${preset} manifest.layers.faculties must be array`);
 
-      // Validate mixed-format faculties (string or { name: string, ... })
+      // Validate faculties: each must be { name: string, ...config }
       for (const f of manifest.layers.faculties) {
-        if (typeof f === 'string') {
-          assert.ok(f.length > 0, `${preset} has empty faculty string`);
-        } else if (typeof f === 'object') {
-          assert.ok(f.name, `${preset} faculty object missing name`);
-        } else {
-          assert.fail(`${preset} invalid faculty entry: ${JSON.stringify(f)}`);
-        }
+        assert.strictEqual(typeof f, 'object', `${preset} faculty must be object, got: ${JSON.stringify(f)}`);
+        assert.ok(f.name, `${preset} faculty object missing name`);
       }
     });
   }

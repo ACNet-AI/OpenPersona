@@ -5,7 +5,12 @@
   "layers": {
     "soul": "./persona.json",
     "body": null,
-    "faculties": ["selfie", "voice", "music", "soul-evolution"],
+    "faculties": [
+      { "name": "selfie" },
+      { "name": "voice" },
+      { "name": "music" },
+      { "name": "soul-evolution" }
+    ],
     "skills": {
       "clawhub": [],
       "skillssh": []

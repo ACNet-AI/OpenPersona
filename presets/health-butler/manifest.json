@@ -5,7 +5,9 @@
   "layers": {
     "soul": "./persona.json",
     "body": null,
-    "faculties": ["reminder"],
+    "faculties": [
+      { "name": "reminder" }
+    ],
     "skills": {
       "clawhub": [],
       "skillssh": []

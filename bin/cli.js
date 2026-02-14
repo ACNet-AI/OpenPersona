@@ -56,7 +56,6 @@ program
       persona.version = manifest.version;
       persona.author = manifest.author;
       persona.meta = manifest.meta;
-      if (manifest.defaults) persona.defaults = manifest.defaults;
     } else if (options.config) {
       const configPath = path.resolve(options.config);
       if (!fs.existsSync(configPath)) {
@@ -78,7 +77,7 @@ program
         { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
       ]);
       persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
-      persona.faculties = answers.faculties || [];
+      persona.faculties = (answers.faculties || []).map((name) => ({ name }));
     }
 
     try {
