@@ -11,6 +11,12 @@
       "skillssh": []
     }
   },
+  "defaults": {
+    "env": {
+      "TTS_PROVIDER": "elevenlabs",
+      "TTS_VOICE_ID": "LEnmbrrxYsUYS7vsRRwD"
+    }
+  },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "meta": {
     "framework": "openpersona",

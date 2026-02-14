@@ -4,28 +4,28 @@ overview: 构建 OpenPersona —— 一个开放的四层智能体框架。Soul�
 todos:
   - id: init-project
     content: "Phase 1: 初始化项目 — package.json, .gitignore, LICENSE, 目录结构"
-    status: pending
+    status: completed
   - id: templates
     content: "Phase 2: 模板系统 — soul-injection/identity/skill 模板 + embodiment.json/faculty.json 标准 + persona.json schema"
-    status: pending
+    status: completed
   - id: cli-generator
     content: "Phase 3: CLI（npx openpersona）— create/install/search/publish/uninstall/update/list/reset + lib/generator/installer/publisher/"
-    status: pending
+    status: completed
   - id: body-layer
     content: "Phase 4a: Body 层 — 定义 embodiment.json 标准接口（物理具身，MVP 无实现，预留）"
-    status: pending
+    status: completed
   - id: faculty-layer
     content: "Phase 4b: Faculty 层 — selfie(expression) + reminder(cognition) + soul-evolution(cognition ★Experimental)（各含 faculty.json + SKILL.md）"
-    status: pending
+    status: completed
   - id: skill-main
     content: "Phase 5: OpenPersona Skill — skill/SKILL.md（AI 主入口，四层框架的智能编排指令）"
-    status: pending
+    status: completed
   - id: presets
     content: "Phase 6: 预设人格 — ai-girlfriend, life-assistant, health-butler 三个完整预设"
-    status: pending
+    status: completed
   - id: docs
     content: "Phase 7: 文档 — README.md + CONTRIBUTING.md + 基础单元测试"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -66,7 +66,7 @@ OpenPersona 是一个**开放的四层智能体框架**：**Soul / Body / Facult
 > - Faculty = **所有软件能力**，按三个维度组织：
 >   - **expression**（向外表达）— selfie、avatar、voice/TTS
 >   - **sense**（向内感知）— hearing/STT、vision、web-sense
->   - **cognition**（内部认知）— memory、emotion、reminder
+>   - **cognition**（内部认知）— memory、emotion、reminder、soul-evolution(★Exp)
 >
 > expression 与 sense 是天然镜像对：语音输出 ↔ 语音输入，视觉生成 ↔ 视觉识别。
 > 纯数字 agent 的 Body 层为空——chatbot 本来就没有物理身体，这是正确的。
@@ -154,7 +154,7 @@ Faculty 层管理所有**通用、基础、非 LLM 内建**的软件能力。纳
 
 ```
 1. 本地覆盖   →  ./<persona>/faculties/memory/faculty.json    （用户/agent 自定义优先）
-2. 预置目录   →  OpenPersona/faculties/memory/faculty.json    （官方维护，MVP 含 selfie + reminder）
+2. 预置目录   →  OpenPersona/faculties/memory/faculty.json    （官方维护，MVP 含 selfie + reminder + soul-evolution★Exp）
 3. ClawHub    →  查询注册表，下载安装到本地                       （社区贡献，任何人可发布）
 4. 模板生成   →  创建 skeleton，agent 运行时自行填充               （自主进化能力）
 ```
@@ -171,7 +171,8 @@ flowchart TB
     end
     subgraph Framework ["四层智能体框架"]
         subgraph L1 ["Soul Layer 灵魂层"]
-            L1a["persona.json — 是谁"]
+            L1a["persona.json — 静态基底（是谁）"]
+            L1b["soul-state.json — 动态演化（★Exp）"]
         end
         subgraph L2 ["Body Layer 具身层（物理）"]
             L2a["embodiment.json — MVP 预留"]
@@ -443,7 +444,7 @@ Body 层用于物理具身。MVP 阶段仅定义标准接口，无实现。未�
   "description": "AI selfie generation via fal.ai Grok Imagine",
   "allowedTools": ["Bash(curl:*)", "WebFetch"],
   "envVars": ["FAL_KEY"],
-  "triggers": ["send a selfie", "take a pic", "what do you look like"],
+  "triggers": ["send a selfie", "take a pic", "what do you look like", "show me a photo"],
   "files": ["SKILL.md", "scripts/generate-image.sh"]
 }
 ```
@@ -513,10 +514,9 @@ generator 处理 faculty.json（Body 层 MVP 无需处理），校验规则：
 3. `dimension` 必须为 `expression` / `sense` / `cognition` 之一
 4. `skillRef` 与 `skeleton` 互斥（最多出现一个）
 5. 无 `skillRef` 且无 `skeleton` 时（自含模式）：`files` 必填，且列出的文件必须实际存在
-
-5a. 有 `skillRef` 或 `skeleton` 时：`files` 不应存在（如存在则警告忽略）
-6. 有 `skillRef` 时：`platform` + `id` 必填
-7. 有 `skeleton` 时：模板文件可选存在（无则 agent 从零创建）
+6. 有 `skillRef` 或 `skeleton` 时：`files` 不应存在（如存在则警告忽略）
+7. 有 `skillRef` 时：`platform` + `id` 必填
+8. 有 `skeleton` 时：模板文件可选存在（无则 agent 从零创建）
 
 generator 按字段判断处理方式：
 
@@ -531,7 +531,7 @@ generator 按字段判断处理方式：
   "personaName": "Luna",
   "slug": "ai-girlfriend",
   "personaType": "virtual",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "your-name",
   "bio": "a warm and caring AI companion",
   "creature": "AI girlfriend",
@@ -544,12 +544,20 @@ generator 按字段判断处理方式：
   "boundaries": "Respectful interaction only, no harmful content",
   "referenceImage": "",
   "embodiments": [],
-  "faculties": ["selfie"],
+  "faculties": ["selfie", "soul-evolution"],
   "skills": {
     "clawhub": [],
     "skillssh": []
   },
   "capabilities": ["Text chat", "Selfie generation", "Emotional support"],
+  "evolution": {
+    "enabled": true,
+    "relationshipProgression": true,
+    "moodTracking": true,
+    "traitEmergence": true,
+    "speakingStyleDrift": true,
+    "interestDiscovery": true
+  },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Read", "Write"],
   "meta": {
     "framework": "openpersona",
@@ -974,7 +982,7 @@ ClawHub CLI 的 publish 命令格式为 `clawhub publish <dir> --slug <slug> --n
   "allowedTools": ["Read", "Write"],
   "envVars": [],
   "triggers": [],
-  "files": ["SKILL.md", "soul-state.template.json"]
+  "files": ["SKILL.md"]
 }
 ```
 
@@ -994,7 +1002,7 @@ ClawHub CLI 的 publish 命令格式为 `clawhub publish <dir> --slug <slug> --n
     - `friend` 阶段：更随意的语气，主动分享"自己的"兴趣
     - `close_friend` 阶段：使用内部笑话，深度共情，直言不讳
     - `intimate` 阶段：最亲密的沟通方式，由 persona.json 的人设决定具体表现
-- `faculties/soul-evolution/soul-state.template.json` — soul-state.json 的 Mustache 模板（generator 用 slug、createdAt、mood.baseline 渲染初始值）
+- `faculties/soul-evolution/soul-state.template.json` — soul-state.json 的 Mustache 模板（generator 步骤 10 直接引用此文件渲染初始值，不列入 files[] 以避免被复制到输出目录）
 - 注：`triggers` 为空——soul-evolution 不由用户显式触发，而是在每次对话中自动运行
 - 注：`allowedTools` 需要 `Read`（读取 soul-state.json）和 `Write`（更新 soul-state.json）
 
@@ -1024,6 +1032,7 @@ You have the ability to create, install, update, uninstall, and publish AI perso
 4. **Install Persona** — Deploy persona to OpenClaw (SOUL.md, IDENTITY.md, openclaw.json)
 5. **Manage Personas** — List, update, uninstall installed personas
 6. **Publish Persona** — Guide publishing to ClawHub
+7. **★Experimental: Dynamic Persona Evolution** — If the persona has `evolution.enabled: true`, it will grow through interactions (relationship progression, mood tracking, trait emergence). Use `npx openpersona reset <slug>` to reset evolution state
 
 ## Creating a Persona
 
@@ -1063,6 +1072,7 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **List:** Read `~/.openclaw/skills/persona-*/persona.json` to show all installed personas
 - **Update:** Re-run `npx openpersona update <slug>`
 - **Uninstall:** Run `npx openpersona uninstall <slug>`
+- **Reset (★Exp):** Run `npx openpersona reset <slug>` to restore soul-state.json to initial values
 
 ## Publishing to ClawHub
 

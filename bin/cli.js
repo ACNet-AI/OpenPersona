@@ -56,6 +56,7 @@ program
       persona.version = manifest.version;
       persona.author = manifest.author;
       persona.meta = manifest.meta;
+      if (manifest.defaults) persona.defaults = manifest.defaults;
     } else if (options.config) {
       const configPath = path.resolve(options.config);
       if (!fs.existsSync(configPath)) {
@@ -73,7 +74,7 @@ program
         { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
         { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
         { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
-        { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'reminder', 'soul-evolution'] },
+        { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder', 'soul-evolution'] },
         { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
       ]);
       persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
