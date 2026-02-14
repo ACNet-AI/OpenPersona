@@ -1,7 +1,11 @@
 ---
 name: open-persona
-description: Create, manage, and orchestrate AI personas with skills from ClawHub and skills.sh
+description: Create, manage, and orchestrate AI personas with skills from ClawHub and skills.sh. Use when the user wants to create a new AI persona, install/manage existing personas, or publish persona skill packs.
 allowed-tools: Bash(npm:*) Bash(npx:*) Bash(openclaw:*) Bash(curl:*) Read Write WebFetch
+compatibility: Requires OpenClaw installed and configured
+metadata:
+  author: openpersona
+  version: "0.1.0"
 ---
 # OpenPersona — AI Persona Creator
 

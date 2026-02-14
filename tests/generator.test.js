@@ -52,7 +52,7 @@ describe('generator', () => {
 });
 
 describe('generated SKILL.md quality', () => {
-  it('has proper frontmatter with name, description, allowed-tools', async () => {
+  it('has proper frontmatter with name, description, allowed-tools, metadata', async () => {
     const persona = {
       personaName: 'FMTest',
       slug: 'fm-test',
@@ -70,6 +70,32 @@ describe('generated SKILL.md quality', () => {
     assert.ok(skillMd.includes('description:'), 'frontmatter must contain description');
     assert.ok(skillMd.includes('allowed-tools:'), 'frontmatter must contain allowed-tools');
     assert.ok(skillMd.includes('Bash(curl:*)'), 'selfie faculty should add Bash(curl:*) to tools');
+    // Agent Skills spec: metadata and compatibility
+    assert.ok(skillMd.includes('compatibility:'), 'frontmatter must contain compatibility');
+    assert.ok(skillMd.includes('metadata:'), 'frontmatter must contain metadata block');
+    assert.ok(skillMd.includes('author: openpersona'), 'metadata must include default author');
+    assert.ok(skillMd.includes('version: "0.1.0"'), 'metadata must include default version');
+    assert.ok(skillMd.includes('framework: openpersona'), 'metadata must include framework');
+    await fs.remove(TMP);
+  });
+
+  it('uses custom author and version when provided', async () => {
+    const persona = {
+      personaName: 'Custom',
+      slug: 'custom-meta',
+      bio: 'custom metadata tester',
+      personality: 'precise',
+      speakingStyle: 'Direct',
+      faculties: ['reminder'],
+      author: 'myteam',
+      version: '2.0.0',
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('author: myteam'), 'metadata must use provided author');
+    assert.ok(skillMd.includes('version: "2.0.0"'), 'metadata must use provided version');
     await fs.remove(TMP);
   });
 
@@ -174,7 +200,8 @@ describe('generated persona.json output', () => {
     const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
 
     const forbidden = ['backstory', 'capabilitiesSection', 'facultySummary',
-      'skillContent', 'description', 'evolutionEnabled', 'allowedToolsStr'];
+      'skillContent', 'description', 'evolutionEnabled', 'allowedToolsStr',
+      'author', 'version'];
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
