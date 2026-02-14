@@ -43,7 +43,15 @@ Examples:
 }
 
 function parseArgs(args) {
-  const opts = { text: '', voice: null, output: null, play: false, model: 'eleven_multilingual_v2', stability: 0.5, similarity: 0.75 };
+  const opts = {
+    text: '',
+    voice: null,
+    output: null,
+    play: false,
+    model: 'eleven_multilingual_v2',
+    stability: parseFloat(process.env.TTS_STABILITY) || 0.5,
+    similarity: parseFloat(process.env.TTS_SIMILARITY) || 0.75,
+  };
   let i = 0;
 
   // First non-flag argument is text

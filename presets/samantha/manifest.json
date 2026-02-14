@@ -5,16 +5,20 @@
   "layers": {
     "soul": "./persona.json",
     "body": null,
-    "faculties": ["voice", "music", "soul-evolution"],
+    "faculties": [
+      {
+        "name": "voice",
+        "provider": "elevenlabs",
+        "voiceId": "LEnmbrrxYsUYS7vsRRwD",
+        "stability": 0.4,
+        "similarity_boost": 0.8
+      },
+      "music",
+      "soul-evolution"
+    ],
     "skills": {
       "clawhub": [],
       "skillssh": []
-    }
-  },
-  "defaults": {
-    "env": {
-      "TTS_PROVIDER": "elevenlabs",
-      "TTS_VOICE_ID": "LEnmbrrxYsUYS7vsRRwD"
     }
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],

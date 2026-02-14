@@ -72,17 +72,22 @@ log_info "Text: ${TEXT:0:80}$([ ${#TEXT} -gt 80 ] && echo '...')"
 # --- Generate audio based on provider ---
 case "$PROVIDER" in
   elevenlabs)
-    if [ -z "${TTS_API_KEY:-}" ]; then
-      log_error "TTS_API_KEY required for ElevenLabs"
+    if [ -z "${TTS_API_KEY:-}" ] && [ -z "${ELEVENLABS_API_KEY:-}" ]; then
+      log_error "TTS_API_KEY or ELEVENLABS_API_KEY required for ElevenLabs"
       exit 1
     fi
+    API_KEY="${ELEVENLABS_API_KEY:-$TTS_API_KEY}"
     VOICE_ID="${TTS_VOICE_ID:-21m00Tcm4TlvDq8ikWAM}"  # Default: Rachel
+    STABILITY="${TTS_STABILITY:-0.5}"
+    SIMILARITY="${TTS_SIMILARITY:-0.75}"
     JSON_PAYLOAD=$(jq -n \
       --arg text "$TEXT" \
-      '{text: $text, model_id: "eleven_multilingual_v2", voice_settings: {stability: 0.5, similarity_boost: 0.75}}')
+      --argjson stability "$STABILITY" \
+      --argjson similarity "$SIMILARITY" \
+      '{text: $text, model_id: "eleven_multilingual_v2", voice_settings: {stability: $stability, similarity_boost: $similarity}}')
 
     curl -s -X POST "https://api.elevenlabs.io/v1/text-to-speech/$VOICE_ID" \
-      -H "xi-api-key: $TTS_API_KEY" \
+      -H "xi-api-key: $API_KEY" \
       -H "Content-Type: application/json" \
       -d "$JSON_PAYLOAD" \
       --output "$OUTPUT"

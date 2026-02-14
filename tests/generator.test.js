@@ -31,6 +31,37 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
+  it('handles mixed faculty formats (string and object)', async () => {
+    const persona = {
+      personaName: 'MixTest',
+      slug: 'mix-faculty-test',
+      bio: 'mixed faculty format tester',
+      personality: 'flexible',
+      speakingStyle: 'Adaptive',
+      faculties: [
+        { name: 'voice', provider: 'elevenlabs', voiceId: 'test-voice-123', stability: 0.4, similarity_boost: 0.8 },
+        'reminder',
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    assert.ok(fs.existsSync(skillDir));
+
+    // Check that generated persona.json has defaults.env with mapped values
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.ok(personaOut.defaults?.env, 'persona.json should have defaults.env from faculty config');
+    assert.strictEqual(personaOut.defaults.env.TTS_PROVIDER, 'elevenlabs');
+    assert.strictEqual(personaOut.defaults.env.TTS_VOICE_ID, 'test-voice-123');
+    assert.strictEqual(personaOut.defaults.env.TTS_STABILITY, '0.4');
+    assert.strictEqual(personaOut.defaults.env.TTS_SIMILARITY, '0.8');
+
+    // Check SKILL.md was generated (faculties loaded correctly)
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('Voice Faculty'), 'SKILL.md should include voice faculty content');
+    assert.ok(skillMd.includes('reminder'), 'SKILL.md should include reminder faculty');
+    await fs.remove(TMP);
+  });
+
   it('adds soul-evolution when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',
@@ -201,7 +232,7 @@ describe('generated persona.json output', () => {
 
     const forbidden = ['backstory', 'capabilitiesSection', 'facultySummary',
       'skillContent', 'description', 'evolutionEnabled', 'allowedToolsStr',
-      'author', 'version'];
+      'author', 'version', 'facultyConfigs'];
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
