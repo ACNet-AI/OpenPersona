@@ -5,7 +5,7 @@ allowed-tools: Bash(npm:*) Bash(npx:*) Bash(openclaw:*) Bash(curl:*) Read Write 
 compatibility: Requires OpenClaw installed and configured
 metadata:
   author: openpersona
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 # OpenPersona — AI Persona Creator
 
@@ -14,12 +14,13 @@ You have the ability to create, install, update, uninstall, and publish AI perso
 ## What You Can Do
 
 1. **Create Persona** — Help the user design a new AI persona through conversation
-2. **Recommend Skills** — Search ClawHub and skills.sh for skills that match the persona
-3. **Create Custom Skills** — Write SKILL.md files for capabilities not found in ecosystems
-4. **Install Persona** — Deploy persona to OpenClaw (SOUL.md, IDENTITY.md, openclaw.json)
-5. **Manage Personas** — List, update, uninstall installed personas
-6. **Publish Persona** — Guide publishing to ClawHub
-7. **★Experimental: Dynamic Persona Evolution** — If the persona has `evolution.enabled: true`, it will grow through interactions (relationship progression, mood tracking, trait emergence). Use `npx openpersona reset <slug>` to reset evolution state
+2. **Recommend Faculties** — Suggest faculties (voice, selfie, music, etc.) based on persona needs
+3. **Recommend Skills** — Search ClawHub and skills.sh for external skills
+4. **Create Custom Skills** — Write SKILL.md files for capabilities not found in ecosystems
+5. **Install Persona** — Deploy persona to OpenClaw (SOUL.md, IDENTITY.md, openclaw.json)
+6. **Manage Personas** — List, update, uninstall installed personas
+7. **Publish Persona** — Guide publishing to ClawHub
+8. **★Experimental: Dynamic Persona Evolution** — If the persona has `evolution.enabled: true`, it will grow through interactions (relationship progression, mood tracking, trait emergence). Use `npx openpersona reset <slug>` to reset evolution state
 
 ## Four-Layer Architecture
 
@@ -31,7 +32,35 @@ Each persona is a four-layer bundle defined by two files:
   - `layers.faculties` — List of faculty modules (expression/sense/cognition)
   - `layers.skills` — External skills from ClawHub / skills.sh
 
-- **`persona.json`** — Pure soul definition (personality, speaking style, vibe, boundaries)
+- **`persona.json`** — Pure soul definition (personality, speaking style, vibe, boundaries, behaviorGuide)
+
+## Available Presets
+
+| Preset | Persona | Faculties | Best For |
+|--------|---------|-----------|----------|
+| `samantha` | Samantha — Inspired by the movie *Her* | voice, music, soul-evolution | Deep conversation, emotional connection, creative AI companion |
+| `ai-girlfriend` | Luna — Pianist turned developer | selfie, voice, music, soul-evolution | Visual + audio companion with rich personality |
+| `life-assistant` | Alex — Life management expert | reminder | Schedule, weather, shopping, daily tasks |
+| `health-butler` | Vita — Professional nutritionist | reminder | Diet, exercise, mood, health tracking |
+
+Use presets: `npx openpersona create --preset samantha --install`
+
+## Available Faculties
+
+When helping users build a persona, recommend faculties based on their needs:
+
+| Faculty | Dimension | What It Does | Recommend When |
+|---------|-----------|-------------|----------------|
+| **selfie** | expression | AI selfie generation via fal.ai | User wants visual presence, profile pics, "send a pic" |
+| **voice** | expression | TTS via ElevenLabs / OpenAI / Qwen3-TTS | User wants the persona to speak, voice messages, audio content |
+| **music** | expression | AI music composition via Suno | User wants the persona to create music, songs, melodies |
+| **reminder** | cognition | Reminders and task management | User needs scheduling, task tracking, daily briefings |
+| **soul-evolution** | cognition ★Exp | Dynamic personality growth | User wants a persona that remembers, evolves, deepens over time |
+
+**Faculty environment variables (user must configure):**
+- selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
+- voice: `TTS_PROVIDER`, `TTS_API_KEY`, `TTS_VOICE_ID`
+- music: `SUNO_API_KEY` (from https://suno.com)
 
 ## Creating a Persona
 
@@ -39,11 +68,15 @@ When the user wants to create a persona, gather this information through natural
 
 **Soul (persona.json):**
 - **Required:** personaName, slug, bio, personality, speakingStyle
-- **Recommended:** creature, emoji, background, age, vibe, boundaries, capabilities
-- **Optional:** referenceImage, evolution config
+- **Recommended:** creature, emoji, background (write a rich narrative, not just one line!), age, vibe, boundaries, capabilities
+- **Optional:** referenceImage, behaviorGuide, evolution config
+
+**The `background` field is critical.** Write a compelling story — multiple paragraphs that give the persona depth, history, and emotional texture. A one-line background produces a flat, lifeless persona. Think of it as the persona's origin story.
+
+**The `behaviorGuide` field** is optional but powerful. Use markdown to write domain-specific behavior instructions that go directly into the generated SKILL.md. This is how you teach the persona _how_ to act, not just _who_ to be.
 
 **Cross-layer (manifest.json):**
-- **Faculties:** Which faculties to enable (selfie, reminder, soul-evolution, etc.)
+- **Faculties:** Which faculties to enable (see Available Faculties above)
 - **Skills:** External skills from ClawHub or skills.sh
 - **Body:** Physical embodiment (null for most personas)
 
@@ -54,7 +87,7 @@ npx openpersona create --config ./persona.json --install
 
 Or use a preset:
 ```bash
-npx openpersona create --preset ai-girlfriend --install
+npx openpersona create --preset samantha --install
 ```
 
 ## Recommending Skills
