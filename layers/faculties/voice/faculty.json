@@ -1,0 +1,9 @@
+{
+  "name": "voice",
+  "dimension": "expression",
+  "description": "Text-to-speech voice synthesis — give your persona a real voice via ElevenLabs, OpenAI TTS, or Qwen3-TTS",
+  "allowedTools": ["Bash(curl:*)", "Bash(npx:*)", "WebFetch"],
+  "envVars": ["TTS_PROVIDER", "TTS_API_KEY", "TTS_VOICE_ID"],
+  "triggers": ["say this out loud", "speak to me", "read this aloud", "send a voice message", "I want to hear your voice"],
+  "files": ["SKILL.md", "scripts/speak.sh"]
+}

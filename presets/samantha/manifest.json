@@ -1,11 +1,11 @@
 {
-  "name": "ai-girlfriend",
+  "name": "samantha",
   "version": "0.1.0",
   "author": "openpersona",
   "layers": {
     "soul": "./persona.json",
     "body": null,
-    "faculties": ["selfie", "voice", "music", "soul-evolution"],
+    "faculties": ["voice", "music", "soul-evolution"],
     "skills": {
       "clawhub": [],
       "skillssh": []

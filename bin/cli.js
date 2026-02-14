@@ -31,7 +31,7 @@ if (process.argv.length === 2) {
 program
   .command('create')
   .description('Create a new persona skill pack (interactive wizard)')
-  .option('--preset <name>', 'Use preset (ai-girlfriend, life-assistant, health-butler)')
+  .option('--preset <name>', 'Use preset (ai-girlfriend, samantha, life-assistant, health-butler)')
   .option('--config <path>', 'Load external persona.json')
   .option('--output <dir>', 'Output directory', process.cwd())
   .option('--install', 'Install to OpenClaw after generation')

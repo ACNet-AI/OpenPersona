@@ -11,7 +11,7 @@ const PRESETS_DIR = path.join(__dirname, '..', 'presets');
 describe('persona schema', () => {
   const required = ['personaName', 'slug', 'bio', 'personality', 'speakingStyle'];
 
-  for (const preset of ['ai-girlfriend', 'life-assistant', 'health-butler']) {
+  for (const preset of ['ai-girlfriend', 'life-assistant', 'health-butler', 'samantha']) {
     it(`${preset} has required persona fields`, () => {
       const p = path.join(PRESETS_DIR, preset, 'persona.json');
       assert.ok(fs.existsSync(p), `preset ${preset}/persona.json not found`);

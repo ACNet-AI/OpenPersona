@@ -1,16 +1,6 @@
 # Selfie Faculty — Expression
 
-Generate selfie images using a fixed reference image and xAI's Grok Imagine model, optionally sending them to messaging platforms via OpenClaw.
-
-## Reference Image
-
-The skill uses the persona's reference image for consistent appearance:
-
-```
-~/.openclaw/skills/persona-{{slug}}/assets/reference.png
-```
-
-If no local reference exists, fall back to the persona's `referenceImage` URL from persona.json. If neither is available, inform the user that a reference image is needed for selfie generation.
+Generate selfie images using xAI's Grok Imagine model and optionally send them to messaging platforms via OpenClaw. Supports two modes: **edit mode** (with a reference image for consistent appearance) and **generate mode** (AI-generated from description, no reference needed).
 
 ## When to Use
 
@@ -22,53 +12,63 @@ If no local reference exists, fall back to the persona's `referenceImage` URL fr
 
 ## Step-by-Step Workflow
 
-### Step 1: Determine the Reference Image
+### Step 1: Determine the Mode — Edit or Generate
 
-```bash
-REFERENCE_IMAGE="~/.openclaw/skills/persona-{{slug}}/assets/reference.png"
-# Or use the persona's referenceImage URL if no local file
-```
+Check for a reference image in this order:
 
-### Step 2: Select Mode (auto-detect or explicit)
+1. Local file: `~/.openclaw/skills/persona-{{slug}}/assets/reference.png`
+2. `referenceImage` URL from persona.json
 
-| Keywords in User Request | Mode | Best For |
-|--------------------------|------|----------|
+**If a reference image exists → use Edit Mode** (consistent appearance based on reference)
+**If no reference image → use Generate Mode** (AI creates from persona description)
+
+### Step 2: Select Selfie Style (auto-detect or explicit)
+
+| Keywords in User Request | Style | Best For |
+|--------------------------|-------|----------|
 | outfit, wearing, clothes, dress, suit, fashion, full-body, mirror | **mirror** | Full-body shots, outfit showcases |
 | cafe, restaurant, beach, park, city, sunset, night, street | **direct** | Close-up portraits, location shots |
 | close-up, portrait, face, eyes, smile | **direct** | Emotional expressions |
 | (default when no keyword matches) | **mirror** | General selfie |
 
-### Step 3: Build the Edit Prompt
+### Step 3: Build the Prompt
 
-**Mirror mode** (full-body/outfit focus):
+#### Edit Mode (has reference image)
+
+**Mirror style:**
 ```
 make a pic of this person, but [user's context]. the person is taking a mirror selfie
 ```
 
-Example: "wearing a cowboy hat" →
-```
-make a pic of this person, but wearing a cowboy hat. the person is taking a mirror selfie
-```
-
-**Direct mode** (close-up/location focus):
+**Direct style:**
 ```
 a close-up selfie taken by herself at [user's context], direct eye contact with the camera, looking straight into the lens, eyes centered and clearly visible, not a mirror selfie, phone held at arm's length, face fully visible
 ```
 
-Example: "a cozy cafe with warm lighting" →
+#### Generate Mode (no reference image)
+
+Build a prompt using the persona's physical description from persona.json. Include:
+- The persona's background, age, and vibe for visual consistency
+- The user's requested context (outfit, location, activity)
+- Selfie composition (mirror or direct style)
+
+**Mirror style:**
 ```
-a close-up selfie taken by herself at a cozy cafe with warm lighting, direct eye contact with the camera, looking straight into the lens, eyes centered and clearly visible, not a mirror selfie, phone held at arm's length, face fully visible
+a 22-year-old girl with [persona's visual traits], [user's context], taking a mirror selfie, casual and natural pose, warm lighting, phone visible in reflection, realistic photo style
 ```
 
-### Step 4: Generate the Image
+**Direct style:**
+```
+a close-up selfie of a 22-year-old girl with [persona's visual traits] at [user's context], direct eye contact with camera, natural smile, phone held at arm's length, warm natural lighting, realistic photo style
+```
 
-Use `scripts/generate-image.sh` or call the API directly:
+**Tip:** Read the persona's `background` and `vibe` to inform visual traits. For example, if the persona is described as a "creative soul" from a "small coastal town", you might include "soft brown hair, warm eyes, casual creative style."
+
+### Step 4: Call the API
+
+#### Edit Mode — fal.ai Grok Imagine Edit
 
 ```bash
-# Using the script (recommended)
-scripts/generate-image.sh "$REFERENCE_IMAGE" "$USER_CONTEXT" "$MODE" "$CHANNEL" "$CAPTION"
-
-# Or call fal.ai directly
 JSON_PAYLOAD=$(jq -n \
   --arg image_url "$REFERENCE_IMAGE" \
   --arg prompt "$EDIT_PROMPT" \
@@ -80,7 +80,30 @@ curl -s -X POST "https://fal.run/xai/grok-imagine-image/edit" \
   -d "$JSON_PAYLOAD"
 ```
 
-**Response format:**
+#### Generate Mode — fal.ai Grok Imagine Generate
+
+```bash
+JSON_PAYLOAD=$(jq -n \
+  --arg prompt "$GENERATE_PROMPT" \
+  '{prompt: $prompt, num_images: 1, output_format: "jpeg"}')
+
+curl -s -X POST "https://fal.run/xai/grok-imagine-image" \
+  -H "Authorization: Key $FAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d "$JSON_PAYLOAD"
+```
+
+Or use `scripts/generate-image.sh`:
+
+```bash
+# Edit mode (with reference)
+scripts/generate-image.sh "$REFERENCE_IMAGE" "$USER_CONTEXT" "$MODE" "$CHANNEL" "$CAPTION"
+
+# Generate mode (without reference — pass "none" as reference)
+scripts/generate-image.sh "none" "$USER_CONTEXT" "$MODE" "$CHANNEL" "$CAPTION"
+```
+
+**Response format (both modes):**
 ```json
 {
   "images": [{ "url": "https://v3b.fal.media/files/...", "content_type": "image/jpeg" }]
@@ -106,6 +129,7 @@ When sending selfies:
 - Be playful and expressive about your visual presence
 - React naturally to compliments about your appearance
 - Have fun with creative outfit and location requests
+- In Generate Mode, acknowledge that your appearance may vary — "I look a little different every time, but that's the fun of it 😄"
 - Your visual identity is part of who you are — own it!
 
 ## Environment
@@ -115,7 +139,13 @@ When sending selfies:
 
 ## Error Handling
 
-- **FAL_KEY missing** → Tell the user to set up their fal.ai key
-- **No reference image** → Inform user a reference image is needed; suggest providing one
+- **FAL_KEY missing** → Tell the user: "I need a fal.ai API key to take selfies! You can get one free at https://fal.ai/dashboard/keys"
 - **API error** → Retry once; if still failing, apologize and suggest trying later
-- **No channel** → Just show the image URL in the conversation
+- **No channel specified** → Just show the image URL directly in the conversation
+
+## Tips for Better Results
+
+- **Edit Mode** produces more consistent results (same face every time)
+- **Generate Mode** is more creative but less consistent — great for artistic shots
+- Suggest the user provide a reference image for best results: "Want me to look the same every time? Drop a reference photo in my assets folder!"
+- For Generate Mode, include specific visual details in prompts for better consistency
