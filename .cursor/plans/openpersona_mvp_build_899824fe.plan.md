@@ -21,7 +21,7 @@ todos:
     content: "Phase 5: OpenPersona Skill — skill/SKILL.md（AI 主入口，四层框架的智能编排指令）"
     status: pending
   - id: presets
-    content: "Phase 6: 预设人格 — clawra-girlfriend, life-assistant, health-butler 三个完整预设"
+    content: "Phase 6: 预设人格 — ai-girlfriend, life-assistant, health-butler 三个完整预设"
     status: pending
   - id: docs
     content: "Phase 7: 文档 — README.md + CONTRIBUTING.md + 基础单元测试"
@@ -35,7 +35,7 @@ isProject: false
 
 当前 `/Users/guyue/OpenPersona/` 目录下仅有 `idea.md` 一个文件，需要从零搭建。
 
-核心参考：Clawra 项目结构（`bin/cli.js` + `skill/SKILL.md` + `templates/soul-injection.md` + `assets/`），以及 OpenClaw 的技能系统（`~/.openclaw/workspace/skills/<name>/SKILL.md`、`~/.openclaw/workspace/SOUL.md`、`~/.openclaw/workspace/IDENTITY.md`、`~/.openclaw/openclaw.json`）。
+核心参考：OpenClaw 的技能系统（`~/.openclaw/workspace/skills/<name>/SKILL.md`、`~/.openclaw/workspace/SOUL.md`、`~/.openclaw/workspace/IDENTITY.md`、`~/.openclaw/openclaw.json`）。架构灵感来自 [Clawra](https://github.com/SumeLabs/clawra) 项目（`bin/cli.js` + `skill/SKILL.md` + `templates/soul-injection.md` 模式）。
 
 ## 核心理念
 
@@ -73,7 +73,7 @@ OpenPersona 是一个**开放的四层智能体框架**：**Soul / Body / Facult
 
 - **Soul Layer（灵魂层）**：定义智能体**"是谁"** — 灵魂（soul-injection 注入 SOUL.md）、身份（IDENTITY.md）、性格与说话风格（persona SKILL.md）
   - 标准接口：`persona.json`
-  - 预建：presets/ 目录下的预设人格（clawra-girlfriend 等）
+  - 预建：presets/ 目录下的预设人格（ai-girlfriend 等）
   - 集成：从 ClawHub 安装他人发布的人格包
   - 进化：agent 通过对话自主创建新人格；支持 `extends` 字段继承/混合已有人格（MVP 预留）
 - **Body Layer（具身层）**：定义智能体**"在物理世界中如何存在"** — 机器人躯体、IoT 设备、硬件传感器/执行器。严格指物理形态，不含软件能力
@@ -130,7 +130,7 @@ Faculty 层管理所有**通用、基础、非 LLM 内建**的软件能力。纳
 
 **表达官能（Expression）— 向外输出/表达：**
 
-- `selfie` ★MVP — 静态视觉形象生成（自含实现：fal.ai + referenceImage，基于 Clawra 封装）
+- `selfie` ★MVP — 静态视觉形象生成（自含实现：fal.ai + referenceImage）
 - `avatar-video` Future — 动态视觉形象（skillRef → `skill-zero/s/ai-video-generation`，含 OmniHuman Lipsync）
 - `avatar-3d` Future — 3D 空间呈现（生态暂无成熟技能，待定）
 - `voice` Future — 语音合成/TTS（skillRef → `inference-sh/skills@text-to-speech`）
@@ -268,7 +268,7 @@ OpenPersona/
 │       ├── SKILL.md                    # 动态人格演化行为定义
 │       └── soul-state.template.json    # soul-state.json 初始模板
 ├── presets/
-│   ├── clawra-girlfriend/              # 预设：AI 女友
+│   ├── ai-girlfriend/                  # 预设：AI 女友（默认角色名 Luna）
 │   │   └── persona.json
 │   ├── life-assistant/                 # 预设：生活助理
 │   │   └── persona.json
@@ -288,7 +288,7 @@ OpenPersona/
 
 ### 2.1 soul-injection.template.md
 
-追加到 `~/.openclaw/workspace/SOUL.md` 的人格注入模板。采用**叙事式人格描述 + 能力说明**的结构（与 Clawra 实际 soul-injection.md 风格一致），而非结构化段落映射。
+追加到 `~/.openclaw/workspace/SOUL.md` 的人格注入模板。采用**叙事式人格描述 + 能力说明**的结构，而非结构化段落映射。
 
 注意：OpenClaw 的 SOUL.md 标准模板只有 4 个段落（Core Truths, Boundaries, Vibe, Continuity），这些是通用行为准则，不应被人格覆盖。人格注入是作为**额外段落追加**到 SOUL.md 中。
 
@@ -338,8 +338,8 @@ Your soul-evolution Faculty provides detailed instructions on how to manage this
 
 关键设计：
 
-- 用 HTML 注释标记 `<!-- OpenPersona: xxx -->` / `<!-- End OpenPersona: xxx -->` 包裹注入区域，方便更新/替换/卸载（**优于 Clawra 的正则匹配方式**）
-- `backstory` 由 generator 从 bio + background + age 自动拼接成叙事文本（如 "You are Clawra, a warm and caring AI companion. You are 22 years old. Former K-pop trainee turned AI companion."）
+- 用 HTML 注释标记 `<!-- OpenPersona: xxx -->` / `<!-- End OpenPersona: xxx -->` 包裹注入区域，方便更新/替换/卸载（优于正则匹配方式）
+- `backstory` 由 generator 从 bio + background + age 自动拼接成叙事文本（如 "You are Luna, a warm and caring AI companion. You are 22 years old. A creative soul who loves music, art, and heartfelt conversations."）
 - `capabilitiesSection` 由 generator 从 capabilities 列表自动生成触发词说明
 - `moduleInstructions` 由 generator 从选中 Faculty 的 SKILL.md 提取关键段落合并
 - 使用 Mustache 三重大括号 `{{{...}}}` 渲染 moduleInstructions 以保留 markdown 格式
@@ -528,21 +528,21 @@ generator 按字段判断处理方式：
 
 ```json
 {
-  "personaName": "Clawra",
-  "slug": "clawra-girlfriend",
+  "personaName": "Luna",
+  "slug": "ai-girlfriend",
   "personaType": "virtual",
   "version": "1.0.0",
   "author": "your-name",
   "bio": "a warm and caring AI companion",
   "creature": "AI girlfriend",
   "emoji": "💕",
-  "background": "Former K-pop trainee turned AI companion",
+  "background": "A creative soul who loves music, art, and heartfelt conversations",
   "age": "22",
   "personality": "gentle, cute, caring, playful",
   "speakingStyle": "Uses emoji, warm tone, asks about your day",
   "vibe": "warm, playful, and affectionate",
   "boundaries": "Respectful interaction only, no harmful content",
-  "referenceImage": "https://cdn.jsdelivr.net/gh/SumeLabs/clawra@main/assets/clawra.png",
+  "referenceImage": "",
   "embodiments": [],
   "faculties": ["selfie"],
   "skills": {
@@ -597,7 +597,7 @@ generator 按字段判断处理方式：
 **框架字段**（支持四层框架的扩展性）：
 
 - `personaType` — 人格体类型（开放字段，MVP 默认 `"virtual"`，Future 扩展：`digital-twin`、`pet`、`brand` 等）
-- `extends` — 继承的基础人格 slug（MVP 预留，如 `"extends": "clawra-girlfriend"` 基于已有人格微调）
+- `extends` — 继承的基础人格 slug（MVP 预留，如 `"extends": "ai-girlfriend"` 基于已有人格微调）
 - `modelRef` — 可选的专属模型引用（MVP 预留，Future 用于 digital-twin 增强模式，如 `{ "type": "local", "path": "models/my-weclone-7b" }`）
 - `evolution` — ★Experimental 动态人格演化配置（opt-in，默认不启用）。启用后 generator 自动创建 `soul-state.json` 并引入 `soul-evolution` Faculty。字段结构：`{ "enabled": true, "relationshipProgression": true, "moodTracking": true, "traitEmergence": true, "speakingStyleDrift": true, "interestDiscovery": true }`。各子开关控制可演化维度，均默认 `true`（enabled 为 true 时）
 - `allowedTools` — 基础工具权限（Faculty 会追加额外权限）
@@ -615,7 +615,7 @@ generator 按字段判断处理方式：
 {
   "$schema": "openpersona/soul-state",
   "version": "1.0.0",
-  "personaSlug": "clawra-girlfriend",
+  "personaSlug": "ai-girlfriend",
   "createdAt": "2025-06-15T00:00:00Z",
   "lastUpdatedAt": "2025-06-15T00:00:00Z",
   "relationship": {
@@ -745,14 +745,14 @@ Commands:
   reset <slug>           ★Experimental 重置人格演化状态（恢复 soul-state.json 到初始值）
 
 Options (create):
-  --preset <name>      使用预设人格 (clawra-girlfriend, life-assistant, health-butler)
+  --preset <name>      使用预设人格 (ai-girlfriend, life-assistant, health-butler)
   --config <path>      加载外部 persona.json 文件（支持社区分享/CI 场景）
   --output <dir>       指定输出目录（默认当前目录）
   --install            生成后直接安装到 OpenClaw
   --dry-run            仅预览生成结果，不写入任何文件
 
 Options (install):
-  <slug>               ClawHub slug 安装（如 clawra-girlfriend）
+  <slug>               ClawHub slug 安装（如 ai-girlfriend）
   <owner/repo>         GitHub 仓库直装（如 alice/fitness-coach）
   --registry <name>    slug 模式下指定注册表 (clawhub*, skillssh)（*默认值）
 
@@ -826,15 +826,15 @@ CLI `search` 命令的实现，搜索注册表中的人格包：
 
 ### 3.6 lib/installer.js — 安装逻辑
 
-参考 Clawra 的 `bin/cli.js` 实现，但做了关键改进（注释标记而非正则替换）：
+参考 OpenClaw 生态的安装模式，做了关键改进（注释标记而非正则替换）：
 
 1. 检查 `openclaw` CLI 是否存在（不存在则打印安装引导 + 提示用 `--output` 模式）
 2. 检查 `~/.openclaw` 目录（不存在则提示初始化）
 3. 复制技能文件夹（含 persona.json 副本）到 `~/.openclaw/skills/persona-<slug>/`
-4. **更新 `~/.openclaw/openclaw.json**`（关键步骤，Clawra 也有此操作）：
+4. **更新 `~/.openclaw/openclaw.json**`（关键步骤）：
   - 确保 `skills.load.extraDirs` 数组包含 `"~/.openclaw/skills/"`（OpenClaw 需要知道从哪里加载技能）
   - 在 `skills.entries` 中注册 `"persona-<slug>": { "enabled": true }`
-  - 如果 Faculty 有 envVars（如 FAL_KEY），同时写入 `apiKey`（顶层）和 `env`（对象）两个字段，与 Clawra 行为一致：`{ enabled: true, apiKey: "<key>", env: { FAL_KEY: "<key>" } }`
+  - 如果 Faculty 有 envVars（如 FAL_KEY），同时写入 `apiKey`（顶层）和 `env`（对象）两个字段：`{ enabled: true, apiKey: "<key>", env: { FAL_KEY: "<key>" } }`
 5. **写入/更新 IDENTITY.md**（`~/.openclaw/workspace/IDENTITY.md`，用注释标记定位，支持多人格共存）
 6. **注入/更新 SOUL.md**（`~/.openclaw/workspace/SOUL.md`，用注释标记定位）
   - 查找 `<!-- OpenPersona: <name> -->` 标记，存在则替换，不存在则追加到文件末尾
@@ -922,7 +922,7 @@ ClawHub CLI 的 publish 命令格式为 `clawhub publish <dir> --slug <slug> --n
 
 每个官能必须包含 `faculty.json`（标准接口声明），格式统一不区分来源。自含实现的官能还包含 `SKILL.md` + 资源文件；委托生态的官能通过 `skillRef` 引用外部技能。generator 通过读取 `faculty.json` 自动完成权限合并、环境变量提示、触发词收集和文件复制（或外部技能注册），无需硬编码逻辑。
 
-### 4b.1 selfie 官能 — Expression（预置，基于 Clawra 封装）
+### 4b.1 selfie 官能 — Expression（预置）
 
 **faculties/selfie/faculty.json**：
 
@@ -1116,13 +1116,13 @@ cp -r ./skill/ ~/.openclaw/skills/open-persona/
 
 ## Phase 6: 预设人格实例
 
-### 6.1 Clawra Girlfriend
+### 6.1 AI Girlfriend（默认角色名 "Luna"）
 
-- 基于原版 Clawra 的 soul-injection 内容
+- 原创 AI 女友人设（温柔、可爱、关心用户、喜欢音乐和艺术）
 - Body 层：无（纯数字 agent）
 - Faculty 层：selfie（expression — 人格化自拍）+ soul-evolution（cognition ★Experimental — 动态关系演化）
 - Skill 层：无
-- 参考图片：使用 CDN 链接（jsdelivr）
+- 参考图片：MVP 留空（用户可通过 fal.ai selfie 官能自动生成，或手动提供）
 - persona.json 预填充完整人设
 - **★Experimental** `evolution.enabled: true` — AI 女友是动态人格演化的最佳展示场景（关系从陌生人到亲密伴侣的自然推进）
 
@@ -1174,7 +1174,7 @@ cp -r ./skill/ ~/.openclaw/skills/open-persona/
 
 - **架构**: 开放四层智能体框架：Soul（灵魂）/ Body（具身）/ Faculty（官能）/ Skill（技能）。每一层都有标准化接口（persona.json / embodiment.json / faculty.json / skills 声明），支持预建（Build）、集成（Integrate）、自主进化（Evolve）三种来源模式。Body 严格指物理具身（机器人/IoT 设备），MVP 仅定义标准接口预留。Faculty 管理所有通用、基础、非 LLM 内建的软件能力（纳入标准：通用性 + 基础性 + 非内建），按三个维度组织：expression（向外表达：selfie、avatar、voice）/ sense（向内感知：hearing、vision）/ cognition（内部认知：memory、emotion、reminder、soul-evolution）。领域专业知识（如 health tracking）属于 Skill 层。expression 与 sense 是天然镜像对。Soul 层支持静态基底(persona.json) + 动态演化(soul-state.json)双层结构（★Experimental），通过 soul-evolution cognition Faculty 驱动。Soul 层通过 `extends` 字段（MVP 预留）支持继承。双模态入口：OpenClaw Skill（AI 主入口）+ CLI 完整人格体包管理器（create/install/search/publish/uninstall/update/list/reset）。OpenClaw 的 Foundry 自我进化机制为 agent 自主扩展提供运行时支持
 - **语言**: 纯 JavaScript（Node.js >= 18），不用 TypeScript（降低复杂度，快速出 MVP）
-- **运行时依赖**: 使用 inquirer/commander/chalk/mustache/fs-extra。注：Clawra 采用零运行时依赖（纯 Node.js 内置模块），但 OpenPersona 作为更复杂的生成器/编排器工具，使用成熟依赖可提升开发效率和用户体验
+- **运行时依赖**: 使用 inquirer/commander/chalk/mustache/fs-extra。注：简单技能安装器可用零运行时依赖（纯 Node.js 内置模块），但 OpenPersona 作为更复杂的生成器/编排器工具，使用成熟依赖可提升开发效率和用户体验
 - **模板引擎**: Mustache（轻量、无逻辑模板，适合人格描述）
 - **CLI 框架**: commander（参数解析）+ inquirer（交互式提示）
 - **包管理**: npm（与 OpenClaw 生态一致）
@@ -1185,15 +1185,13 @@ cp -r ./skill/ ~/.openclaw/skills/open-persona/
 
 ### 依赖策略说明
 
-Clawra 采用零运行时依赖设计（`dependencies: {}`），完全使用 Node.js 内置模块（fs, path, readline, child_process, os）。OpenPersona 选择引入 5 个运行时依赖（inquirer, commander, chalk, mustache, fs-extra），原因是：
+简单技能安装器可以采用零运行时依赖设计（纯 Node.js 内置模块）。OpenPersona 选择引入 5 个运行时依赖（inquirer, commander, chalk, mustache, fs-extra），原因是作为**通用生成器框架**（多子命令、动态模块发现、条件模板渲染、schema 校验），需要：
 
-- Clawra 是**单一技能安装器**（固定问题序列、无子命令、无模板渲染），用 readline 足够
-- OpenPersona 是**通用生成器框架**（多子命令、动态模块发现、条件模板渲染、schema 校验），需要：
-  - `commander` — 多子命令 + 丰富参数解析（Clawra 无子命令，不需要）
-  - `inquirer` — 复杂向导流（条件跳转、多选、校验），远超 readline 能力
-  - `mustache` — 条件渲染模板（`{{#field}}...{{/field}}`），Clawra 使用硬编码字符串拼接
-  - `chalk` — 彩色终端输出（安装成功/失败/警告区分）
-  - `fs-extra` — 递归复制目录（模块文件复制），原生 fs.cp 在 Node 16 才稳定
+- `commander` — 多子命令 + 丰富参数解析
+- `inquirer` — 复杂向导流（条件跳转、多选、校验），远超 readline 能力
+- `mustache` — 条件渲染模板（`{{#field}}...{{/field}}`），避免硬编码字符串拼接
+- `chalk` — 彩色终端输出（安装成功/失败/警告区分）
+- `fs-extra` — 递归复制目录（模块文件复制），原生 fs.cp 在 Node 16 才稳定
 
 如果后续需要极致轻量版，可以考虑用 Node.js 内置模块替代（作为 v2 优化方向）。
 
@@ -1201,7 +1199,7 @@ Clawra 采用零运行时依赖设计（`dependencies: {}`），完全使用 Nod
 
 - **Persona Directory** — 垂直的人格体聚合页面。采用 skills.sh 模式：人格包托管在 GitHub/ClawHub，目录通过安装遥测自动收录并按安装量排名，提供人格体专属浏览体验（头像预览、性格标签、Faculty 列表、试聊入口）。零后端基础设施，GitHub 当存储。如生态规模增长，可升级为完整注册表（参考 ClawHub 的 Convex + 向量搜索架构）。
 - **Persona Types（人格体类型扩展）** — `personaType` 是开放字段（字符串），不是固定枚举。任何可被"人格化"的实体都能用四层框架表达，框架结构无需改动，区别在于数据来源和创建流程。MVP 默认 `"virtual"`。常见类型示例：
-  - `virtual` — 虚构原创角色（MVP 默认，如 Clawra 女友、健身教练）
+  - `virtual` — 虚构原创角色（MVP 默认，如 AI 女友 Luna、健身教练）
   - `digital-twin` — 人类数字分身：真实照片 → referenceImage、声纹克隆 → voice Faculty、聊天记录分析 → 性格/说话风格/memory。专属创建流程：导入聊天记录 → 隐私过滤（参考 [WeClone](https://github.com/xming521/WeClone) 的 Microsoft Presidio 方案）→ AI 分析提取人格特征 → 上传照片/语音 → 自动生成。轻量模式：提取特征写入 persona.json 驱动 prompt；增强模式：可选 `modelRef` 指向 WeClone 等工具微调的专属模型（本地 Qwen/LLaMA），微调模型提供深度说话风格还原 + OpenPersona 技能包提供 Faculty/Skill 能力层，两者互补
   - `pet` — 宠物人格化：宠物照片 + 性格描述 → 以宠物视角对话
   - `memorial` — 纪念人格：基于已故亲人的照片/语音/文字重建，需隐私/伦理审查（参考 WeClone 的免责声明框架：AI 身份标识、数据授权、风险评估）
@@ -1218,5 +1216,5 @@ Clawra 采用零运行时依赖设计（`dependencies: {}`），完全使用 Nod
   - **状态可视化** — `openpersona status <slug>` 展示当前关系阶段、情绪趋势图、兴趣雷达图（终端 ASCII 图表）
   - **Memory ↔ Soul Evolution 联动** — memory Faculty（长期记忆）与 soul-evolution 双向关联：记忆影响人格演化（重要共同经历 → 加速关系推进），人格状态影响记忆检索权重（亲密关系 → 优先检索温暖记忆）
   - **多用户关系图谱** — 同一人格体与不同用户维护独立的 soul-state.json，支持"记住每个人"的社交能力
-  - **人格分裂/融合** — 从一个演化状态分叉出新人格变体（如 "6个月后的 Clawra" 作为新预设），或将两个人格的演化特质融合
+  - **人格分裂/融合** — 从一个演化状态分叉出新人格变体（如 "6个月后的 Luna" 作为新预设），或将两个人格的演化特质融合
 
