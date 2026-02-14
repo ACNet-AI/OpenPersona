@@ -1,0 +1,19 @@
+{
+  "name": "health-butler",
+  "version": "0.1.0",
+  "author": "openpersona",
+  "layers": {
+    "soul": "./persona.json",
+    "body": null,
+    "faculties": ["reminder"],
+    "skills": {
+      "clawhub": [],
+      "skillssh": []
+    }
+  },
+  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Read", "Write"],
+  "meta": {
+    "framework": "openpersona",
+    "frameworkVersion": "1.0.0"
+  }
+}

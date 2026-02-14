@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/manifest",
+  "title": "Preset Manifest",
+  "description": "Four-layer manifest for a preset persona bundle",
+  "type": "object",
+  "required": ["name", "layers"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Preset identifier (matches slug)" },
+    "version": { "type": "string", "default": "0.1.0", "description": "Semantic version" },
+    "author": { "type": "string" },
+    "layers": {
+      "type": "object",
+      "required": ["soul", "faculties"],
+      "properties": {
+        "soul": { "type": "string", "description": "Relative path to persona.json" },
+        "body": {
+          "oneOf": [
+            { "type": "string", "description": "Embodiment name or path" },
+            { "type": "null" }
+          ],
+          "description": "Body layer reference, null for pure digital agents"
+        },
+        "faculties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of faculty names to include"
+        },
+        "skills": {
+          "type": "object",
+          "properties": {
+            "clawhub": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "skillssh": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "description": "External skill references from ecosystems"
+        }
+      }
+    },
+    "allowedTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Base tool permissions (faculties append additional permissions)"
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "framework": { "type": "string" },
+        "frameworkVersion": { "type": "string" }
+      }
+    }
+  }
+}

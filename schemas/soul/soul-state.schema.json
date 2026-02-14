@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/soul/soul-state",
+  "title": "Soul State",
+  "description": "Soul layer - Dynamic persona evolution state ★Experimental",
+  "type": "object",
+  "properties": {
+    "personaSlug": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "lastUpdatedAt": { "type": "string", "format": "date-time" },
+    "relationship": {
+      "type": "object",
+      "properties": {
+        "stage": { "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"] },
+        "interactionCount": { "type": "integer" }
+      }
+    },
+    "mood": {
+      "type": "object",
+      "properties": {
+        "current": { "type": "string" },
+        "intensity": { "type": "number" },
+        "baseline": { "type": "string" }
+      }
+    },
+    "evolvedTraits": { "type": "array", "items": { "type": "string" } },
+    "interests": { "type": "object" },
+    "milestones": { "type": "array" }
+  }
+}

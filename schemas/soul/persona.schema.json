@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/soul/persona",
+  "title": "Persona",
+  "description": "Soul layer - Pure persona definition (who you are)",
+  "type": "object",
+  "required": ["personaName", "slug", "bio", "personality", "speakingStyle"],
+  "properties": {
+    "personaName": { "type": "string", "description": "Display name" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Identifier for directory and registry" },
+    "personaType": { "type": "string", "default": "virtual", "description": "Persona type (virtual, digital-twin, pet, brand, etc.)" },
+    "bio": { "type": "string", "description": "One-line bio" },
+    "personality": { "type": "string", "description": "Personality keywords" },
+    "speakingStyle": { "type": "string", "description": "Speaking style" },
+    "creature": { "type": "string", "default": "AI companion", "description": "Creature type for IDENTITY.md" },
+    "emoji": { "type": "string", "default": "🤖", "description": "Representative emoji for IDENTITY.md" },
+    "background": { "type": "string", "description": "Background story" },
+    "age": { "type": "string", "description": "Age setting" },
+    "vibe": { "type": "string", "description": "Overall vibe/tone" },
+    "boundaries": { "type": "string", "description": "Behavioral boundaries" },
+    "referenceImage": { "type": "string", "description": "Reference image URL for visual identity" },
+    "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Capability descriptions" },
+    "evolution": {
+      "type": "object",
+      "description": "★Experimental: Dynamic persona evolution config",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "relationshipProgression": { "type": "boolean", "default": true },
+        "moodTracking": { "type": "boolean", "default": true },
+        "traitEmergence": { "type": "boolean", "default": true },
+        "speakingStyleDrift": { "type": "boolean", "default": true },
+        "interestDiscovery": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

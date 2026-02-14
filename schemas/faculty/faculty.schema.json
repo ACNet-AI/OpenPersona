@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/faculty/faculty",
+  "title": "Faculty",
+  "description": "Faculty layer - Software capability definition",
+  "type": "object",
+  "required": ["name", "dimension"],
+  "properties": {
+    "name": { "type": "string" },
+    "dimension": { "enum": ["expression", "sense", "cognition"] },
+    "description": { "type": "string" },
+    "skillRef": {
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string" },
+        "id": { "type": "string" }
+      }
+    },
+    "skeleton": { "type": "string" },
+    "allowedTools": { "type": "array", "items": { "type": "string" } },
+    "envVars": { "type": "array", "items": { "type": "string" } },
+    "triggers": { "type": "array", "items": { "type": "string" } },
+    "files": { "type": "array", "items": { "type": "string" } }
+  }
+}

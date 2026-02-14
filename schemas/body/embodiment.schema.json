@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/body/embodiment",
+  "title": "Embodiment",
+  "description": "Body layer - Physical embodiment definition",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": { "type": "string", "description": "Unique identifier" },
+    "description": { "type": "string" },
+    "hardwareRef": {
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string" },
+        "package": { "type": "string" }
+      }
+    },
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "hardwareRequirements": {
+      "type": "object",
+      "properties": {
+        "interface": { "type": "string" },
+        "driver": { "type": "string" }
+      }
+    }
+  }
+}

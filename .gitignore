@@ -1,0 +1,14 @@
+node_modules/
+.cursor/
+docs/
+.env
+.env.*
+!.env.example
+dist/
+*.log
+.DS_Store
+coverage/
+.nyc_output/
+*.tgz
+.npm/
+.cache/
