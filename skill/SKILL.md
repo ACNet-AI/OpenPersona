@@ -29,7 +29,7 @@ Each persona is a four-layer bundle defined by two files:
 - **`manifest.json`** — Four-layer manifest declaring what the persona uses:
   - `layers.soul` — Path to persona.json (who you are)
   - `layers.body` — Physical embodiment (null for digital agents)
-  - `layers.faculties` — List of faculty modules (expression/sense/cognition)
+  - `layers.faculties` — Array of faculty objects: `[{ "name": "voice", "provider": "elevenlabs", ... }]`
   - `layers.skills` — External skills from ClawHub / skills.sh
 
 - **`persona.json`** — Pure soul definition (personality, speaking style, vibe, boundaries, behaviorGuide)
@@ -59,8 +59,14 @@ When helping users build a persona, recommend faculties based on their needs:
 
 **Faculty environment variables (user must configure):**
 - selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
-- voice: `TTS_PROVIDER`, `TTS_API_KEY`, `TTS_VOICE_ID`
+- voice: `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY`
 - music: `SUNO_API_KEY` (from https://suno.com)
+
+**Rich faculty config:** Each faculty in manifest.json is an object with optional config:
+```json
+{ "name": "voice", "provider": "elevenlabs", "voiceId": "...", "stability": 0.4, "similarity_boost": 0.8 }
+```
+Config is automatically mapped to env vars at install time. Users only need to add their API key.
 
 ## Creating a Persona
 
@@ -76,7 +82,7 @@ When the user wants to create a persona, gather this information through natural
 **The `behaviorGuide` field** is optional but powerful. Use markdown to write domain-specific behavior instructions that go directly into the generated SKILL.md. This is how you teach the persona _how_ to act, not just _who_ to be.
 
 **Cross-layer (manifest.json):**
-- **Faculties:** Which faculties to enable (see Available Faculties above)
+- **Faculties:** Which faculties to enable — use object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
 - **Skills:** External skills from ClawHub or skills.sh
 - **Body:** Physical embodiment (null for most personas)
 

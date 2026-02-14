@@ -72,7 +72,8 @@ persona-samantha/
 ├── persona.json          # Persona data (for update/list/publish)
 ├── soul-state.json       # ★Exp — dynamic evolution state
 └── scripts/
-    ├── speak.sh          # TTS voice synthesis (ElevenLabs / OpenAI / Qwen3-TTS)
+    ├── speak.js          # TTS via ElevenLabs JS SDK (recommended, with --play)
+    ├── speak.sh          # TTS via curl (all providers: ElevenLabs / OpenAI / Qwen3)
     └── compose.sh        # Music composition (Suno)
 ```
 
@@ -81,7 +82,8 @@ Running `--preset ai-girlfriend` additionally includes:
 ```
 ├── scripts/
 │   ├── generate-image.sh # Selfie generation (fal.ai Grok Imagine)
-│   ├── speak.sh          # TTS voice synthesis
+│   ├── speak.js          # TTS via ElevenLabs JS SDK
+│   ├── speak.sh          # TTS via curl (all providers)
 │   └── compose.sh        # Music composition
 └── assets/               # Reference images (placeholder if empty)
 ```
@@ -115,10 +117,39 @@ Running `--preset ai-girlfriend` additionally includes:
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
 | **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
-| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `TTS_PROVIDER`, `TTS_API_KEY`, `TTS_VOICE_ID` |
+| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | Suno | `SUNO_API_KEY` |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 | **soul-evolution** | cognition ★Exp | Dynamic persona growth across conversations | Built-in | — |
+
+### Rich Faculty Config
+
+Faculties in `manifest.json` use object format with optional per-persona tuning:
+
+```json
+"faculties": [
+  {
+    "name": "voice",
+    "provider": "elevenlabs",
+    "voiceId": "LEnmbrrxYsUYS7vsRRwD",
+    "stability": 0.4,
+    "similarity_boost": 0.8
+  },
+  { "name": "music" },
+  { "name": "soul-evolution" }
+]
+```
+
+Faculty configs are automatically mapped to environment variables at install time. For example, the voice config above produces:
+
+```
+TTS_PROVIDER=elevenlabs
+TTS_VOICE_ID=LEnmbrrxYsUYS7vsRRwD
+TTS_STABILITY=0.4
+TTS_SIMILARITY=0.8
+```
+
+Samantha ships with a built-in ElevenLabs voice — users only need to add their `ELEVENLABS_API_KEY`.
 
 ## Custom Persona Creation
 
@@ -221,7 +252,7 @@ schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-tests/                  # Tests (18 passing)
+tests/                  # Tests (20 passing)
 ```
 
 ## Development
