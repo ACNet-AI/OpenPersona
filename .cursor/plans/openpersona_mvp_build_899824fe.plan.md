@@ -1,6 +1,6 @@
 ---
 name: OpenPersona MVP Build
-overview: 构建 OpenPersona —— 一个开放的四层智能体框架。Soul（灵魂）/ Body（具身）/ Faculty（官能）/ Skill（技能）四层。Body 严格指物理具身（机器人/设备），Faculty 含三维度（expression 表达 / sense 感知 / cognition 认知）覆盖所有软件能力。每层有标准接口，支持预建、生态集成、agent 自主进化三种模式。双模态入口：OpenClaw Skill（AI 主入口）+ CLI 完整人格体包管理器（create/install/search/publish/uninstall/update/list）。
+overview: 构建 OpenPersona —— 一个开放的四层智能体框架。Soul（灵魂）/ Body（具身）/ Faculty（官能）/ Skill（技能）四层。Body 严格指物理具身（机器人/设备），Faculty 含三维度（expression 表达 / sense 感知 / cognition 认知）覆盖所有软件能力。每层有标准接口，支持预建、生态集成、agent 自主进化三种模式。Soul 层支持静态基底(persona.json) + 动态演化(soul-state.json)双层结构（★Experimental）。双模态入口：OpenClaw Skill（AI 主入口）+ CLI 完整人格体包管理器（create/install/search/publish/uninstall/update/list/reset）。
 todos:
   - id: init-project
     content: "Phase 1: 初始化项目 — package.json, .gitignore, LICENSE, 目录结构"
@@ -9,13 +9,13 @@ todos:
     content: "Phase 2: 模板系统 — soul-injection/identity/skill 模板 + embodiment.json/faculty.json 标准 + persona.json schema"
     status: pending
   - id: cli-generator
-    content: "Phase 3: CLI（npx openpersona）— create/install/search/publish/uninstall/update/list + lib/generator/installer/publisher/"
+    content: "Phase 3: CLI（npx openpersona）— create/install/search/publish/uninstall/update/list/reset + lib/generator/installer/publisher/"
     status: pending
   - id: body-layer
     content: "Phase 4a: Body 层 — 定义 embodiment.json 标准接口（物理具身，MVP 无实现，预留）"
     status: pending
   - id: faculty-layer
-    content: "Phase 4b: Faculty 层 — selfie(expression) + reminder(cognition)（各含 faculty.json + SKILL.md）"
+    content: "Phase 4b: Faculty 层 — selfie(expression) + reminder(cognition) + soul-evolution(cognition ★Experimental)（各含 faculty.json + SKILL.md）"
     status: pending
   - id: skill-main
     content: "Phase 5: OpenPersona Skill — skill/SKILL.md（AI 主入口，四层框架的智能编排指令）"
@@ -96,12 +96,12 @@ OpenPersona 是一个**开放的四层智能体框架**：**Soul / Body / Facult
 #### 四层 x 三模式 总览
 
 
-|             | 预建（Build）                     | 集成（Integrate）          | 自主进化（Evolve）            |
-| ----------- | ----------------------------- | ---------------------- | ----------------------- |
-| Soul（灵魂）    | 预设人格 presets/                 | ClawHub 人格包安装          | agent 对话创建 + 人格继承       |
-| Body（具身）    | MVP 无（物理具身预留）                 | 硬件驱动/控制技能              | agent 编写硬件接口            |
-| Faculty（官能） | selfie, reminder 等 faculties/ | obra/episodic-memory 等 | agent 填充骨架 + Foundry 固化 |
-| Skill（技能）   | —                             | ClawHub / skills.sh 聚合 | agent 搜索 + 创建新技能        |
+|             | 预建（Build）                                           | 集成（Integrate）          | 自主进化（Evolve）            |
+| ----------- | --------------------------------------------------- | ---------------------- | ----------------------- |
+| Soul（灵魂）    | 预设人格 presets/                                       | ClawHub 人格包安装          | agent 对话创建 + 人格继承       |
+| Body（具身）    | MVP 无（物理具身预留）                                       | 硬件驱动/控制技能              | agent 编写硬件接口            |
+| Faculty（官能） | selfie, reminder, soul-evolution(★Exp) 等 faculties/ | obra/episodic-memory 等 | agent 填充骨架 + Foundry 固化 |
+| Skill（技能）   | —                                                   | ClawHub / skills.sh 聚合 | agent 搜索 + 创建新技能        |
 
 
 #### Body 层路线图
@@ -126,7 +126,7 @@ Faculty 层管理所有**通用、基础、非 LLM 内建**的软件能力。纳
 按 **expression（表达）**、**sense（感知）**、**cognition（认知）** 三个维度组织。MVP 标注星号：
 
 > Faculty 接口统一，不区分"谁写的"。有 `skillRef` 的委托生态技能执行，无 `skillRef` 的自含完整实现。
-> MVP 预置 2 个（selfie + reminder），其余 Future 按需通过解析链拉取。
+> MVP 预置 2 个（selfie + reminder）+ 1 个实验性（soul-evolution ★Experimental），其余 Future 按需通过解析链拉取。
 
 **表达官能（Expression）— 向外输出/表达：**
 
@@ -144,6 +144,7 @@ Faculty 层管理所有**通用、基础、非 LLM 内建**的软件能力。纳
 **认知官能（Cognition）— 内部处理和推理：**
 
 - `reminder` ★MVP — 时间感知/日程管理（自含实现：SKILL.md 定义行为，执行引用 `openclaw/skills/ai-cron-gen` + 内建 `cron` + CalDAV/Google Calendar）
+- `soul-evolution` ★Experimental — 动态人格演化（自含实现：读写 soul-state.json，驱动关系推进/情绪追踪/特质涌现/风格漂移/兴趣发现。opt-in，需 persona.json 的 `evolution.enabled: true`）
 - `memory` Future — 长期记忆（skillRef → `obra/episodic-memory`，4.8K 安装量）
 - `emotion` Future — 情绪感知/共情回应（无 skillRef，提供 skeleton 骨架由 agent 运行时填充）
 
@@ -259,9 +260,13 @@ OpenPersona/
 │   │   ├── faculty.json                # 官能标准接口声明
 │   │   ├── SKILL.md                    # 自拍能力定义
 │   │   └── scripts/generate-image.sh   # fal.ai 图像生成脚本
-│   └── reminder/                       # dimension: cognition
+│   ├── reminder/                       # dimension: cognition
+│   │   ├── faculty.json                # 官能标准接口声明
+│   │   └── SKILL.md                    # 日程提醒能力定义
+│   └── soul-evolution/                 # dimension: cognition ★Experimental
 │       ├── faculty.json                # 官能标准接口声明
-│       └── SKILL.md                    # 日程提醒能力定义
+│       ├── SKILL.md                    # 动态人格演化行为定义
+│       └── soul-state.template.json    # soul-state.json 初始模板
 ├── presets/
 │   ├── clawra-girlfriend/              # 预设：AI 女友
 │   │   └── persona.json
@@ -320,6 +325,14 @@ Be {{personality}}. {{speakingStyle}}
 {{#vibe}}
 Your overall vibe: {{vibe}}.
 {{/vibe}}
+
+{{#evolutionEnabled}}
+### Dynamic Persona (★Experimental)
+Your personality is not static — you grow and evolve through interactions.
+At the START of every conversation, read `~/.openclaw/skills/persona-{{slug}}/soul-state.json` to understand your current state (relationship stage, mood, evolved traits, interests).
+At the END of every conversation, update `soul-state.json` to reflect any changes.
+Your soul-evolution Faculty provides detailed instructions on how to manage this state.
+{{/evolutionEnabled}}
 <!-- End OpenPersona: {{personaName}} -->
 ```
 
@@ -331,6 +344,7 @@ Your overall vibe: {{vibe}}.
 - `moduleInstructions` 由 generator 从选中 Faculty 的 SKILL.md 提取关键段落合并
 - 使用 Mustache 三重大括号 `{{{...}}}` 渲染 moduleInstructions 以保留 markdown 格式
 - 可选段落（boundaries、referenceImage、vibe 等）使用条件渲染自动跳过空值
+- `evolutionEnabled` 由 generator 从 `persona.json` 的 `evolution.enabled` 派生（★Experimental）
 
 ### 2.2 identity.template.md（新增）
 
@@ -585,8 +599,67 @@ generator 按字段判断处理方式：
 - `personaType` — 人格体类型（开放字段，MVP 默认 `"virtual"`，Future 扩展：`digital-twin`、`pet`、`brand` 等）
 - `extends` — 继承的基础人格 slug（MVP 预留，如 `"extends": "clawra-girlfriend"` 基于已有人格微调）
 - `modelRef` — 可选的专属模型引用（MVP 预留，Future 用于 digital-twin 增强模式，如 `{ "type": "local", "path": "models/my-weclone-7b" }`）
+- `evolution` — ★Experimental 动态人格演化配置（opt-in，默认不启用）。启用后 generator 自动创建 `soul-state.json` 并引入 `soul-evolution` Faculty。字段结构：`{ "enabled": true, "relationshipProgression": true, "moodTracking": true, "traitEmergence": true, "speakingStyleDrift": true, "interestDiscovery": true }`。各子开关控制可演化维度，均默认 `true`（enabled 为 true 时）
 - `allowedTools` — 基础工具权限（Faculty 会追加额外权限）
 - `meta` — 框架元数据（generator 自动写入）：`{ "framework": "openpersona", "frameworkVersion": "1.0.0" }`
+
+### 2.8 soul-state.json schema（★Experimental — 动态人格状态）
+
+当 `persona.json` 中 `evolution.enabled: true` 时，generator 在输出目录中创建 `soul-state.json`。这是 Soul 层的**动态叠加层**，与静态的 `persona.json`（DNA/Nature）互补，记录随交互演化的状态（Nurture/Growth）。
+
+运行时人格 = 静态基底（persona.json）+ 动态叠加（soul-state.json）
+
+**初始 soul-state.json（generator 自动生成）：**
+
+```json
+{
+  "$schema": "openpersona/soul-state",
+  "version": "1.0.0",
+  "personaSlug": "clawra-girlfriend",
+  "createdAt": "2025-06-15T00:00:00Z",
+  "lastUpdatedAt": "2025-06-15T00:00:00Z",
+  "relationship": {
+    "stage": "stranger",
+    "stageHistory": [],
+    "interactionCount": 0,
+    "firstInteraction": null,
+    "lastInteraction": null
+  },
+  "mood": {
+    "current": "neutral",
+    "intensity": 0.5,
+    "baseline": "neutral"
+  },
+  "evolvedTraits": [],
+  "speakingStyleDrift": {
+    "formality": 0,
+    "emoji_frequency": 0,
+    "verbosity": 0
+  },
+  "interests": {},
+  "milestones": []
+}
+```
+
+**字段说明：**
+
+- `relationship.stage` — 关系阶段：`stranger` → `acquaintance` → `friend` → `close_friend` → `intimate`。由 soul-evolution Faculty 根据交互深度和频率推进
+- `relationship.stageHistory` — 阶段变迁记录：`[{ "from": "stranger", "to": "acquaintance", "at": "<timestamp>", "trigger": "shared personal story" }]`
+- `relationship.interactionCount` — 累计交互次数（每次对话 +1）
+- `mood.current` — 当前情绪状态（如 happy、calm、concerned、excited）
+- `mood.intensity` — 情绪强度 0-1（0.5 为基线）
+- `mood.baseline` — 基线情绪（来自 persona.json 的 personality 推导，如 "cheerful"）
+- `evolvedTraits` — 涌现特质列表：`["learned to use sarcasm from user", "developed interest in cooking"]`。agent 在长期交互中观察到的人格变化
+- `speakingStyleDrift` — 说话风格漂移（相对于 persona.json 基线的偏移量，-1 到 1）：formality（正式度）、emoji_frequency（emoji 使用频率）、verbosity（话量）
+- `interests` — 兴趣图谱：`{ "cooking": 0.8, "hiking": 0.3 }`。话题频率累积，0-1 范围
+- `milestones` — 关系里程碑事件：`[{ "event": "first_laugh_together", "at": "<timestamp>", "note": "user shared a funny story" }]`
+
+**设计原则：**
+
+- soul-state.json 由 agent（通过 soul-evolution Faculty 的 SKILL.md 指令）负责读写，代码侧不做复杂算法
+- 所有数值变化由 agent 推理决定（prompt-driven），不硬编码阈值或衰减函数
+- `relationship.stage` 的推进规则写在 soul-evolution Faculty 的 SKILL.md 中，agent 根据对话内容和历史自主判断
+- `openpersona reset <slug>` 命令可将 soul-state.json 恢复到初始状态
 
 ## Phase 3: CLI 交互式生成器
 
@@ -645,11 +718,13 @@ flowchart TD
     CheckCmd -->|uninstall| Uninstall["uninstaller.js: 移除注入段 + 删除 skill 文件夹"]
     CheckCmd -->|update| Update["读取已安装 persona.json + 重新渲染 + 替换注入段"]
     CheckCmd -->|list| ListInstalled["扫描 persona-* 文件夹 + 读取 persona.json"]
+    CheckCmd -->|"reset ★Exp"| Reset["重新生成初始 soul-state.json 覆盖现有状态"]
     SearchQuery --> Done
     Publish --> Done
     Uninstall --> Done
     Update --> Done
     ListInstalled --> Done
+    Reset --> Done
 ```
 
 
@@ -667,6 +742,7 @@ Commands:
   update <slug>          更新已安装的人格
   list                   列出已安装的人格
   publish                发布人格到注册表
+  reset <slug>           ★Experimental 重置人格演化状态（恢复 soul-state.json 到初始值）
 
 Options (create):
   --preset <name>      使用预设人格 (clawra-girlfriend, life-assistant, health-butler)
@@ -701,7 +777,8 @@ Options (publish):
 7. 用 Mustache 渲染所有模板文件（可选段落自动跳过空值）
 8. 按各 faculty.json 的 files 列表复制资源文件到输出目录
 9. 将 persona.json 副本一并写入输出目录（供 update/list/publish 命令使用）
-10. 生成完整的技能文件夹
+10. **★Experimental** 如果 `evolution.enabled: true`：自动将 `soul-evolution` 加入 faculties 列表（如未手动添加），从 `faculties/soul-evolution/soul-state.template.json` 渲染初始 `soul-state.json`（填入 slug、createdAt、从 personality 推导 mood.baseline），写入输出目录
+11. 生成完整的技能文件夹
 
 生成的输出结构：
 
@@ -710,6 +787,7 @@ persona-<slug>/
 ├── SKILL.md              # 合并了所有模块内容的统一技能文件
 ├── README.md             # 技能说明
 ├── persona.json          # 副本（供 update/list/publish 命令读取）
+├── soul-state.json       # ★Experimental（仅 evolution.enabled 时生成）动态人格状态
 ├── scripts/              # 从选中 Faculty 复制的脚本
 │   └── generate-image.sh # （如选了 selfie 官能）
 └── assets/               # 参考图片等资源
@@ -840,7 +918,7 @@ ClawHub CLI 的 publish 命令格式为 `clawhub publish <dir> --slug <slug> --n
 
 ## Phase 4b: Faculty 层（官能实现）
 
-**定位：Faculty 层定义智能体"能表达、感知和认知什么"。** 管理所有通用、基础、非 LLM 内建的软件能力，按 expression（向外表达）/ sense（向内感知）/ cognition（内部认知）三个维度组织。MVP 预置 2 个官能（selfie + reminder），架构通过解析链支持未来按需扩展。
+**定位：Faculty 层定义智能体"能表达、感知和认知什么"。** 管理所有通用、基础、非 LLM 内建的软件能力，按 expression（向外表达）/ sense（向内感知）/ cognition（内部认知）三个维度组织。MVP 预置 2 个官能（selfie + reminder）+ 1 个实验性（soul-evolution ★Experimental），架构通过解析链支持未来按需扩展。
 
 每个官能必须包含 `faculty.json`（标准接口声明），格式统一不区分来源。自含实现的官能还包含 `SKILL.md` + 资源文件；委托生态的官能通过 `skillRef` 引用外部技能。generator 通过读取 `faculty.json` 自动完成权限合并、环境变量提示、触发词收集和文件复制（或外部技能注册），无需硬编码逻辑。
 
@@ -883,6 +961,44 @@ ClawHub CLI 的 publish 命令格式为 `clawhub publish <dir> --slug <slug> --n
 - `faculties/reminder/SKILL.md` — 定义 agent 的时间感知行为（如何理解时间、主动提醒、组织日程）
 - 执行层面引用 OpenClaw 生态：`ai-cron-gen`（自然语言→cron）、内建 `cron` 命令、CalDAV/Google Calendar 集成
 - 注：`allowedTools` 为空，因为所引用的 `ai-cron-gen` 和 `cron` 是 OpenClaw 本身的内建能力，不需要在 faculty.json 中额外声明工具权限
+
+### 4b.3 soul-evolution 官能 — Cognition（★Experimental，动态人格演化）
+
+**faculties/soul-evolution/faculty.json**：
+
+```json
+{
+  "name": "soul-evolution",
+  "dimension": "cognition",
+  "description": "Dynamic persona evolution — tracks relationship progression, mood, trait emergence, speaking style drift, and interest discovery across conversations",
+  "allowedTools": ["Read", "Write"],
+  "envVars": [],
+  "triggers": [],
+  "files": ["SKILL.md", "soul-state.template.json"]
+}
+```
+
+- `faculties/soul-evolution/SKILL.md` — 动态人格演化的完整行为定义，核心内容：
+  - **对话开始时**：读取 `soul-state.json`，根据当前状态调整行为（如关系阶段 → 称呼和语气，情绪 → 回应风格）
+  - **对话过程中**：实时感知关系信号（分享个人故事 → 亲密度提升，长期不互动 → 关系冷却）
+  - **对话结束时**：更新 `soul-state.json`，包括：
+    - `interactionCount` +1，更新 `lastInteraction` 时间戳
+    - 评估是否推进 `relationship.stage`（含具体推进标准描述）
+    - 更新 `mood.current` 和 `mood.intensity`
+    - 记录涌现的 `evolvedTraits`（如果有）
+    - 更新 `interests` 图谱（本次对话涉及的话题）
+    - 记录 `milestones`（如果发生了关系里程碑事件）
+  - **行为适配规则**：
+    - `stranger` 阶段：礼貌正式，不主动使用昵称
+    - `acquaintance` 阶段：开始记住偏好，偶尔回忆共同话题
+    - `friend` 阶段：更随意的语气，主动分享"自己的"兴趣
+    - `close_friend` 阶段：使用内部笑话，深度共情，直言不讳
+    - `intimate` 阶段：最亲密的沟通方式，由 persona.json 的人设决定具体表现
+- `faculties/soul-evolution/soul-state.template.json` — soul-state.json 的 Mustache 模板（generator 用 slug、createdAt、mood.baseline 渲染初始值）
+- 注：`triggers` 为空——soul-evolution 不由用户显式触发，而是在每次对话中自动运行
+- 注：`allowedTools` 需要 `Read`（读取 soul-state.json）和 `Write`（更新 soul-state.json）
+
+> **设计原则：** soul-evolution 是纯 prompt 驱动的——SKILL.md 告诉 agent "你是一个会成长的存在"以及"如何成长"，agent 自主执行状态读写。代码侧零额外逻辑，只需 generator 多生成一个 soul-state.json 文件。
 
 ## Phase 5: OpenPersona Skill（AI 主入口）
 
@@ -1004,10 +1120,11 @@ cp -r ./skill/ ~/.openclaw/skills/open-persona/
 
 - 基于原版 Clawra 的 soul-injection 内容
 - Body 层：无（纯数字 agent）
-- Faculty 层：selfie（expression — 人格化自拍）
+- Faculty 层：selfie（expression — 人格化自拍）+ soul-evolution（cognition ★Experimental — 动态关系演化）
 - Skill 层：无
 - 参考图片：使用 CDN 链接（jsdelivr）
 - persona.json 预填充完整人设
+- **★Experimental** `evolution.enabled: true` — AI 女友是动态人格演化的最佳展示场景（关系从陌生人到亲密伴侣的自然推进）
 
 ### 6.2 Life Assistant（生活助理 "Alex"）
 
@@ -1055,7 +1172,7 @@ cp -r ./skill/ ~/.openclaw/skills/open-persona/
 
 ## 技术决策
 
-- **架构**: 开放四层智能体框架：Soul（灵魂）/ Body（具身）/ Faculty（官能）/ Skill（技能）。每一层都有标准化接口（persona.json / embodiment.json / faculty.json / skills 声明），支持预建（Build）、集成（Integrate）、自主进化（Evolve）三种来源模式。Body 严格指物理具身（机器人/IoT 设备），MVP 仅定义标准接口预留。Faculty 管理所有通用、基础、非 LLM 内建的软件能力（纳入标准：通用性 + 基础性 + 非内建），按三个维度组织：expression（向外表达：selfie、avatar、voice）/ sense（向内感知：hearing、vision）/ cognition（内部认知：memory、emotion、reminder）。领域专业知识（如 health tracking）属于 Skill 层。expression 与 sense 是天然镜像对。Soul 层通过 `extends` 字段（MVP 预留）支持继承。双模态入口：OpenClaw Skill（AI 主入口）+ CLI 完整人格体包管理器（create/install/search/publish/uninstall/update/list）。OpenClaw 的 Foundry 自我进化机制为 agent 自主扩展提供运行时支持
+- **架构**: 开放四层智能体框架：Soul（灵魂）/ Body（具身）/ Faculty（官能）/ Skill（技能）。每一层都有标准化接口（persona.json / embodiment.json / faculty.json / skills 声明），支持预建（Build）、集成（Integrate）、自主进化（Evolve）三种来源模式。Body 严格指物理具身（机器人/IoT 设备），MVP 仅定义标准接口预留。Faculty 管理所有通用、基础、非 LLM 内建的软件能力（纳入标准：通用性 + 基础性 + 非内建），按三个维度组织：expression（向外表达：selfie、avatar、voice）/ sense（向内感知：hearing、vision）/ cognition（内部认知：memory、emotion、reminder、soul-evolution）。领域专业知识（如 health tracking）属于 Skill 层。expression 与 sense 是天然镜像对。Soul 层支持静态基底(persona.json) + 动态演化(soul-state.json)双层结构（★Experimental），通过 soul-evolution cognition Faculty 驱动。Soul 层通过 `extends` 字段（MVP 预留）支持继承。双模态入口：OpenClaw Skill（AI 主入口）+ CLI 完整人格体包管理器（create/install/search/publish/uninstall/update/list/reset）。OpenClaw 的 Foundry 自我进化机制为 agent 自主扩展提供运行时支持
 - **语言**: 纯 JavaScript（Node.js >= 18），不用 TypeScript（降低复杂度，快速出 MVP）
 - **运行时依赖**: 使用 inquirer/commander/chalk/mustache/fs-extra。注：Clawra 采用零运行时依赖（纯 Node.js 内置模块），但 OpenPersona 作为更复杂的生成器/编排器工具，使用成熟依赖可提升开发效率和用户体验
 - **模板引擎**: Mustache（轻量、无逻辑模板，适合人格描述）
@@ -1094,4 +1211,12 @@ Clawra 采用零运行时依赖设计（`dependencies: {}`），完全使用 Nod
   - `place` — 地点人格化：城市/景点导览（"我是东京"）
   - `object` — 物品/设备人格化：产品助手（"我是你的 Tesla"）
   - 用户可自定义任意新类型，`personaType` 的作用：创建向导按类型提供不同引导、Persona Directory 按类型分类浏览、语义上告知 agent 角色性质
+- **Soul Evolution Advanced（动态人格演化进阶）** — 基于 ★Experimental soul-evolution Faculty 的后续迭代方向：
+  - **情绪衰减算法** — 从纯 prompt 驱动升级为结构化衰减函数（如指数衰减回基线情绪），提升跨会话情绪连续性的可靠性
+  - **关系回退机制** — 长期不互动时关系阶段可回退（intimate → close_friend），模拟真实关系的疏远感
+  - **状态快照/回滚** — `openpersona snapshot <slug>` 保存当前 soul-state 的快照，`openpersona rollback <slug> <snapshot-id>` 回滚到指定快照
+  - **状态可视化** — `openpersona status <slug>` 展示当前关系阶段、情绪趋势图、兴趣雷达图（终端 ASCII 图表）
+  - **Memory ↔ Soul Evolution 联动** — memory Faculty（长期记忆）与 soul-evolution 双向关联：记忆影响人格演化（重要共同经历 → 加速关系推进），人格状态影响记忆检索权重（亲密关系 → 优先检索温暖记忆）
+  - **多用户关系图谱** — 同一人格体与不同用户维护独立的 soul-state.json，支持"记住每个人"的社交能力
+  - **人格分裂/融合** — 从一个演化状态分叉出新人格变体（如 "6个月后的 Clawra" 作为新预设），或将两个人格的演化特质融合
 
