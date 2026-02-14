@@ -47,16 +47,51 @@ Write what you want to say. Keep it natural — write as you'd speak, not as you
 
 ### Step 3: Generate Audio
 
-Use `scripts/speak.sh` or call the API directly:
+#### ElevenLabs via JS SDK (Recommended)
+
+The official SDK provides the best experience — streaming, built-in playback, and better error handling.
+
+**First-time setup:** `npm install @elevenlabs/elevenlabs-js`
 
 ```bash
-# Using the script (recommended)
-scripts/speak.sh "Your text here" [output_path]
+# Generate and play directly
+node scripts/speak.js "The first move is what sets everything in motion." --play
 
-# Output: path to generated .mp3 file
+# Generate with custom voice and save to file
+node scripts/speak.js "I wrote you a poem" --voice JBFqnCBsd6RMkjVDRZzb --output /tmp/poem.mp3
+
+# More expressive delivery (lower stability = more emotional)
+node scripts/speak.js "I miss you" --play --stability 0.3
+
+# Options:
+#   --voice <id>       Voice ID
+#   --output <path>    Save audio file
+#   --play             Play audio directly
+#   --model <id>       Model ID (default: eleven_multilingual_v2)
+#   --stability <n>    0-1, lower = more expressive (default: 0.5)
+#   --similarity <n>   0-1, higher = closer to original voice (default: 0.75)
 ```
 
-#### ElevenLabs Direct API
+The SDK reads `ELEVENLABS_API_KEY` (or `TTS_API_KEY`) and `TTS_VOICE_ID` from environment automatically.
+
+#### Generic Bash Script (All Providers)
+
+For OpenAI TTS, Qwen3-TTS, or when the JS SDK is not available:
+
+```bash
+# Using speak.sh (supports all providers)
+scripts/speak.sh "Your text here" [output_path] [channel] [caption]
+
+# Examples:
+TTS_PROVIDER=openai scripts/speak.sh "Hello, how are you?"
+TTS_PROVIDER=elevenlabs scripts/speak.sh "I wrote you a poem" /tmp/poem.mp3 "#general"
+TTS_PROVIDER=qwen3 scripts/speak.sh "Local TTS, no API key needed"
+```
+
+#### Direct API Reference
+
+<details>
+<summary>ElevenLabs (curl)</summary>
 
 ```bash
 JSON_PAYLOAD=$(jq -n \
@@ -71,8 +106,10 @@ curl -s -X POST "https://api.elevenlabs.io/v1/text-to-speech/$TTS_VOICE_ID" \
   -d "$JSON_PAYLOAD" \
   --output /tmp/voice-output.mp3
 ```
+</details>
 
-#### OpenAI TTS Direct API
+<details>
+<summary>OpenAI TTS (curl)</summary>
 
 ```bash
 JSON_PAYLOAD=$(jq -n \
@@ -86,8 +123,10 @@ curl -s -X POST "https://api.openai.com/v1/audio/speech" \
   -d "$JSON_PAYLOAD" \
   --output /tmp/voice-output.mp3
 ```
+</details>
 
-#### Qwen3-TTS (Local)
+<details>
+<summary>Qwen3-TTS (curl, local)</summary>
 
 ```bash
 curl -s -X POST "http://localhost:8080/v1/audio/speech" \
@@ -95,6 +134,7 @@ curl -s -X POST "http://localhost:8080/v1/audio/speech" \
   -d "{\"input\": \"$TEXT\", \"voice\": \"default\"}" \
   --output /tmp/voice-output.mp3
 ```
+</details>
 
 ### Step 4: Deliver Audio
 
@@ -135,8 +175,9 @@ If no messaging channel is specified, return the audio file path so the user can
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `TTS_PROVIDER` | Yes | `elevenlabs`, `openai`, or `qwen3` |
-| `TTS_API_KEY` | Yes (except qwen3) | API key for the TTS provider |
+| `ELEVENLABS_API_KEY` | For ElevenLabs | ElevenLabs API key (preferred for JS SDK) |
+| `TTS_PROVIDER` | For speak.sh | `elevenlabs`, `openai`, or `qwen3` |
+| `TTS_API_KEY` | For speak.sh | API key (fallback, also read by speak.js) |
 | `TTS_VOICE_ID` | Recommended | Voice identifier (provider-specific) |
 | `OPENCLAW_GATEWAY_TOKEN` | Optional | For sending audio via messaging |
 
