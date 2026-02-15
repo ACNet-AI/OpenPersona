@@ -60,7 +60,7 @@ When helping users build a persona, recommend faculties based on their needs:
 **Faculty environment variables (user must configure):**
 - selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
 - voice: `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY`
-- music: `SUNO_API_KEY` (from https://suno.com)
+- music: `SUNO_API_KEY` (from https://sunoapi.org/api-key), `SUNO_MODEL` (V4/V4_5/V4_5PLUS/V4_5ALL/V5, default: V4_5ALL)
 
 **Rich faculty config:** Each faculty in manifest.json is an object with optional config:
 ```json
