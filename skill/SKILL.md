@@ -5,7 +5,7 @@ allowed-tools: Bash(npm:*) Bash(npx:*) Bash(openclaw:*) Bash(curl:*) Read Write 
 compatibility: Requires OpenClaw installed and configured
 metadata:
   author: openpersona
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 # OpenPersona — AI Persona Creator
 
