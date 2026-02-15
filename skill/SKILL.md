@@ -118,10 +118,13 @@ If the user needs a capability that doesn't exist in any ecosystem:
 
 ## Managing Installed Personas
 
-- **List:** Read `~/.openclaw/skills/persona-*/persona.json` to show all installed personas
+- **List:** `npx openpersona list` — show all installed personas with active indicator
+- **Switch:** `npx openpersona switch <slug>` — switch active persona (updates SOUL.md, IDENTITY.md, openclaw.json)
 - **Update:** Re-run `npx openpersona update <slug>`
 - **Uninstall:** Run `npx openpersona uninstall <slug>`
 - **Reset (★Exp):** Run `npx openpersona reset <slug>` to restore soul-state.json to initial values
+
+When multiple personas are installed, only one is **active** at a time. The active persona's identity and soul are loaded into the workspace. Switching is instant — it replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers.
 
 ## Heartbeat — Proactive Real-Data Check-ins
 

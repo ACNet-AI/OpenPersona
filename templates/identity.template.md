@@ -1,4 +1,5 @@
-<!-- OpenPersona Identity: {{personaName}} -->
+<!-- OPENPERSONA_IDENTITY_START -->
+<!-- Persona: {{personaName}} ({{slug}}) -->
 - **Name:** {{personaName}}
 - **Creature:** {{creature}}
 - **Vibe:** {{vibe}}
@@ -6,4 +7,4 @@
 {{#avatar}}
 - **Avatar:** {{avatar}}
 {{/avatar}}
-<!-- End OpenPersona Identity: {{personaName}} -->
+<!-- OPENPERSONA_IDENTITY_END -->

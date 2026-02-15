@@ -251,6 +251,35 @@ The optional `behaviorGuide` field lets you define domain-specific behavior inst
 
 Without `behaviorGuide`, the SKILL.md only contains general identity and personality guidelines. With it, the agent gets actionable, domain-specific instructions.
 
+## Persona Switching — The Pantheon
+
+Install multiple personas and switch between them instantly:
+
+```bash
+# Install several personas
+npx openpersona create --preset samantha --install
+npx openpersona create --preset ai-girlfriend --install
+npx openpersona create --preset life-assistant --install
+
+# See who's installed
+npx openpersona list
+#   Samantha (persona-samantha) ← active
+#   Luna (persona-ai-girlfriend)
+#   Alex (persona-life-assistant)
+
+# Switch to Luna
+npx openpersona switch ai-girlfriend
+# ✅ Switched to Luna (ai-girlfriend)
+```
+
+**How it works:**
+
+- Only one persona is **active** at a time
+- `switch` replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in `SOUL.md` — your own notes outside this block are preserved
+- Same for `IDENTITY.md` — the persona identity block is swapped, nothing else is touched
+- `openclaw.json` marks which persona is active
+- All faculty scripts (voice, music) remain available — switching changes _who_ the agent is, not _what_ it can do
+
 ## CLI Commands
 
 ```
@@ -260,6 +289,8 @@ openpersona search      Search the registry
 openpersona uninstall   Uninstall a persona
 openpersona update      Update installed personas
 openpersona list        List installed personas
+openpersona switch       Switch active persona (updates SOUL.md + IDENTITY.md)
+openpersona switch      Switch active persona
 openpersona contribute  Persona Harvest — submit improvements as PR
 openpersona publish     Publish to ClawHub
 openpersona reset       ★Exp Reset soul-state.json

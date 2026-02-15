@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | publish | reset | contribute
+ * Commands: create | install | search | uninstall | update | list | switch | publish | reset | contribute
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -15,6 +15,7 @@ const { search } = require('../lib/searcher');
 const { uninstall } = require('../lib/uninstaller');
 const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
+const { switchPersona, listPersonas } = require('../lib/switcher');
 const { OP_SKILLS_DIR, printError, printSuccess, printInfo } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -182,18 +183,28 @@ program
   .command('list')
   .description('List installed personas')
   .action(async () => {
-    if (!fs.existsSync(OP_SKILLS_DIR)) {
+    const personas = await listPersonas();
+    if (personas.length === 0) {
       printInfo('No personas installed.');
       return;
     }
-    const dirs = fs.readdirSync(OP_SKILLS_DIR);
-    const personas = dirs
-      .filter((d) => d.startsWith('persona-') && fs.existsSync(path.join(OP_SKILLS_DIR, d, 'persona.json')))
-      .map((d) => {
-        const p = JSON.parse(fs.readFileSync(path.join(OP_SKILLS_DIR, d, 'persona.json'), 'utf-8'));
-        return { slug: p.slug, name: p.personaName };
-      });
-    personas.forEach((p) => console.log(`  ${p.name} (persona-${p.slug})`));
+    for (const p of personas) {
+      const marker = p.active ? chalk.green(' ← active') : '';
+      const status = p.enabled ? '' : chalk.dim(' (disabled)');
+      console.log(`  ${p.personaName} (persona-${p.slug})${marker}${status}`);
+    }
+  });
+
+program
+  .command('switch <slug>')
+  .description('Switch active persona')
+  .action(async (slug) => {
+    try {
+      await switchPersona(slug);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
   });
 
 program
