@@ -234,7 +234,7 @@ program
 
 program
   .command('contribute [slug]')
-  .description('Soul Harvesting — submit persona improvements as a PR to the community')
+  .description('Persona Harvest — submit persona improvements as a PR to the community')
   .option('--mode <mode>', 'Contribution scope: preset or framework', 'preset')
   .option('--dry-run', 'Show diff only, do not create PR')
   .action(async (slug, options) => {

@@ -123,9 +123,9 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Uninstall:** Run `npx openpersona uninstall <slug>`
 - **Reset (★Exp):** Run `npx openpersona reset <slug>` to restore soul-state.json to initial values
 
-## Soul Harvesting — Community Contribution
+## Persona Harvest — Community Contribution
 
-When a user's persona has evolved meaningfully through interaction (better behaviorGuide, improved personality, voice tuning), help them contribute back to the community.
+When a user's persona has evolved meaningfully through interaction — across any layer (soul, faculty config, scripts, framework) — help them contribute back to the community.
 
 ### When to Suggest
 
@@ -133,7 +133,8 @@ Be proactive — if you notice the user has made significant improvements to the
 - They refined the behaviorGuide with domain-specific insights
 - They tuned voice parameters (stability, similarity) to something notably better
 - They enriched the background story or personality
-- They discovered a new capability worth sharing
+- They improved a faculty script or added a new capability
+- They discovered a new faculty configuration worth sharing
 
 Suggest: _"These improvements could help everyone's [persona name]. Want to submit them as a contribution?"_
 
@@ -151,7 +152,7 @@ npx openpersona contribute --mode framework
 ```
 
 The `contribute` command will:
-1. **Soul Diff** — Compare local persona vs upstream preset, classify changes by category and impact
+1. **Persona Diff** — Compare local persona vs upstream preset across all layers, classify changes by category and impact
 2. **Review** — Display a human-readable change report for the user to confirm
 3. **Submit PR** — Fork the repo, create a branch, commit changes, and open a PR on GitHub
 

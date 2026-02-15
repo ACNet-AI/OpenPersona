@@ -151,9 +151,9 @@ TTS_SIMILARITY=0.8
 
 Samantha ships with a built-in ElevenLabs voice — users only need to add their `ELEVENLABS_API_KEY`.
 
-## Soul Harvesting — Community Contribution
+## Persona Harvest — Community Contribution
 
-Every user's interaction with their persona can produce valuable improvements. Soul Harvesting lets you contribute these discoveries back to the community.
+Every user's interaction with their persona can produce valuable improvements across all four layers. Persona Harvest lets you contribute these discoveries back to the community.
 
 ```bash
 # Preview what's changed (no PR created)
@@ -168,9 +168,9 @@ npx openpersona contribute --mode framework
 
 **How it works:**
 
-1. **Soul Diff** — Compares your local `persona-samantha/persona.json` against the upstream `presets/samantha/persona.json`, classifying changes by category (background, behaviorGuide, personality, voice config) and impact level
+1. **Persona Diff** — Compares your local `persona-samantha/` against the upstream `presets/samantha/`, classifying changes by category (background, behaviorGuide, personality, voice config) and impact level
 2. **Review** — Displays a structured change report for you to confirm
-3. **Submit** — Forks the repo, creates a `soul-harvest/samantha-*` branch, commits your improvements, and opens a PR
+3. **Submit** — Forks the repo, creates a `persona-harvest/samantha-*` branch, commits your improvements, and opens a PR
 
 PRs go through maintainer review — nothing auto-merges. Requires [GitHub CLI](https://cli.github.com/) (`gh auth login`).
 
@@ -223,7 +223,7 @@ openpersona search      Search the registry
 openpersona uninstall   Uninstall a persona
 openpersona update      Update installed personas
 openpersona list        List installed personas
-openpersona contribute  Soul Harvesting — submit improvements as PR
+openpersona contribute  Persona Harvest — submit improvements as PR
 openpersona publish     Publish to ClawHub
 openpersona reset       ★Exp Reset soul-state.json
 ```
