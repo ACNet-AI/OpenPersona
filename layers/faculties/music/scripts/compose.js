@@ -206,28 +206,42 @@ async function main() {
     }
   }
 
-  const streamRes = await apiRequest('/v1/music/stream', {
-    apiKey,
-    body: streamPayload,
-    query: { output_format: opts.format },
-    stream: true,
-  });
+  // Try /v1/music first (compose, returns full file), fallback to /v1/music/stream
+  const endpoints = ['/v1/music', '/v1/music/stream'];
+  let composeRes = null;
+  let usedEndpoint = '';
 
-  if (streamRes.status !== 200) {
-    // Read error body
-    const errBuf = await streamToBuffer(streamRes.stream);
-    const errStr = errBuf.toString();
-    console.error(`Error: Stream API returned ${streamRes.status}`);
-    try {
-      console.error(JSON.stringify(JSON.parse(errStr), null, 2));
-    } catch {
-      console.error(errStr);
+  for (const ep of endpoints) {
+    composeRes = await apiRequest(ep, {
+      apiKey,
+      body: streamPayload,
+      query: { output_format: opts.format },
+      stream: true,
+    });
+
+    if (composeRes.status === 200) {
+      usedEndpoint = ep;
+      break;
     }
-    process.exit(1);
+
+    // Read error for diagnostics, try next endpoint
+    const errBuf = await streamToBuffer(composeRes.stream);
+    if (ep === endpoints[endpoints.length - 1]) {
+      // Last endpoint, report error
+      const errStr = errBuf.toString();
+      console.error(`Error: Music API returned ${composeRes.status}`);
+      try {
+        console.error(JSON.stringify(JSON.parse(errStr), null, 2));
+      } catch {
+        console.error(errStr);
+      }
+      process.exit(1);
+    }
+    console.log(`   ${ep} returned ${composeRes.status}, trying next endpoint...`);
   }
 
   // Get song_id from response headers
-  const songId = streamRes.headers['song-id'] || streamRes.headers['x-song-id'] || '';
+  const songId = composeRes.headers['song-id'] || composeRes.headers['x-song-id'] || '';
 
   // Determine output path
   const ext = opts.format.startsWith('pcm') ? 'wav'
@@ -237,7 +251,7 @@ async function main() {
     ? path.resolve(opts.output)
     : path.resolve(`composition-${Date.now()}.${ext}`);
 
-  await streamToFile(streamRes.stream, outPath);
+  await streamToFile(composeRes.stream, outPath);
 
   const stats = fs.statSync(outPath);
   const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);

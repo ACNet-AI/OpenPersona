@@ -151,21 +151,33 @@ else
   fi
 fi
 
-# --- Stream the music ---
+# --- Compose the music ---
+# Try /v1/music first (compose), fallback to /v1/music/stream
 log_step "Composing..."
 
 HTTP_CODE=$(curl -s -w "%{http_code}" -o "$OUTPUT" \
-  -X POST "$API_BASE/v1/music/stream?output_format=$FORMAT" \
+  -X POST "$API_BASE/v1/music?output_format=$FORMAT" \
   -H "xi-api-key: $ELEVENLABS_API_KEY" \
   -H "Content-Type: application/json" \
   -d "$STREAM_PAYLOAD")
 
 if [ "$HTTP_CODE" != "200" ]; then
-  ERROR_BODY=$(cat "$OUTPUT" 2>/dev/null || echo "Unknown error")
+  log_warn "/v1/music returned HTTP $HTTP_CODE, trying /v1/music/stream..."
   rm -f "$OUTPUT"
-  log_error "Stream API returned HTTP $HTTP_CODE"
-  log_error "$ERROR_BODY"
-  exit 1
+
+  HTTP_CODE=$(curl -s -w "%{http_code}" -o "$OUTPUT" \
+    -X POST "$API_BASE/v1/music/stream?output_format=$FORMAT" \
+    -H "xi-api-key: $ELEVENLABS_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$STREAM_PAYLOAD")
+
+  if [ "$HTTP_CODE" != "200" ]; then
+    ERROR_BODY=$(cat "$OUTPUT" 2>/dev/null || echo "Unknown error")
+    rm -f "$OUTPUT"
+    log_error "Music API returned HTTP $HTTP_CODE"
+    log_error "$ERROR_BODY"
+    exit 1
+  fi
 fi
 
 # --- Check file ---

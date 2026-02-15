@@ -100,8 +100,8 @@ scripts/compose.sh "upbeat pop" --channel "#general" --caption "Made this for yo
 ```
 
 Both scripts:
-1. Send the generation request to ElevenLabs Music API
-2. Receive streaming audio response (no polling needed!)
+1. Send the generation request to ElevenLabs Music API (`/v1/music`, with `/v1/music/stream` fallback)
+2. Receive audio response directly (no polling needed!)
 3. Save the audio file and return metadata
 
 ### Step 4: Share the Music
