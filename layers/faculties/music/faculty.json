@@ -2,8 +2,8 @@
   "name": "music",
   "dimension": "expression",
   "description": "AI music composition via Suno — compose original songs, melodies, and instrumentals from text descriptions",
-  "allowedTools": ["Bash(curl:*)", "WebFetch"],
-  "envVars": ["SUNO_API_KEY"],
+  "allowedTools": ["Bash(curl:*)", "Bash(node:*)", "Bash(npx:*)", "WebFetch"],
+  "envVars": ["SUNO_API_KEY", "SUNO_MODEL"],
   "triggers": ["compose a song", "write me a melody", "make some music", "I want to hear a song", "play something", "write a song about"],
-  "files": ["SKILL.md", "scripts/compose.sh"]
+  "files": ["SKILL.md", "scripts/compose.js", "scripts/compose.sh"]
 }
