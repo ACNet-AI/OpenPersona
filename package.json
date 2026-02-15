@@ -16,8 +16,16 @@
     "ai",
     "skill"
   ],
-  "author": "",
+  "author": "ACNet-AI",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ACNet-AI/OpenPersona.git"
+  },
+  "homepage": "https://github.com/ACNet-AI/OpenPersona#readme",
+  "bugs": {
+    "url": "https://github.com/ACNet-AI/OpenPersona/issues"
+  },
   "files": [
     "bin/",
     "lib/",
