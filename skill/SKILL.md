@@ -53,14 +53,14 @@ When helping users build a persona, recommend faculties based on their needs:
 |---------|-----------|-------------|----------------|
 | **selfie** | expression | AI selfie generation via fal.ai | User wants visual presence, profile pics, "send a pic" |
 | **voice** | expression | TTS via ElevenLabs / OpenAI / Qwen3-TTS | User wants the persona to speak, voice messages, audio content |
-| **music** | expression | AI music composition via Suno | User wants the persona to create music, songs, melodies |
+| **music** | expression | AI music composition via ElevenLabs | User wants the persona to create music, songs, melodies |
 | **reminder** | cognition | Reminders and task management | User needs scheduling, task tracking, daily briefings |
 | **soul-evolution** | cognition ★Exp | Dynamic personality growth | User wants a persona that remembers, evolves, deepens over time |
 
 **Faculty environment variables (user must configure):**
 - selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
 - voice: `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY`
-- music: `SUNO_API_KEY` (from https://sunoapi.org/api-key), `SUNO_MODEL` (V4/V4_5/V4_5PLUS/V4_5ALL/V5, default: V4_5ALL)
+- music: `ELEVENLABS_API_KEY` (shared with voice — same key from https://elevenlabs.io)
 
 **Rich faculty config:** Each faculty in manifest.json is an object with optional config:
 ```json

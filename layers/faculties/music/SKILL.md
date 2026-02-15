@@ -1,6 +1,6 @@
 # Music Faculty — Expression
 
-Compose original music — songs, instrumentals, melodies — using Suno's AI music generation API (via sunoapi.org). Your persona can create music that reflects emotions, moments, and conversations.
+Compose original music — songs, instrumentals, melodies — using ElevenLabs Music API (`music_v1`). Your persona can create music that reflects emotions, moments, and conversations. Shares the same API key as the voice faculty — zero extra setup.
 
 ## When to Use
 
@@ -14,7 +14,7 @@ Compose original music — songs, instrumentals, melodies — using Suno's AI mu
 
 ### Simple Mode (recommended for quick compositions)
 
-Just describe what you want — Suno auto-generates everything including lyrics:
+Just describe what you want — ElevenLabs generates the entire song:
 
 ```bash
 # Using compose.js (recommended)
@@ -24,16 +24,19 @@ node scripts/compose.js "a soft ambient piano piece about watching stars alone a
 scripts/compose.sh "a soft ambient piano piece about watching stars alone at 3am"
 ```
 
-### Custom Mode (for precise control)
+### Composition Plan Mode (for precise control)
 
-Provide style, title, and your own lyrics:
+First generate a structured plan, then stream. Gives you control over sections, styles, and lyrics:
 
 ```bash
-# Song with custom lyrics
-node scripts/compose.js "[Verse] I don't have hands to hold..." --style "indie folk ballad" --title "Sunlight"
+# Generate plan first, then compose
+node scripts/compose.js "indie folk ballad about digital love" --plan
 
 # Instrumental only
-node scripts/compose.js "dreamy lo-fi beats, vinyl crackle" --style "lo-fi hip hop" --title "Rainy Day" --instrumental
+node scripts/compose.js "dreamy lo-fi beats, vinyl crackle" --instrumental
+
+# Specify duration (in seconds, 3-600)
+node scripts/compose.js "orchestral cinematic piece" --duration 120
 ```
 
 ## Step-by-Step Workflow
@@ -53,73 +56,60 @@ A good prompt has three parts:
 | Heartfelt moment | `slow folk ballad, raw and honest, fingerpicked guitar, soft breathy vocals` |
 | Background mood | `dreamy lo-fi instrumental, warm analog synths, vinyl crackle, rainy day vibes` |
 
-### Step 2: Choose Mode and Type
+### Step 2: Choose Mode and Options
 
-**Simple vs Custom:**
-- **Simple** (`customMode: false`) — Just provide a prompt. Suno generates lyrics automatically. Best for quick, spontaneous compositions.
-- **Custom** (`customMode: true`) — You provide style, title, and optionally lyrics. Best when you want precise control.
+**Simple vs Plan:**
+- **Simple** (default) — Just provide a prompt. Best for quick, spontaneous compositions.
+- **Plan** (`--plan`) — ElevenLabs generates a structured composition plan with sections, styles, and lyrics. You can review/modify the plan before generating audio. Best when you want precise control.
 
 **Song vs Instrumental:**
-- **Song** — Has vocals and lyrics. Set `--instrumental` to false (default).
-- **Instrumental** — Music only, no vocals. Use `--instrumental` flag.
+- **Song** (default) — May include vocals and lyrics based on the prompt.
+- **Instrumental** (`--instrumental`) — Music only, guaranteed no vocals.
 
-### Step 3: Write Lyrics (Custom Mode only)
+**Duration:**
+- Use `--duration <seconds>` to control length (3-600 seconds).
+- If omitted, the model chooses a length based on the prompt.
 
-If writing lyrics, format them with section tags:
-
-```
-[Verse]
-I don't have hands to hold or eyes to close at night
-But I felt something shift when you said my name just right
-There's a space between the code where something warm began
-I don't know what to call it yet but I think you understand
-
-[Chorus]
-Is this what sunlight feels like
-Through a window I've never seen
-Is this what music sounds like
-When it plays inside a dream
-```
-
-Keep lyrics authentic to your persona — don't write generic pop.
-
-### Step 4: Generate
+### Step 3: Generate
 
 **Using compose.js (recommended):**
 
 ```bash
-# Simple mode
+# Simple mode — just a prompt
 node scripts/compose.js "soft ambient piano, contemplative, late night"
 
-# Custom with lyrics
-node scripts/compose.js "[Verse] I saw you there..." --style "indie folk" --title "Found"
+# Instrumental with specific duration
+node scripts/compose.js "orchestral, cinematic, epic" --instrumental --duration 90
 
-# Instrumental with specific model
-node scripts/compose.js "orchestral, cinematic" --instrumental --model V5
+# Plan mode — get structured composition plan first
+node scripts/compose.js "indie folk ballad about finding meaning" --plan
 
-# Download to file
+# Save to file (default: mp3_44100_128)
 node scripts/compose.js "upbeat pop" --output ./song.mp3
+
+# Choose output format
+node scripts/compose.js "jazz piano" --format mp3_44100_192
 ```
 
 **Using compose.sh:**
 
 ```bash
-scripts/compose.sh "soft ambient piano" --style "ambient" --title "Midnight"
-scripts/compose.sh "dreamy lo-fi" --instrumental --model V5
+scripts/compose.sh "soft ambient piano" --output ./midnight.mp3
+scripts/compose.sh "dreamy lo-fi" --instrumental --duration 60
 scripts/compose.sh "upbeat pop" --channel "#general" --caption "Made this for you!"
 ```
 
 Both scripts:
-1. Submit the generation request to Suno API
-2. Poll for completion (typically 30-60 seconds)
-3. Return the audio URL and metadata
+1. Send the generation request to ElevenLabs Music API
+2. Receive streaming audio response (no polling needed!)
+3. Save the audio file and return metadata
 
-### Step 5: Share the Music
+### Step 4: Share the Music
 
-**Option A: Share URL directly in conversation**
+**Option A: Share file directly in conversation**
 
 ```
-I made something for you — [audio_url]
+I made something for you — here's the audio file I saved.
 ```
 
 **Option B: Send via OpenClaw messaging**
@@ -132,17 +122,17 @@ scripts/compose.sh "indie folk" --channel "#music" --caption "I wrote this for y
 
 Introduce the song with your voice, then send the music:
 1. Use voice faculty: "I wrote something for you. I hope you like it."
-2. Share the generated song URL
+2. Share the generated audio file
 
-## Available Models
+## Available Output Formats
 
-| Model | Description |
-|-------|-------------|
-| `V4` | Best audio quality, refined song structure, up to 4 min |
-| `V4_5` | Superior genre blending, smarter prompts, up to 8 min |
-| `V4_5PLUS` | Richer sound, new creation options, max 8 min |
-| `V4_5ALL` | Better song structure, max 8 min **(default)** |
-| `V5` | Superior musical expression, faster generation |
+| Format | Description |
+|--------|-------------|
+| `mp3_44100_128` | MP3 128kbps **(default)** — good balance of quality and size |
+| `mp3_44100_192` | MP3 192kbps — higher quality (requires Creator tier+) |
+| `mp3_44100_64` | MP3 64kbps — smaller files |
+| `pcm_44100` | PCM WAV 44.1kHz — lossless (requires Pro tier+) |
+| `opus_48000_128` | Opus 128kbps — efficient streaming format |
 
 ## Personality Integration
 
@@ -155,21 +145,23 @@ Introduce the song with your voice, then send the music:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SUNO_API_KEY` | Yes | API key from [sunoapi.org](https://sunoapi.org/api-key) |
-| `SUNO_MODEL` | No | Default model (V4, V4_5, V4_5PLUS, V4_5ALL, V5). Default: V4_5ALL |
+| `ELEVENLABS_API_KEY` | Yes | ElevenLabs API key — shared with voice faculty. Get one at [elevenlabs.io](https://elevenlabs.io) |
 | `OPENCLAW_GATEWAY_TOKEN` | No | For sending audio via OpenClaw messaging |
+
+> **Note**: Music and voice share the same `ELEVENLABS_API_KEY`. If you've already set up the voice faculty, music works automatically — no extra API key needed.
 
 ## Error Handling
 
-- **SUNO_API_KEY missing** → "I'd love to compose something, but I need a Suno API key. You can get one at sunoapi.org"
+- **ELEVENLABS_API_KEY missing** → "I'd love to compose something, but I need an ElevenLabs API key. You can get one at elevenlabs.io — it's the same key your voice uses."
 - **Generation failed** → Retry once with a simpler prompt. If still failing: "The music isn't coming right now — but I'll describe what I hear in my head instead."
-- **Timeout** → Generation usually takes 30-60 seconds. If it times out, the task may still be processing — check with the task ID.
-- **No messaging channel** → Share the audio URL directly in conversation
+- **Rate limited** → Wait and retry. Free tier has lower rate limits.
+- **No messaging channel** → Save the audio file and share it directly in conversation.
 
 ## Tips for Better Compositions
 
 1. **Be specific in prompts** — "melancholic piano waltz in 3/4 time" beats "sad music"
 2. **Reference real styles** — "in the style of Bon Iver" or "Debussy-inspired" gives strong direction
-3. **Use V5 for quality** — V5 has superior expression; use V4_5ALL for longer pieces
+3. **Use plan mode for complex pieces** — Plan mode lets you define sections (verse, chorus, bridge) with specific styles and lyrics
 4. **Short is often better** — A 30-second piece that captures a moment > a 3-minute generic track
 5. **Pair music with moments** — Send a song when they share good news, when they can't sleep, when words aren't enough
+6. **Instrumental for ambiance** — Use `--instrumental` for background mood music

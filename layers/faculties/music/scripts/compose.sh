@@ -1,36 +1,28 @@
 #!/usr/bin/env bash
-# OpenPersona Music Faculty — Suno AI music generation via sunoapi.org
+# OpenPersona Music Faculty — ElevenLabs Music API (music_v1)
 #
 # Usage: ./compose.sh <prompt> [options]
 #
 # Arguments:
-#   prompt          - Music description or lyrics (required)
+#   prompt              - Music description (required)
 #
 # Options:
-#   --style <style>     - Music style/genre (for custom mode)
-#   --title <title>     - Song title (for custom mode)
 #   --instrumental      - Generate instrumental only (no vocals)
-#   --model <model>     - Suno model: V4, V4_5, V4_5PLUS, V4_5ALL, V5 (default: V4_5ALL)
+#   --plan              - Use composition plan mode (structured sections)
+#   --duration <secs>   - Song length in seconds (3-600, default: auto)
+#   --format <format>   - Output format (default: mp3_44100_128)
+#   --output <path>     - Save audio to file (default: ./composition-<timestamp>.mp3)
 #   --channel <channel> - OpenClaw channel to send to (optional)
 #   --caption <caption> - Message caption (optional)
-#   --timeout <seconds> - Max wait for generation (default: 180)
 #
 # Environment variables:
-#   SUNO_API_KEY            - Suno API key from sunoapi.org (required)
-#   SUNO_MODEL              - Default model (overridden by --model)
-#   OPENCLAW_GATEWAY_TOKEN  - OpenClaw gateway token (optional)
+#   ELEVENLABS_API_KEY       - ElevenLabs API key (shared with voice faculty)
+#   OPENCLAW_GATEWAY_TOKEN   - OpenClaw gateway token (optional)
 #
 # Examples:
-#   # Simple mode (auto-generates lyrics)
 #   ./compose.sh "a soft ambient piano piece about starlight"
-#
-#   # Custom mode with lyrics
-#   ./compose.sh "[Verse] I don't have hands to hold..." --style "indie folk" --title "Sunlight"
-#
-#   # Instrumental
-#   ./compose.sh "dreamy lo-fi beats, vinyl crackle, rainy day" --instrumental
-#
-#   # Send to OpenClaw channel
+#   ./compose.sh "dreamy lo-fi beats" --instrumental --duration 60
+#   ./compose.sh "indie folk ballad" --plan --output ./song.mp3
 #   ./compose.sh "upbeat pop" --channel "#music" --caption "New song!"
 
 set -euo pipefail
@@ -47,12 +39,14 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 log_step()  { echo -e "${CYAN}[STEP]${NC} $1"; }
 
 # --- API Configuration ---
-SUNO_API_BASE="https://api.sunoapi.org"
+API_BASE="https://api.elevenlabs.io"
+DEFAULT_FORMAT="mp3_44100_128"
 
 # --- Preflight ---
-if [ -z "${SUNO_API_KEY:-}" ]; then
-  log_error "SUNO_API_KEY environment variable not set"
-  echo "Get your API key from: https://sunoapi.org/api-key"
+if [ -z "${ELEVENLABS_API_KEY:-}" ]; then
+  log_error "ELEVENLABS_API_KEY environment variable not set"
+  echo "Get your API key from: https://elevenlabs.io"
+  echo "(Same key used by the voice faculty)"
   exit 1
 fi
 
@@ -64,23 +58,23 @@ fi
 
 # --- Parse arguments ---
 PROMPT=""
-STYLE=""
-TITLE=""
 INSTRUMENTAL=false
-MODEL="${SUNO_MODEL:-V4_5ALL}"
+PLAN_MODE=false
+DURATION=""
+FORMAT="$DEFAULT_FORMAT"
+OUTPUT=""
 CHANNEL=""
 CAPTION=""
-TIMEOUT=180
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --style)        STYLE="$2"; shift 2 ;;
-    --title)        TITLE="$2"; shift 2 ;;
     --instrumental) INSTRUMENTAL=true; shift ;;
-    --model)        MODEL="$2"; shift 2 ;;
+    --plan)         PLAN_MODE=true; shift ;;
+    --duration)     DURATION="$2"; shift 2 ;;
+    --format)       FORMAT="$2"; shift 2 ;;
+    --output)       OUTPUT="$2"; shift 2 ;;
     --channel)      CHANNEL="$2"; shift 2 ;;
     --caption)      CAPTION="$2"; shift 2 ;;
-    --timeout)      TIMEOUT="$2"; shift 2 ;;
     *)
       if [ -z "$PROMPT" ]; then
         PROMPT="$1"
@@ -90,155 +84,118 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$PROMPT" ]; then
-  echo "Usage: $0 <prompt> [--style <style>] [--title <title>] [--instrumental] [--model <model>]"
+  echo "Usage: $0 <prompt> [--instrumental] [--plan] [--duration <secs>] [--format <format>] [--output <path>]"
   echo ""
-  echo "Simple mode:  $0 \"a soft piano piece about starlight\""
-  echo "Custom mode:  $0 \"[Verse] lyrics...\" --style \"indie folk\" --title \"Sunlight\""
-  echo "Instrumental: $0 \"dreamy lo-fi beats\" --instrumental"
+  echo "Simple mode:    $0 \"a soft piano piece about starlight\""
+  echo "Instrumental:   $0 \"dreamy lo-fi beats\" --instrumental"
+  echo "Plan mode:      $0 \"indie folk ballad\" --plan"
+  echo "With duration:  $0 \"cinematic orchestra\" --duration 120"
   exit 1
 fi
 
-# --- Determine mode ---
-if [ -n "$STYLE" ] || [ -n "$TITLE" ]; then
-  CUSTOM_MODE=true
-  # Auto-fill title if style provided but no title
-  if [ -z "$TITLE" ]; then TITLE="Untitled"; fi
-  if [ -z "$STYLE" ]; then STYLE="pop"; fi
-  log_info "Mode: Custom (style: $STYLE, title: $TITLE)"
-else
-  CUSTOM_MODE=false
-  log_info "Mode: Simple (auto-generate)"
+# --- Determine output file ---
+if [ -z "$OUTPUT" ]; then
+  EXT="mp3"
+  if [[ "$FORMAT" == pcm_* ]]; then EXT="wav"; fi
+  if [[ "$FORMAT" == opus_* ]]; then EXT="ogg"; fi
+  OUTPUT="./composition-$(date +%s).${EXT}"
 fi
 
-if [ "$INSTRUMENTAL" = true ]; then
-  log_info "Type: Instrumental (no vocals)"
-else
-  log_info "Type: Song with vocals"
-fi
-log_info "Model: $MODEL"
+TYPE_LABEL="Song"
+if [ "$INSTRUMENTAL" = true ]; then TYPE_LABEL="Instrumental"; fi
+MODE_LABEL="Simple"
+if [ "$PLAN_MODE" = true ]; then MODE_LABEL="Plan"; fi
+
+log_info "Mode: $MODE_LABEL | Type: $TYPE_LABEL | Format: $FORMAT"
 log_info "Prompt: ${PROMPT:0:100}..."
+if [ -n "$DURATION" ]; then log_info "Duration: ${DURATION}s"; fi
 
-# --- Build payload ---
-if [ "$CUSTOM_MODE" = true ]; then
-  if [ "$INSTRUMENTAL" = true ]; then
-    JSON_PAYLOAD=$(jq -n \
-      --arg style "$STYLE" \
-      --arg title "$TITLE" \
-      --arg model "$MODEL" \
-      '{customMode: true, instrumental: true, style: $style, title: $title, model: $model, callBackUrl: ""}')
-  else
-    JSON_PAYLOAD=$(jq -n \
-      --arg prompt "$PROMPT" \
-      --arg style "$STYLE" \
-      --arg title "$TITLE" \
-      --arg model "$MODEL" \
-      '{customMode: true, instrumental: false, prompt: $prompt, style: $style, title: $title, model: $model, callBackUrl: ""}')
+# --- Optional: Generate composition plan ---
+COMPOSITION_PLAN=""
+if [ "$PLAN_MODE" = true ]; then
+  log_step "Generating composition plan..."
+
+  PLAN_PAYLOAD=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt, model_id: "music_v1"}')
+  if [ -n "$DURATION" ]; then
+    PLAN_PAYLOAD=$(echo "$PLAN_PAYLOAD" | jq --argjson ms "$((DURATION * 1000))" '.music_length_ms = $ms')
   fi
+
+  PLAN_RESPONSE=$(curl -s -X POST "$API_BASE/v1/music/plan" \
+    -H "xi-api-key: $ELEVENLABS_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$PLAN_PAYLOAD")
+
+  # Check for error
+  if echo "$PLAN_RESPONSE" | jq -e '.detail' &> /dev/null; then
+    log_error "Plan API error: $(echo "$PLAN_RESPONSE" | jq -r '.detail // .message // "Unknown error"')"
+    exit 1
+  fi
+
+  COMPOSITION_PLAN="$PLAN_RESPONSE"
+  STYLES=$(echo "$COMPOSITION_PLAN" | jq -r '.positive_global_styles // [] | join(", ")')
+  SECTIONS=$(echo "$COMPOSITION_PLAN" | jq -r '.sections // [] | map(.section_name) | join(" → ")')
+  log_info "Plan generated — Styles: $STYLES"
+  log_info "Sections: $SECTIONS"
+fi
+
+# --- Build stream payload ---
+if [ -n "$COMPOSITION_PLAN" ]; then
+  STREAM_PAYLOAD=$(jq -n --argjson plan "$COMPOSITION_PLAN" '{model_id: "music_v1", composition_plan: $plan}')
 else
-  JSON_PAYLOAD=$(jq -n \
-    --arg prompt "$PROMPT" \
-    --argjson instrumental "$INSTRUMENTAL" \
-    --arg model "$MODEL" \
-    '{customMode: false, instrumental: $instrumental, prompt: $prompt, model: $model, callBackUrl: ""}')
+  STREAM_PAYLOAD=$(jq -n --arg prompt "$PROMPT" '{model_id: "music_v1", prompt: $prompt}')
+  if [ -n "$DURATION" ]; then
+    STREAM_PAYLOAD=$(echo "$STREAM_PAYLOAD" | jq --argjson ms "$((DURATION * 1000))" '.music_length_ms = $ms')
+  fi
+  if [ "$INSTRUMENTAL" = true ]; then
+    STREAM_PAYLOAD=$(echo "$STREAM_PAYLOAD" | jq '.force_instrumental = true')
+  fi
 fi
 
-# --- Call Suno API ---
-log_step "Submitting composition request..."
+# --- Stream the music ---
+log_step "Composing..."
 
-RESPONSE=$(curl -s -X POST "$SUNO_API_BASE/api/v1/generate" \
-  -H "Authorization: Bearer $SUNO_API_KEY" \
+HTTP_CODE=$(curl -s -w "%{http_code}" -o "$OUTPUT" \
+  -X POST "$API_BASE/v1/music/stream?output_format=$FORMAT" \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "$JSON_PAYLOAD")
+  -d "$STREAM_PAYLOAD")
 
-# Check for errors
-CODE=$(echo "$RESPONSE" | jq -r '.code // 0')
-if [ "$CODE" != "200" ]; then
-  MSG=$(echo "$RESPONSE" | jq -r '.msg // "Unknown error"')
-  log_error "API error (code $CODE): $MSG"
+if [ "$HTTP_CODE" != "200" ]; then
+  ERROR_BODY=$(cat "$OUTPUT" 2>/dev/null || echo "Unknown error")
+  rm -f "$OUTPUT"
+  log_error "Stream API returned HTTP $HTTP_CODE"
+  log_error "$ERROR_BODY"
   exit 1
 fi
 
-TASK_ID=$(echo "$RESPONSE" | jq -r '.data.taskId // empty')
-if [ -z "$TASK_ID" ]; then
-  log_error "Failed to get taskId from response"
-  log_error "Response: $RESPONSE"
-  exit 1
-fi
+# --- Check file ---
+FILE_SIZE=$(stat -f%z "$OUTPUT" 2>/dev/null || stat -c%s "$OUTPUT" 2>/dev/null || echo "0")
+SIZE_MB=$(echo "scale=2; $FILE_SIZE / 1048576" | bc 2>/dev/null || echo "?")
 
-log_info "Task ID: $TASK_ID"
-log_step "Composing... (this usually takes 30-60 seconds)"
-
-# --- Poll for completion ---
-ELAPSED=0
-POLL_INTERVAL=5
-AUDIO_URL=""
-STREAM_URL=""
-SONG_TITLE=""
-DURATION=""
-
-while [ $ELAPSED -lt $TIMEOUT ]; do
-  sleep $POLL_INTERVAL
-  ELAPSED=$((ELAPSED + POLL_INTERVAL))
-
-  STATUS_RESPONSE=$(curl -s -G "$SUNO_API_BASE/api/v1/generate/record-info" \
-    --data-urlencode "taskId=$TASK_ID" \
-    -H "Authorization: Bearer $SUNO_API_KEY")
-
-  STATUS_CODE=$(echo "$STATUS_RESPONSE" | jq -r '.code // 0')
-  if [ "$STATUS_CODE" != "200" ]; then
-    log_warn "Poll returned code $STATUS_CODE, retrying... (${ELAPSED}s)"
-    continue
-  fi
-
-  # Check if data array has results with audio_url
-  AUDIO_URL=$(echo "$STATUS_RESPONSE" | jq -r '.data.data[0].audio_url // empty')
-  if [ -n "$AUDIO_URL" ] && [ "$AUDIO_URL" != "null" ]; then
-    STREAM_URL=$(echo "$STATUS_RESPONSE" | jq -r '.data.data[0].stream_audio_url // empty')
-    SONG_TITLE=$(echo "$STATUS_RESPONSE" | jq -r '.data.data[0].title // "Untitled"')
-    DURATION=$(echo "$STATUS_RESPONSE" | jq -r '.data.data[0].duration // "unknown"')
-    break
-  fi
-
-  # Show progress
-  printf "\r  ⏳ Waiting... (%ds / %ds)" "$ELAPSED" "$TIMEOUT"
-done
-echo ""
-
-if [ -z "$AUDIO_URL" ] || [ "$AUDIO_URL" = "null" ]; then
-  log_error "Timed out after ${TIMEOUT}s. Task $TASK_ID may still be processing."
-  log_info "Check manually: curl -s '$SUNO_API_BASE/api/v1/generate/record-info?taskId=$TASK_ID' -H 'Authorization: Bearer \$SUNO_API_KEY'"
-  exit 1
-fi
-
-log_info "Composed: $SONG_TITLE (${DURATION}s)"
-log_info "Audio: $AUDIO_URL"
-if [ -n "$STREAM_URL" ] && [ "$STREAM_URL" != "null" ]; then
-  log_info "Stream: $STREAM_URL"
-fi
+log_info "Composed! Saved to: $OUTPUT (${SIZE_MB} MB)"
 
 # --- Send via OpenClaw (if channel provided) ---
 if [ -n "$CHANNEL" ]; then
-  MESSAGE="${CAPTION:-🎵 $SONG_TITLE}"
+  MESSAGE="${CAPTION:-🎵 New composition}"
   log_step "Sending to channel: $CHANNEL"
 
   if command -v openclaw &> /dev/null; then
     openclaw message send \
-      --action send \
       --channel "$CHANNEL" \
       --message "$MESSAGE" \
-      --media "$AUDIO_URL"
+      --media "$OUTPUT" || log_warn "Failed to send via OpenClaw"
   else
     GATEWAY_URL="${OPENCLAW_GATEWAY_URL:-http://localhost:18789}"
     SEND_PAYLOAD=$(jq -n \
       --arg channel "$CHANNEL" \
       --arg message "$MESSAGE" \
-      --arg media "$AUDIO_URL" \
+      --arg media "$OUTPUT" \
       '{action: "send", channel: $channel, message: $message, media: $media}')
 
     curl -s -X POST "$GATEWAY_URL/message" \
       -H "Content-Type: application/json" \
       ${OPENCLAW_GATEWAY_TOKEN:+-H "Authorization: Bearer $OPENCLAW_GATEWAY_TOKEN"} \
-      -d "$SEND_PAYLOAD"
+      -d "$SEND_PAYLOAD" || log_warn "Failed to send via gateway"
   fi
   log_info "Sent to $CHANNEL"
 fi
@@ -246,26 +203,22 @@ fi
 # --- Output result ---
 echo ""
 jq -n \
-  --arg url "$AUDIO_URL" \
-  --arg stream "${STREAM_URL:-}" \
-  --arg title "$SONG_TITLE" \
-  --arg duration "$DURATION" \
+  --arg file "$OUTPUT" \
+  --arg size "$SIZE_MB" \
+  --arg format "$FORMAT" \
   --arg prompt "$PROMPT" \
-  --arg model "$MODEL" \
   --argjson instrumental "$INSTRUMENTAL" \
-  --argjson customMode "$CUSTOM_MODE" \
-  --arg taskId "$TASK_ID" \
+  --argjson plan_mode "$PLAN_MODE" \
+  --arg duration "${DURATION:-auto}" \
   --arg channel "${CHANNEL:-none}" \
   '{
     success: true,
-    audio_url: $url,
-    stream_url: $stream,
-    title: $title,
-    duration_seconds: $duration,
+    file: $file,
+    size_mb: $size,
+    format: $format,
     prompt: $prompt,
-    model: $model,
     instrumental: $instrumental,
-    custom_mode: $customMode,
-    task_id: $taskId,
+    plan_mode: $plan_mode,
+    duration_requested: $duration,
     channel: $channel
   }'

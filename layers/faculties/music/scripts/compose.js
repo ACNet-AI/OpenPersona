@@ -1,45 +1,46 @@
 #!/usr/bin/env node
 /**
- * OpenPersona Music Faculty — Suno AI music generation via sunoapi.org
+ * OpenPersona Music Faculty — ElevenLabs Music API (music_v1)
  *
  * Usage:
  *   node compose.js "a soft piano piece about starlight"
- *   node compose.js "[Verse] lyrics..." --style "indie folk" --title "Sunlight"
- *   node compose.js "dreamy lo-fi" --instrumental --model V5
- *   node compose.js "upbeat pop" --output ./song.mp3
+ *   node compose.js "dreamy lo-fi beats" --instrumental
+ *   node compose.js "indie folk ballad" --plan
+ *   node compose.js "upbeat pop" --output ./song.mp3 --duration 60
  *
  * Environment:
- *   SUNO_API_KEY   - API key from sunoapi.org (required)
- *   SUNO_MODEL     - Default model (V4, V4_5, V4_5PLUS, V4_5ALL, V5)
+ *   ELEVENLABS_API_KEY  - ElevenLabs API key (shared with voice faculty)
  */
 
 const https = require('https');
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const API_BASE = 'https://api.sunoapi.org';
+const API_BASE = 'https://api.elevenlabs.io';
+const DEFAULT_FORMAT = 'mp3_44100_128';
 
 // --- Argument parsing ---
 function parseArgs(args) {
   const opts = {
     prompt: '',
-    style: '',
-    title: '',
     instrumental: false,
-    model: process.env.SUNO_MODEL || 'V4_5ALL',
+    plan: false,
+    duration: null,        // seconds; null = let model decide
+    format: DEFAULT_FORMAT,
     output: null,
-    timeout: 180,
+    channel: '',
+    caption: '',
   };
   let i = 0;
   while (i < args.length) {
     switch (args[i]) {
-      case '--style':        opts.style = args[++i]; break;
-      case '--title':        opts.title = args[++i]; break;
       case '--instrumental': opts.instrumental = true; break;
-      case '--model':        opts.model = args[++i]; break;
+      case '--plan':         opts.plan = true; break;
+      case '--duration':     opts.duration = parseInt(args[++i], 10); break;
+      case '--format':       opts.format = args[++i]; break;
       case '--output':       opts.output = args[++i]; break;
-      case '--timeout':      opts.timeout = parseInt(args[++i], 10); break;
+      case '--channel':      opts.channel = args[++i]; break;
+      case '--caption':      opts.caption = args[++i]; break;
       case '--help':
       case '-h':
         printUsage();
@@ -58,26 +59,48 @@ function printUsage() {
 Usage: node compose.js <prompt> [options]
 
 Options:
-  --style <style>     Music style/genre (enables custom mode)
-  --title <title>     Song title (enables custom mode)
   --instrumental      Generate instrumental only (no vocals)
-  --model <model>     Suno model: V4, V4_5, V4_5PLUS, V4_5ALL, V5 (default: V4_5ALL)
-  --output <path>     Download audio to file
-  --timeout <seconds> Max wait time (default: 180)
+  --plan              Use composition plan mode (structured sections)
+  --duration <secs>   Song length in seconds (3-600, default: auto)
+  --format <format>   Output format (default: mp3_44100_128)
+  --output <path>     Save audio to file
+  --channel <channel> Send to OpenClaw channel
+  --caption <text>    Message caption for channel
+
+Formats: mp3_44100_128, mp3_44100_192, mp3_44100_64, pcm_44100, opus_48000_128
 
 Examples:
   node compose.js "a soft ambient piano piece about starlight"
-  node compose.js "[Verse] I don't have hands..." --style "indie folk" --title "Sunlight"
-  node compose.js "dreamy lo-fi beats" --instrumental --model V5
-  node compose.js "upbeat pop" --output ./my-song.mp3
+  node compose.js "indie folk ballad" --plan --output ./song.mp3
+  node compose.js "dreamy lo-fi beats" --instrumental --duration 60
 `);
 }
 
-// --- HTTP helper ---
-function request(url, options = {}) {
+// --- HTTP helpers ---
+function apiRequest(endpoint, options = {}) {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const req = mod.request(url, options, (res) => {
+    const url = new URL(endpoint, API_BASE);
+    if (options.query) {
+      for (const [k, v] of Object.entries(options.query)) {
+        url.searchParams.set(k, v);
+      }
+    }
+
+    const reqOpts = {
+      method: options.method || 'POST',
+      headers: {
+        'xi-api-key': options.apiKey,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    };
+
+    const req = https.request(url, reqOpts, (res) => {
+      // For streaming audio, return the raw response
+      if (options.stream) {
+        resolve({ status: res.statusCode, headers: res.headers, stream: res });
+        return;
+      }
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
@@ -90,37 +113,37 @@ function request(url, options = {}) {
       });
     });
     req.on('error', reject);
-    if (options.body) req.write(options.body);
+    if (options.body) req.write(typeof options.body === 'string' ? options.body : JSON.stringify(options.body));
     req.end();
   });
 }
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+function streamToFile(stream, filePath) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(filePath);
+    stream.pipe(file);
+    file.on('finish', () => { file.close(); resolve(); });
+    file.on('error', (e) => { fs.unlink(filePath, () => {}); reject(e); });
+    stream.on('error', (e) => { fs.unlink(filePath, () => {}); reject(e); });
+  });
 }
 
-function downloadFile(url, dest) {
+function streamToBuffer(stream) {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const file = fs.createWriteStream(dest);
-    mod.get(url, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        // Follow redirect
-        downloadFile(res.headers.location, dest).then(resolve).catch(reject);
-        return;
-      }
-      res.pipe(file);
-      file.on('finish', () => { file.close(); resolve(); });
-    }).on('error', (e) => { fs.unlink(dest, () => {}); reject(e); });
+    const chunks = [];
+    stream.on('data', (c) => chunks.push(c));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
   });
 }
 
 // --- Main ---
 async function main() {
-  const apiKey = process.env.SUNO_API_KEY;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
-    console.error('Error: SUNO_API_KEY environment variable not set');
-    console.error('Get your API key from: https://sunoapi.org/api-key');
+    console.error('Error: ELEVENLABS_API_KEY environment variable not set');
+    console.error('Get your API key from: https://elevenlabs.io');
+    console.error('(Same key used by the voice faculty)');
     process.exit(1);
   }
 
@@ -130,122 +153,126 @@ async function main() {
     process.exit(1);
   }
 
-  const customMode = !!(opts.style || opts.title);
+  const typeLabel = opts.instrumental ? 'Instrumental' : 'Song';
+  const modeLabel = opts.plan ? 'Plan' : 'Simple';
+  console.log(`🎵 Mode: ${modeLabel} | Type: ${typeLabel}`);
+  console.log(`   Prompt: ${opts.prompt.slice(0, 100)}${opts.prompt.length > 100 ? '...' : ''}`);
+  if (opts.duration) console.log(`   Duration: ${opts.duration}s`);
 
-  // Build payload
-  const payload = {
-    customMode,
-    instrumental: opts.instrumental,
-    model: opts.model,
-    callBackUrl: '',
-  };
+  let compositionPlan = null;
 
-  if (customMode) {
-    payload.style = opts.style || 'pop';
-    payload.title = opts.title || 'Untitled';
-    if (!opts.instrumental) {
-      payload.prompt = opts.prompt;
+  // Step 1 (optional): Generate composition plan
+  if (opts.plan) {
+    console.log('📝 Generating composition plan...');
+    const planPayload = {
+      prompt: opts.prompt,
+      model_id: 'music_v1',
+    };
+    if (opts.duration) {
+      planPayload.music_length_ms = opts.duration * 1000;
     }
-  } else {
-    payload.prompt = opts.prompt;
+
+    const planRes = await apiRequest('/v1/music/plan', {
+      apiKey,
+      body: planPayload,
+    });
+
+    if (planRes.status !== 200) {
+      console.error(`Error: Plan API returned ${planRes.status}`);
+      console.error(typeof planRes.data === 'string' ? planRes.data : JSON.stringify(planRes.data, null, 2));
+      process.exit(1);
+    }
+
+    compositionPlan = planRes.data;
+    console.log('   Plan generated:');
+    console.log(`   Styles: ${compositionPlan.positive_global_styles?.join(', ') || 'auto'}`);
+    console.log(`   Sections: ${compositionPlan.sections?.map(s => s.section_name).join(' → ') || 'auto'}`);
   }
 
-  const modeLabel = customMode ? 'Custom' : 'Simple';
-  const typeLabel = opts.instrumental ? 'Instrumental' : 'Song';
-  console.log(`🎵 Mode: ${modeLabel} | Type: ${typeLabel} | Model: ${opts.model}`);
-  console.log(`   Prompt: ${opts.prompt.slice(0, 100)}${opts.prompt.length > 100 ? '...' : ''}`);
+  // Step 2: Stream the music
+  console.log('⏳ Composing...');
 
-  // Submit generation request
-  console.log('⏳ Submitting composition request...');
+  const streamPayload = { model_id: 'music_v1' };
 
-  const genRes = await request(`${API_BASE}/api/v1/generate`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  if (compositionPlan) {
+    streamPayload.composition_plan = compositionPlan;
+  } else {
+    streamPayload.prompt = opts.prompt;
+    if (opts.duration) {
+      streamPayload.music_length_ms = opts.duration * 1000;
+    }
+    if (opts.instrumental) {
+      streamPayload.force_instrumental = true;
+    }
+  }
+
+  const streamRes = await apiRequest('/v1/music/stream', {
+    apiKey,
+    body: streamPayload,
+    query: { output_format: opts.format },
+    stream: true,
   });
 
-  if (genRes.data.code !== 200) {
-    console.error(`Error: API returned code ${genRes.data.code}: ${genRes.data.msg || 'Unknown error'}`);
-    process.exit(1);
-  }
-
-  const taskId = genRes.data?.data?.taskId;
-  if (!taskId) {
-    console.error('Error: No taskId in response');
-    console.error(JSON.stringify(genRes.data, null, 2));
-    process.exit(1);
-  }
-
-  console.log(`   Task ID: ${taskId}`);
-  console.log('⏳ Composing... (usually 30-60 seconds)');
-
-  // Poll for completion
-  const pollInterval = 5000;
-  let elapsed = 0;
-  let result = null;
-
-  while (elapsed < opts.timeout * 1000) {
-    await sleep(pollInterval);
-    elapsed += pollInterval;
-
-    const statusRes = await request(
-      `${API_BASE}/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`,
-      {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-      }
-    );
-
-    if (statusRes.data.code !== 200) {
-      process.stdout.write(`\r   Waiting... (${Math.round(elapsed / 1000)}s)`);
-      continue;
+  if (streamRes.status !== 200) {
+    // Read error body
+    const errBuf = await streamToBuffer(streamRes.stream);
+    const errStr = errBuf.toString();
+    console.error(`Error: Stream API returned ${streamRes.status}`);
+    try {
+      console.error(JSON.stringify(JSON.parse(errStr), null, 2));
+    } catch {
+      console.error(errStr);
     }
-
-    const tracks = statusRes.data?.data?.data;
-    if (tracks && tracks.length > 0 && tracks[0].audio_url) {
-      result = tracks[0];
-      break;
-    }
-
-    process.stdout.write(`\r   Waiting... (${Math.round(elapsed / 1000)}s)`);
-  }
-
-  console.log('');
-
-  if (!result) {
-    console.error(`Error: Timed out after ${opts.timeout}s. Task ${taskId} may still be processing.`);
     process.exit(1);
   }
 
-  console.log(`✅ Composed: ${result.title || 'Untitled'} (${result.duration || '?'}s)`);
-  console.log(`   Audio: ${result.audio_url}`);
-  if (result.stream_audio_url) {
-    console.log(`   Stream: ${result.stream_audio_url}`);
-  }
+  // Get song_id from response headers
+  const songId = streamRes.headers['song-id'] || streamRes.headers['x-song-id'] || '';
 
-  // Download if output specified
-  if (opts.output) {
-    const outPath = path.resolve(opts.output);
-    console.log(`📥 Downloading to ${outPath}...`);
-    await downloadFile(result.audio_url, outPath);
-    console.log('   Download complete.');
+  // Determine output path
+  const ext = opts.format.startsWith('pcm') ? 'wav'
+    : opts.format.startsWith('opus') ? 'ogg'
+    : 'mp3';
+  const outPath = opts.output
+    ? path.resolve(opts.output)
+    : path.resolve(`composition-${Date.now()}.${ext}`);
+
+  await streamToFile(streamRes.stream, outPath);
+
+  const stats = fs.statSync(outPath);
+  const sizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+
+  console.log(`✅ Composed! Saved to: ${outPath} (${sizeMb} MB)`);
+  if (songId) console.log(`   Song ID: ${songId}`);
+
+  // Send via OpenClaw (if channel provided)
+  if (opts.channel) {
+    console.log(`📤 Sending to channel: ${opts.channel}`);
+    try {
+      const { execSync } = require('child_process');
+      const message = opts.caption || `🎵 New composition`;
+      execSync(`openclaw message send --channel "${opts.channel}" --message "${message}" --media "${outPath}"`, { stdio: 'inherit' });
+      console.log(`   Sent to ${opts.channel}`);
+    } catch {
+      console.log('   OpenClaw CLI not available, skipping channel send.');
+    }
   }
 
   // Output JSON result
   const output = {
     success: true,
-    audio_url: result.audio_url,
-    stream_url: result.stream_audio_url || '',
-    title: result.title || 'Untitled',
-    duration_seconds: result.duration || 0,
+    file: outPath,
+    size_mb: parseFloat(sizeMb),
+    format: opts.format,
     prompt: opts.prompt,
-    model: opts.model,
     instrumental: opts.instrumental,
-    custom_mode: customMode,
-    task_id: taskId,
+    plan_mode: opts.plan,
+    duration_requested: opts.duration || 'auto',
+    song_id: songId || null,
+    plan: compositionPlan ? {
+      styles: compositionPlan.positive_global_styles || [],
+      sections: (compositionPlan.sections || []).map(s => s.section_name),
+    } : null,
   };
 
   console.log('\n' + JSON.stringify(output, null, 2));

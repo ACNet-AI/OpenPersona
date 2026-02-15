@@ -13,7 +13,7 @@
         "stability": 0.4,
         "similarity_boost": 0.8
       },
-      { "name": "music", "model": "V4_5ALL" },
+      { "name": "music" },
       { "name": "soul-evolution" }
     ],
     "skills": {

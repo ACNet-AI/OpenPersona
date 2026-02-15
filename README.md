@@ -43,7 +43,7 @@ flowchart TB
 - **Soul** — Persona definition (persona.json + soul-state.json ★Experimental)
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
 - **Faculty** — General software capabilities organized by dimension:
-  - **Expression** — selfie, voice (TTS), music (Suno)
+  - **Expression** — selfie, voice (TTS), music (ElevenLabs)
   - **Sense** — (planned: hearing/STT, vision)
   - **Cognition** — reminder, soul-evolution ★Exp
 - **Skill** — Professional skills, integrated from ClawHub / skills.sh
@@ -54,7 +54,7 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via Suno, evolves through conversations, proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via ElevenLabs Music, evolves through conversations, proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
 | **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music, soul-evolution ★Exp | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, dynamic relationship growth. |
 | **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
@@ -74,7 +74,7 @@ persona-samantha/
 └── scripts/
     ├── speak.js          # TTS via ElevenLabs JS SDK (recommended, with --play)
     ├── speak.sh          # TTS via curl (all providers: ElevenLabs / OpenAI / Qwen3)
-    └── compose.sh        # Music composition (Suno)
+    └── compose.sh        # Music composition (ElevenLabs)
 ```
 
 Running `--preset ai-girlfriend` additionally includes:
@@ -105,7 +105,7 @@ Running `--preset ai-girlfriend` additionally includes:
 | Architecture | Monolithic | Four-layer (Soul/Body/Faculty/Skill) |
 | Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution ★Exp |
 | Voice | None | ElevenLabs / OpenAI TTS / Qwen3-TTS |
-| Music | None | Suno AI composition |
+| Music | None | ElevenLabs Music composition |
 | Persona evolution | None | Dynamic relationship/mood/trait tracking |
 | Customization | Fork and modify | `persona.json` + `behaviorGuide` + mix faculties |
 | Presets | 1 | 4 (extensible) |
@@ -118,7 +118,7 @@ Running `--preset ai-girlfriend` additionally includes:
 |---------|-----------|-------------|----------|----------|
 | **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
-| **music** | expression | AI music composition (instrumental or with lyrics) | Suno | `SUNO_API_KEY` |
+| **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 | **soul-evolution** | cognition ★Exp | Dynamic persona growth across conversations | Built-in | — |
 
@@ -344,7 +344,7 @@ layers/                 # Shared building blocks (four-layer module pool)
   faculties/            #   Faculty layer modules
     selfie/             #     expression — AI selfie generation (fal.ai)
     voice/              #     expression — TTS voice synthesis
-    music/              #     expression — AI music composition (Suno)
+    music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
     soul-evolution/     #     cognition ★Exp — dynamic persona evolution
   skills/               #   Skill layer modules (MVP placeholder)
