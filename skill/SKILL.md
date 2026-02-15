@@ -145,12 +145,13 @@ Personas can have a `heartbeat` config in manifest.json that enables proactive m
 | `strategy` | `"smart"` (only when meaningful) or `"scheduled"` (fixed intervals) |
 | `maxDaily` | Maximum proactive messages per day |
 | `quietHours` | `[start, end]` — hours during which the persona stays silent (24h format) |
-| `sources` | Data sources: `workspace-digest` (summarize real activity), `upgrade-notify` (community upgrades available) |
+| `sources` | Data sources: `workspace-digest`, `upgrade-notify`, `context-aware` |
 
 ### Heartbeat Sources
 
 - **workspace-digest** — Summarize what actually happened in the OpenClaw workspace: tasks completed, patterns observed, ongoing projects. The persona reviews real workspace data and generates a brief, useful summary.
 - **upgrade-notify** — Check if the upstream persona preset has new community contributions (via Persona Harvest). If upgrades are available, let the user know and ask if they want to update.
+- **context-aware** — Use real time/date/calendar context and interaction history. Acknowledge day of week, holidays, or prolonged silence based on the actual last interaction timestamp. Never guess — only reference what OpenClaw can verify (current time, last message timestamp, calendar events if available).
 
 ### Important Rules
 

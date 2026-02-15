@@ -27,7 +27,7 @@
     "strategy": "smart",
     "maxDaily": 5,
     "quietHours": [0, 7],
-    "sources": ["workspace-digest", "upgrade-notify"]
+    "sources": ["workspace-digest", "upgrade-notify", "context-aware"]
   },
   "meta": {
     "framework": "openpersona",
