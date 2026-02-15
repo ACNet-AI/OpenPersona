@@ -54,7 +54,7 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via Suno, evolves through conversations. No selfie — true to character (no physical form). |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via Suno, evolves through conversations, proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
 | **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music, soul-evolution ★Exp | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, dynamic relationship growth. |
 | **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
@@ -150,6 +150,42 @@ TTS_SIMILARITY=0.8
 ```
 
 Samantha ships with a built-in ElevenLabs voice — users only need to add their `ELEVENLABS_API_KEY`.
+
+## Heartbeat — Proactive Real-Data Check-ins
+
+Personas can proactively reach out to users based on **real data**, not fabricated experiences. The heartbeat system is configured per-persona in `manifest.json`:
+
+```json
+"heartbeat": {
+  "enabled": true,
+  "strategy": "smart",
+  "maxDaily": 5,
+  "quietHours": [0, 7],
+  "sources": ["workspace-digest", "upgrade-notify"]
+}
+```
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `enabled` | Turn heartbeat on/off | `false` |
+| `strategy` | `"smart"` (only when meaningful) or `"scheduled"` (fixed intervals) | `"smart"` |
+| `maxDaily` | Maximum proactive messages per day | `5` |
+| `quietHours` | `[start, end]` — silent hours (24h format) | `[0, 7]` |
+| `sources` | Data sources for proactive messages | `[]` |
+
+### Sources
+
+- **workspace-digest** — Summarize real workspace activity: tasks completed, patterns observed, ongoing projects. No fabrication — only what actually happened.
+- **upgrade-notify** — Check if the upstream persona preset has new community contributions via Persona Harvest. Notify the user and ask if they want to upgrade.
+
+### Design Principles
+
+1. **Never fabricate experiences.** No "I was reading poetry at 3am." All proactive messages reference real data.
+2. **Respect token budget.** Workspace digests read local files — no full LLM chains unless `strategy: "smart"` detects something worth a deeper response.
+3. **OpenClaw handles scheduling.** The heartbeat config tells OpenClaw _when_ to trigger; the persona's `behaviorGuide` tells the agent _what_ to say.
+4. **User-configurable.** Users can adjust frequency, quiet hours, and sources to match their preferences.
+
+Samantha ships with heartbeat enabled (`smart` strategy, workspace-digest + upgrade-notify).
 
 ## Persona Harvest — Community Contribution
 

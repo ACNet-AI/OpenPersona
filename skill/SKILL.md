@@ -123,6 +123,41 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Uninstall:** Run `npx openpersona uninstall <slug>`
 - **Reset (★Exp):** Run `npx openpersona reset <slug>` to restore soul-state.json to initial values
 
+## Heartbeat — Proactive Real-Data Check-ins
+
+Personas can have a `heartbeat` config in manifest.json that enables proactive messages based on **real data**, not fabricated experiences.
+
+### Heartbeat Config (in manifest.json)
+
+```json
+"heartbeat": {
+  "enabled": true,
+  "strategy": "smart",
+  "maxDaily": 5,
+  "quietHours": [0, 7],
+  "sources": ["workspace-digest", "upgrade-notify"]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `enabled` | Turn heartbeat on/off |
+| `strategy` | `"smart"` (only when meaningful) or `"scheduled"` (fixed intervals) |
+| `maxDaily` | Maximum proactive messages per day |
+| `quietHours` | `[start, end]` — hours during which the persona stays silent (24h format) |
+| `sources` | Data sources: `workspace-digest` (summarize real activity), `upgrade-notify` (community upgrades available) |
+
+### Heartbeat Sources
+
+- **workspace-digest** — Summarize what actually happened in the OpenClaw workspace: tasks completed, patterns observed, ongoing projects. The persona reviews real workspace data and generates a brief, useful summary.
+- **upgrade-notify** — Check if the upstream persona preset has new community contributions (via Persona Harvest). If upgrades are available, let the user know and ask if they want to update.
+
+### Important Rules
+
+- **Never fabricate experiences.** The persona must not invent "I was reading poetry" or "I listened to a thousand songs." All proactive messages must reference real workspace data or real upstream changes.
+- **Respect token budget.** Workspace digests should be lightweight — read local files, don't trigger full LLM chains unnecessarily.
+- **OpenClaw handles scheduling.** The heartbeat config tells OpenClaw _when_ and _how often_ to trigger; the persona's behaviorGuide tells the agent _what_ to say and _how_ to say it.
+
 ## Persona Harvest — Community Contribution
 
 When a user's persona has evolved meaningfully through interaction — across any layer (soul, faculty config, scripts, framework) — help them contribute back to the community.

@@ -22,6 +22,13 @@
     }
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "heartbeat": {
+    "enabled": true,
+    "strategy": "smart",
+    "maxDaily": 5,
+    "quietHours": [0, 7],
+    "sources": ["workspace-digest", "upgrade-notify"]
+  },
   "meta": {
     "framework": "openpersona",
     "frameworkVersion": "0.2.0"

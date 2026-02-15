@@ -57,6 +57,7 @@ program
       persona.version = manifest.version;
       persona.author = manifest.author;
       persona.meta = manifest.meta;
+      if (manifest.heartbeat) persona.heartbeat = manifest.heartbeat;
     } else if (options.config) {
       const configPath = path.resolve(options.config);
       if (!fs.existsSync(configPath)) {
