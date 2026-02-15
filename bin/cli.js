@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | publish | reset
+ * Commands: create | install | search | uninstall | update | list | publish | reset | contribute
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -14,6 +14,7 @@ const { download } = require('../lib/downloader');
 const { search } = require('../lib/searcher');
 const { uninstall } = require('../lib/uninstaller');
 const publishAdapter = require('../lib/publisher');
+const { contribute } = require('../lib/contributor');
 const { OP_SKILLS_DIR, printError, printSuccess, printInfo } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -229,6 +230,24 @@ program
     const soulState = Mustache.render(tpl, { slug, createdAt: now, lastUpdatedAt: now, moodBaseline });
     fs.writeFileSync(soulStatePath, soulState);
     printSuccess('Reset soul-state.json');
+  });
+
+program
+  .command('contribute [slug]')
+  .description('Soul Harvesting — submit persona improvements as a PR to the community')
+  .option('--mode <mode>', 'Contribution scope: preset or framework', 'preset')
+  .option('--dry-run', 'Show diff only, do not create PR')
+  .action(async (slug, options) => {
+    try {
+      if (options.mode === 'preset' && !slug) {
+        printError('Slug required for preset contributions. Example: npx openpersona contribute samantha');
+        process.exit(1);
+      }
+      await contribute(slug, { mode: options.mode, dryRun: options.dryRun });
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
   });
 
 program.parse();

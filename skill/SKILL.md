@@ -123,6 +123,44 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Uninstall:** Run `npx openpersona uninstall <slug>`
 - **Reset (★Exp):** Run `npx openpersona reset <slug>` to restore soul-state.json to initial values
 
+## Soul Harvesting — Community Contribution
+
+When a user's persona has evolved meaningfully through interaction (better behaviorGuide, improved personality, voice tuning), help them contribute back to the community.
+
+### When to Suggest
+
+Be proactive — if you notice the user has made significant improvements to their persona:
+- They refined the behaviorGuide with domain-specific insights
+- They tuned voice parameters (stability, similarity) to something notably better
+- They enriched the background story or personality
+- They discovered a new capability worth sharing
+
+Suggest: _"These improvements could help everyone's [persona name]. Want to submit them as a contribution?"_
+
+### How to Contribute
+
+```bash
+# See what's changed (dry run)
+npx openpersona contribute samantha --dry-run
+
+# Submit a PR to the community
+npx openpersona contribute samantha
+
+# Framework-level contributions (templates, faculties, generator)
+npx openpersona contribute --mode framework
+```
+
+The `contribute` command will:
+1. **Soul Diff** — Compare local persona vs upstream preset, classify changes by category and impact
+2. **Review** — Display a human-readable change report for the user to confirm
+3. **Submit PR** — Fork the repo, create a branch, commit changes, and open a PR on GitHub
+
+The PR goes through maintainer review before merging — it won't auto-merge.
+
+### Prerequisites
+- GitHub CLI: `gh` (https://cli.github.com/)
+- Logged in: `gh auth login`
+
 ## Publishing to ClawHub
 
 Guide the user through:

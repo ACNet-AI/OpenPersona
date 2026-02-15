@@ -151,6 +151,37 @@ TTS_SIMILARITY=0.8
 
 Samantha ships with a built-in ElevenLabs voice — users only need to add their `ELEVENLABS_API_KEY`.
 
+## Soul Harvesting — Community Contribution
+
+Every user's interaction with their persona can produce valuable improvements. Soul Harvesting lets you contribute these discoveries back to the community.
+
+```bash
+# Preview what's changed (no PR created)
+npx openpersona contribute samantha --dry-run
+
+# Submit improvements as a PR
+npx openpersona contribute samantha
+
+# Framework-level contributions (templates, faculties, lib)
+npx openpersona contribute --mode framework
+```
+
+**How it works:**
+
+1. **Soul Diff** — Compares your local `persona-samantha/persona.json` against the upstream `presets/samantha/persona.json`, classifying changes by category (background, behaviorGuide, personality, voice config) and impact level
+2. **Review** — Displays a structured change report for you to confirm
+3. **Submit** — Forks the repo, creates a `soul-harvest/samantha-*` branch, commits your improvements, and opens a PR
+
+PRs go through maintainer review — nothing auto-merges. Requires [GitHub CLI](https://cli.github.com/) (`gh auth login`).
+
+**Contributable dimensions:**
+
+| Layer | What | Example |
+|-------|------|---------|
+| Soul | background, behaviorGuide, personality, speakingStyle | "Added late-night conversation style guidance" |
+| Faculty Config | voice stability, similarity, new faculties | "Tuned voice to be warmer at stability 0.3" |
+| Framework | templates, generator logic, faculty scripts | "Improved speak.js streaming performance" |
+
 ## Custom Persona Creation
 
 ### Using `persona.json`
@@ -186,14 +217,15 @@ Without `behaviorGuide`, the SKILL.md only contains general identity and persona
 ## CLI Commands
 
 ```
-openpersona create    Create a persona (interactive or --preset/--config)
-openpersona install   Install a persona (slug or owner/repo)
-openpersona search    Search the registry
-openpersona uninstall Uninstall a persona
-openpersona update    Update installed personas
-openpersona list      List installed personas
-openpersona publish   Publish to ClawHub
-openpersona reset     ★Exp Reset soul-state.json
+openpersona create      Create a persona (interactive or --preset/--config)
+openpersona install     Install a persona (slug or owner/repo)
+openpersona search      Search the registry
+openpersona uninstall   Uninstall a persona
+openpersona update      Update installed personas
+openpersona list        List installed personas
+openpersona contribute  Soul Harvesting — submit improvements as PR
+openpersona publish     Publish to ClawHub
+openpersona reset       ★Exp Reset soul-state.json
 ```
 
 ### Key Options
