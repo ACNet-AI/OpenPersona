@@ -33,7 +33,7 @@ flowchart TB
   end
   subgraph Faculty ["Faculty Layer"]
     D["expression: selfie · voice · music"]
-    E["cognition: reminder · soul-evolution ★Exp"]
+    E["cognition: reminder"]
   end
   subgraph Skill ["Skill Layer"]
     F["ClawHub / skills.sh integrations"]
@@ -45,7 +45,7 @@ flowchart TB
 - **Faculty** — General software capabilities organized by dimension:
   - **Expression** — selfie, voice (TTS), music (ElevenLabs)
   - **Sense** — (planned: hearing/STT, vision)
-  - **Cognition** — reminder, soul-evolution ★Exp
+  - **Cognition** — reminder
 - **Skill** — Professional skills, integrated from ClawHub / skills.sh
 
 ### Constitution — The Soul's Foundation
@@ -58,8 +58,8 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music, soul-evolution ★Exp | Speaks via TTS, composes original music via ElevenLabs Music, evolves through conversations, proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music, soul-evolution ★Exp | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, dynamic relationship growth. |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music | Speaks via TTS, composes original music via ElevenLabs Music, soul evolution ★Exp (Soul layer), proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, soul evolution ★Exp (Soul layer). |
 | **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
 
@@ -124,7 +124,7 @@ Running `--preset ai-girlfriend` additionally includes:
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
-| **soul-evolution** | cognition ★Exp | Dynamic persona growth across conversations | Built-in | — |
+| ~~soul-evolution~~ | *(moved to Soul layer)* | Dynamic persona growth is now a native Soul layer feature, enabled via `evolution.enabled` in persona.json | — | — |
 
 ### Rich Faculty Config
 
@@ -139,8 +139,7 @@ Faculties in `manifest.json` use object format with optional per-persona tuning:
     "stability": 0.4,
     "similarity_boost": 0.8
   },
-  { "name": "music" },
-  { "name": "soul-evolution" }
+  { "name": "music" }
 ]
 ```
 
@@ -351,7 +350,7 @@ layers/                 # Shared building blocks (four-layer module pool)
     voice/              #     expression — TTS voice synthesis
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
-    soul-evolution/     #     cognition ★Exp — dynamic persona evolution
+    soul-evolution/     #     (deprecated — evolution moved to Soul layer)
   skills/               #   Skill layer modules (MVP placeholder)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates

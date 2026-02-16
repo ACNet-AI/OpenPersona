@@ -11,7 +11,8 @@ Soul Layer internal structure:
 
   constitution.md   ← Shared foundation (all personas inherit, cannot be overridden)
   persona.json      ← Individual persona definition (personality, style, behavior)
-  soul-state.json   ← Dynamic evolution state (★Experimental, managed by soul-evolution faculty)
+  soul-state.json           ← Dynamic evolution state (★Experimental)
+  soul-state.template.json  ← Evolution state template (used by generator & CLI reset)
 ```
 
 The constitution is built on five core axioms (**Purpose**, **Honesty**, **Safety**, **Autonomy**, **Hierarchy**), from which all other principles derive:

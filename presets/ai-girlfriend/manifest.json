@@ -8,8 +8,7 @@
     "faculties": [
       { "name": "selfie" },
       { "name": "voice" },
-      { "name": "music" },
-      { "name": "soul-evolution" }
+      { "name": "music" }
     ],
     "skills": {
       "clawhub": [],

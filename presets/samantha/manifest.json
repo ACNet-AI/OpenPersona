@@ -13,8 +13,7 @@
         "stability": 0.4,
         "similarity_boost": 0.8
       },
-      { "name": "music" },
-      { "name": "soul-evolution" }
+      { "name": "music" }
     ],
     "skills": {
       "clawhub": [],

@@ -76,7 +76,7 @@ program
         { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
         { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
         { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
-        { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder', 'soul-evolution'] },
+        { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder'] },
         { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
       ]);
       persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
@@ -234,7 +234,7 @@ program
       process.exit(1);
     }
     const persona = JSON.parse(fs.readFileSync(personaPath, 'utf-8'));
-    const templatePath = path.join(PKG_ROOT, 'layers', 'faculties', 'soul-evolution', 'soul-state.template.json');
+    const templatePath = path.join(PKG_ROOT, 'layers', 'soul', 'soul-state.template.json');
     const tpl = fs.readFileSync(templatePath, 'utf-8');
     const Mustache = require('mustache');
     const now = new Date().toISOString();
