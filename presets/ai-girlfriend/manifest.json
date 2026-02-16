@@ -18,6 +18,6 @@
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.3.0"
+    "frameworkVersion": "0.4.0"
   }
 }

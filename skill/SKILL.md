@@ -5,7 +5,7 @@ allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:
 compatibility: Requires OpenClaw installed and configured
 metadata:
   author: openpersona
-  version: "0.3.0"
+  version: "0.4.0"
   repository: https://github.com/acnlabs/OpenPersona
   homepage: https://github.com/acnlabs/OpenPersona#readme
   requiredEnvVars:
