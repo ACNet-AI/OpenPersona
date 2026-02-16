@@ -15,6 +15,7 @@ Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 - [Key Features](#key-features)
 - [Four-Layer Architecture](#four-layer-architecture)
 - [Preset Personas](#preset-personas)
+- [Generated Output](#generated-output)
 - [Faculty Reference](#faculty-reference)
 - [Heartbeat](#heartbeat--proactive-real-data-check-ins)
 - [Persona Harvest](#persona-harvest--community-contribution)
@@ -92,23 +93,6 @@ persona-samantha/
   README.md
   scripts/           — Faculty scripts (TTS, music, selfie — varies by preset)
 ```
-
-## From Clawra to OpenPersona
-
-[Clawra](https://github.com/SumeLabs/clawra) was the starting point — a single-persona product that proved the concept. OpenPersona generalizes it into a **modular framework**:
-
-| | Clawra | OpenPersona |
-|---|--------|-------------|
-| Scope | Single persona (Clawra) | Framework for any persona |
-| Architecture | Monolithic | Four-layer (Soul/Body/Faculty/Skill) |
-| Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution |
-| Voice | None | ElevenLabs (verified) / OpenAI TTS / Qwen3-TTS |
-| Music | None | ElevenLabs Music composition |
-| Persona evolution | None | Dynamic relationship/mood/trait tracking |
-| Customization | Fork and modify | `persona.json` + `behaviorGuide` + mix faculties |
-| Presets | 1 | 4 (extensible) |
-| CLI | Install only | 8 commands (create/install/search/publish/...) |
-| AI entry point | None | `skills/open-persona/SKILL.md` — meta-skill for building & managing persona skill packs |
 
 ## Faculty Reference
 
