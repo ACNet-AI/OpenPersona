@@ -1,7 +1,7 @@
 {
   "name": "openpersona",
   "version": "0.3.0",
-  "description": "Open four-layer agent framework — Soul/Body/Faculty/Skill. Create, manage, and orchestrate AI personas.",
+  "description": "Open four-layer agent framework — Soul/Body/Faculty/Skill. Create, manage, and orchestrate agent personas.",
   "main": "lib/generator.js",
   "bin": {
     "openpersona": "./bin/cli.js"
@@ -16,15 +16,15 @@
     "ai",
     "skill"
   ],
-  "author": "ACNet-AI",
+  "author": "acnlabs",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ACNet-AI/OpenPersona.git"
+    "url": "git+https://github.com/acnlabs/OpenPersona.git"
   },
-  "homepage": "https://github.com/ACNet-AI/OpenPersona#readme",
+  "homepage": "https://github.com/acnlabs/OpenPersona#readme",
   "bugs": {
-    "url": "https://github.com/ACNet-AI/OpenPersona/issues"
+    "url": "https://github.com/acnlabs/OpenPersona/issues"
   },
   "files": [
     "bin/",

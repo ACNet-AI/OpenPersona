@@ -263,9 +263,9 @@ async function main() {
   if (opts.channel) {
     console.log(`📤 Sending to channel: ${opts.channel}`);
     try {
-      const { execSync } = require('child_process');
-      const message = opts.caption || `🎵 New composition`;
-      execSync(`openclaw message send --channel "${opts.channel}" --message "${message}" --media "${outPath}"`, { stdio: 'inherit' });
+      const { execFileSync } = require('child_process');
+      const message = opts.caption || '🎵 New composition';
+      execFileSync('openclaw', ['message', 'send', '--channel', opts.channel, '--message', message, '--media', outPath], { stdio: 'inherit' });
       console.log(`   Sent to ${opts.channel}`);
     } catch {
       console.log('   OpenClaw CLI not available, skipping channel send.');

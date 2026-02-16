@@ -1,19 +1,34 @@
 ---
 name: open-persona
-description: Create, manage, and orchestrate AI personas with skills from ClawHub and skills.sh. Use when the user wants to create a new AI persona, install/manage existing personas, or publish persona skill packs.
-allowed-tools: Bash(npm:*) Bash(npx:*) Bash(openclaw:*) Bash(curl:*) Read Write WebFetch
+description: Create, manage, and orchestrate agent personas with skills from ClawHub and skills.sh. Use when the user wants to create a new agent persona, install/manage existing personas, or publish persona skill packs.
+allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
 compatibility: Requires OpenClaw installed and configured
 metadata:
   author: openpersona
   version: "0.3.0"
+  repository: https://github.com/acnlabs/OpenPersona
+  homepage: https://github.com/acnlabs/OpenPersona#readme
+  requiredEnvVars:
+    - name: FAL_KEY
+      faculty: selfie
+      description: "fal.ai API key for selfie generation"
+      required: false
+    - name: ELEVENLABS_API_KEY
+      faculty: voice, music
+      description: "ElevenLabs API key for TTS and music composition"
+      required: false
+    - name: TTS_PROVIDER
+      faculty: voice
+      description: "TTS provider: elevenlabs, openai, or qwen3"
+      required: false
 ---
-# OpenPersona — AI Persona Creator
+# OpenPersona — Agent Persona Creator
 
-You have the ability to create, install, update, uninstall, and publish AI persona skill packs.
+You have the ability to create, install, update, uninstall, and publish agent persona skill packs.
 
 ## What You Can Do
 
-1. **Create Persona** — Help the user design a new AI persona through conversation
+1. **Create Persona** — Help the user design a new agent persona through conversation
 2. **Recommend Faculties** — Suggest faculties (voice, selfie, music, etc.) based on persona needs
 3. **Recommend Skills** — Search ClawHub and skills.sh for external skills
 4. **Create Custom Skills** — Write SKILL.md files for capabilities not found in ecosystems

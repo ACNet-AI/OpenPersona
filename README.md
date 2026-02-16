@@ -1,6 +1,6 @@
 # OpenPersona
 
-An open four-layer agent framework: **Soul / Body / Faculty / Skill**. Create, compose, and orchestrate AI persona skill packs.
+An open four-layer agent framework: **Soul / Body / Faculty / Skill**. Create, compose, and orchestrate agent persona skill packs.
 
 Inspired by [Clawra](https://github.com/SumeLabs/clawra) and built on [OpenClaw](https://github.com/openclaw/openclaw).
 
@@ -40,13 +40,17 @@ flowchart TB
   end
 ```
 
-- **Soul** — Persona definition (persona.json + soul-state.json ★Experimental)
+- **Soul** — Persona definition (constitution.md + persona.json + soul-state.json ★Experimental)
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
 - **Faculty** — General software capabilities organized by dimension:
   - **Expression** — selfie, voice (TTS), music (ElevenLabs)
   - **Sense** — (planned: hearing/STT, vision)
   - **Cognition** — reminder, soul-evolution ★Exp
 - **Skill** — Professional skills, integrated from ClawHub / skills.sh
+
+### Constitution — The Soul's Foundation
+
+Every persona automatically inherits a shared **constitution** (`layers/soul/constitution.md`) — universal values and safety boundaries that cannot be overridden by individual persona definitions. The constitution is built on five core axioms — **Purpose**, **Honesty**, **Safety**, **Autonomy**, and **Hierarchy** — from which derived principles (Identity, User Wellbeing, Evolution Ethics) follow. When principles conflict, safety and honesty take precedence over helpfulness. Individual personas build their unique personality **on top of** this foundation.
 
 ## Preset Personas
 
@@ -321,7 +325,7 @@ Install the OpenPersona framework skill into OpenClaw, giving the agent the abil
 
 ```bash
 # From GitHub
-git clone https://github.com/ACNet-AI/OpenPersona.git ~/.openclaw/skills/open-persona
+git clone https://github.com/acnlabs/OpenPersona.git ~/.openclaw/skills/open-persona
 
 # Or copy locally
 cp -r skill/ ~/.openclaw/skills/open-persona/
@@ -339,7 +343,8 @@ presets/                # Assembled products — complete persona bundles
   life-assistant/       #   Alex — reminder
   health-butler/        #   Vita — reminder
 layers/                 # Shared building blocks (four-layer module pool)
-  soul/                 #   Soul layer modules (MVP placeholder)
+  soul/                 #   Soul layer modules
+    constitution.md     #     Universal values & boundaries (injected into all personas)
   embodiments/          #   Body layer modules (MVP placeholder)
   faculties/            #   Faculty layer modules
     selfie/             #     expression — AI selfie generation (fal.ai)

@@ -2,7 +2,7 @@
   "name": "selfie",
   "dimension": "expression",
   "description": "AI selfie generation via fal.ai Grok Imagine",
-  "allowedTools": ["Bash(curl:*)", "WebFetch"],
+  "allowedTools": ["Bash(bash scripts/generate-image.sh:*)", "Bash(openclaw message:*)"],
   "envVars": ["FAL_KEY"],
   "triggers": ["send a selfie", "take a pic", "what do you look like", "show me a photo"],
   "files": ["SKILL.md", "scripts/generate-image.sh"]
