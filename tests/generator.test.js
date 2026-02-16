@@ -115,7 +115,7 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
-  it('adds soul-evolution when evolution.enabled', async () => {
+  it('generates soul-state.json when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',
       slug: 'evo-test',

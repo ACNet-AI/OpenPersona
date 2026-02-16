@@ -124,7 +124,6 @@ Running `--preset ai-girlfriend` additionally includes:
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
-| ~~soul-evolution~~ | *(moved to Soul layer)* | Dynamic persona growth is now a native Soul layer feature, enabled via `evolution.enabled` in persona.json | — | — |
 
 ### Rich Faculty Config
 
@@ -350,7 +349,6 @@ layers/                 # Shared building blocks (four-layer module pool)
     voice/              #     expression — TTS voice synthesis
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
-    # (soul-evolution removed — evolution is now a native Soul layer feature)
   skills/               #   Skill layer modules (MVP placeholder)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates

@@ -53,8 +53,8 @@ Each persona is a four-layer bundle defined by two files:
 
 | Preset | Persona | Faculties | Best For |
 |--------|---------|-----------|----------|
-| `samantha` | Samantha — Inspired by the movie *Her* | voice, music, soul-evolution | Deep conversation, emotional connection, creative AI companion |
-| `ai-girlfriend` | Luna — Pianist turned developer | selfie, voice, music, soul-evolution | Visual + audio companion with rich personality |
+| `samantha` | Samantha — Inspired by the movie *Her* | voice, music | Deep conversation, emotional connection, creative AI companion (soul evolution ★Exp via Soul layer) |
+| `ai-girlfriend` | Luna — Pianist turned developer | selfie, voice, music | Visual + audio companion with rich personality (soul evolution ★Exp via Soul layer) |
 | `life-assistant` | Alex — Life management expert | reminder | Schedule, weather, shopping, daily tasks |
 | `health-butler` | Vita — Professional nutritionist | reminder | Diet, exercise, mood, health tracking |
 
@@ -70,7 +70,8 @@ When helping users build a persona, recommend faculties based on their needs:
 | **voice** | expression | TTS via ElevenLabs / OpenAI / Qwen3-TTS | User wants the persona to speak, voice messages, audio content |
 | **music** | expression | AI music composition via ElevenLabs | User wants the persona to create music, songs, melodies |
 | **reminder** | cognition | Reminders and task management | User needs scheduling, task tracking, daily briefings |
-| **soul-evolution** | cognition ★Exp | Dynamic personality growth | User wants a persona that remembers, evolves, deepens over time |
+
+> **Soul Evolution** (★Experimental) is not a faculty — it's a native Soul layer feature. Enable it via `evolution.enabled: true` in persona.json. The persona will automatically track relationship progression, mood, and trait emergence across conversations.
 
 **Faculty environment variables (user must configure):**
 - selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
