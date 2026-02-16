@@ -1,9 +1,0 @@
-{
-  "name": "soul-evolution",
-  "dimension": "cognition",
-  "description": "Dynamic persona evolution — tracks relationship progression, mood, trait emergence, speaking style drift, and interest discovery across conversations",
-  "allowedTools": ["Read", "Write"],
-  "envVars": [],
-  "triggers": [],
-  "files": ["SKILL.md"]
-}

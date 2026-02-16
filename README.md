@@ -350,7 +350,7 @@ layers/                 # Shared building blocks (four-layer module pool)
     voice/              #     expression — TTS voice synthesis
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
-    soul-evolution/     #     (deprecated — evolution moved to Soul layer)
+    # (soul-evolution removed — evolution is now a native Soul layer feature)
   skills/               #   Skill layer modules (MVP placeholder)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
