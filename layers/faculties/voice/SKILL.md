@@ -4,11 +4,13 @@ Give your persona a real voice. Convert text to natural speech using TTS provide
 
 ## Supported Providers
 
-| Provider | Env Var for Key | Best For | Latency |
-|----------|----------------|----------|---------|
-| **ElevenLabs** | `TTS_API_KEY` | Highest naturalness, emotional range, voice cloning | Medium |
-| **OpenAI TTS** | `TTS_API_KEY` | Low latency, good quality, easy integration | Low |
-| **Qwen3-TTS** | (local, no key) | Self-hosted, full control, no API costs | Varies |
+| Provider | Env Var for Key | Best For | Status |
+|----------|----------------|----------|--------|
+| **ElevenLabs** | `ELEVENLABS_API_KEY` | Highest naturalness, emotional range, voice cloning | ✅ Verified |
+| **OpenAI TTS** | `TTS_API_KEY` | Low latency, good quality, easy integration | ⚠️ Unverified |
+| **Qwen3-TTS** | (local, no key) | Self-hosted, full control, no API costs | ⚠️ Unverified |
+
+> **Note:** Only ElevenLabs has been tested end-to-end. OpenAI TTS and Qwen3-TTS have code paths in `speak.sh` but have not been verified against live APIs. Use the JS SDK (`speak.js`) for the most reliable experience — it only supports ElevenLabs.
 
 The provider is set via `TTS_PROVIDER` environment variable: `elevenlabs`, `openai`, or `qwen3`.
 
@@ -37,13 +39,13 @@ Write what you want to say. Keep it natural — write as you'd speak, not as you
 - Supports emotion control: `stability` (0-1), `similarity_boost` (0-1)
 - Lower stability = more expressive/emotional; higher = more consistent
 
-**OpenAI TTS:**
+**OpenAI TTS:** ⚠️ Unverified
 - `TTS_VOICE_ID` — One of: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`
 - Model: `tts-1` (fast) or `tts-1-hd` (high quality)
 
-**Qwen3-TTS:**
+**Qwen3-TTS:** ⚠️ Unverified
 - Local deployment, voice configured at setup
-- Supports emotion tags in text: `[happy]`, `[sad]`, `[whisper]`
+- Assumes OpenAI-compatible API at `http://localhost:8080`
 
 ### Step 3: Generate Audio
 

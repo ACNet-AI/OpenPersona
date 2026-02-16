@@ -108,20 +108,20 @@ Running `--preset ai-girlfriend` additionally includes:
 | Scope | Single persona (Clawra) | Framework for any persona |
 | Architecture | Monolithic | Four-layer (Soul/Body/Faculty/Skill) |
 | Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution ★Exp |
-| Voice | None | ElevenLabs / OpenAI TTS / Qwen3-TTS |
+| Voice | None | ElevenLabs (verified) / OpenAI TTS / Qwen3-TTS (⚠️ unverified) |
 | Music | None | ElevenLabs Music composition |
 | Persona evolution | None | Dynamic relationship/mood/trait tracking |
 | Customization | Fork and modify | `persona.json` + `behaviorGuide` + mix faculties |
 | Presets | 1 | 4 (extensible) |
 | CLI | Install only | 8 commands (create/install/search/publish/...) |
-| AI entry point | None | `skill/SKILL.md` — agent creates personas via conversation |
+| AI entry point | None | `skills/open-persona/SKILL.md` — meta-skill for building & managing persona skill packs |
 
 ## Faculty Reference
 
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
 | **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
-| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
+| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs ✅ / OpenAI TTS ⚠️ / Qwen3-TTS ⚠️ | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 
