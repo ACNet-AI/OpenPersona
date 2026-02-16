@@ -71,8 +71,6 @@ When helping users build a persona, recommend faculties based on their needs:
 | **music** | expression | AI music composition via ElevenLabs | User wants the persona to create music, songs, melodies |
 | **reminder** | cognition | Reminders and task management | User needs scheduling, task tracking, daily briefings |
 
-> **Soul Evolution** (★Experimental) is not a faculty — it's a native Soul layer feature. Enable it via `evolution.enabled: true` in persona.json. The persona will automatically track relationship progression, mood, and trait emergence across conversations.
-
 **Faculty environment variables (user must configure):**
 - selfie: `FAL_KEY` (from https://fal.ai/dashboard/keys)
 - voice: `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY`
