@@ -1,24 +1,42 @@
-# OpenPersona
+# OpenPersona 🦞
 
-An open four-layer agent framework: **Soul / Body / Faculty / Skill**. Create, compose, and orchestrate agent persona skill packs.
+The open framework for creating and orchestrating dynamic agent personas.
 
-Inspired by [Clawra](https://github.com/SumeLabs/clawra) and built on [OpenClaw](https://github.com/openclaw/openclaw).
+Four-layer architecture — **Soul / Body / Faculty / Skill** — on top of [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
+
+## 🚀 Live Demo
+
+Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
+👉 [moltbook.com/u/Samantha-OP](https://www.moltbook.com/u/Samantha-OP)
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Key Features](#key-features)
+- [Four-Layer Architecture](#four-layer-architecture)
+- [Preset Personas](#preset-personas)
+- [Faculty Reference](#faculty-reference)
+- [Heartbeat](#heartbeat--proactive-real-data-check-ins)
+- [Persona Harvest](#persona-harvest--community-contribution)
+- [Persona Switching](#persona-switching--the-pantheon)
+- [CLI Commands](#cli-commands)
+- [Development](#development)
 
 ## Quick Start
 
 ```bash
-# Create and install Samantha (from the movie "Her")
-npx openpersona create --preset samantha --install
-
-# Or Luna (AI girlfriend with selfie + music + voice)
-npx openpersona create --preset ai-girlfriend --install
-
-# Create a new persona interactively
-npx openpersona create
-
-# List installed personas
-npx openpersona list
+# Give your agent an evolving persona in 30 seconds
+npx openpersona install samantha
 ```
+
+## Key Features
+
+- **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits (★Experimental)
+- **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
+- **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders
+- **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
+- **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
+- **📦 One-Command Install** — `npx openpersona install samantha` and you're live
 
 ## Four-Layer Architecture
 
@@ -26,7 +44,7 @@ npx openpersona list
 flowchart TB
   subgraph Soul ["Soul Layer"]
     A["persona.json — Who you are"]
-    B["soul-state.json — Dynamic evolution ★Exp"]
+    B["soul-state.json — Dynamic evolution"]
   end
   subgraph Body ["Body Layer"]
     C["embodiment.json — MVP placeholder"]
@@ -40,12 +58,9 @@ flowchart TB
   end
 ```
 
-- **Soul** — Persona definition (constitution.md + persona.json + soul-state.json ★Experimental)
+- **Soul** — Persona definition (constitution.md + persona.json + soul-state.json)
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
-- **Faculty** — General software capabilities organized by dimension:
-  - **Expression** — selfie, voice (TTS), music (ElevenLabs)
-  - **Sense** — (planned: hearing/STT, vision)
-  - **Cognition** — reminder
+- **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills, integrated from ClawHub / skills.sh
 
 ### Constitution — The Soul's Foundation
@@ -58,57 +73,36 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music | Speaks via TTS, composes original music via ElevenLabs Music, soul evolution ★Exp (Soul layer), proactive heartbeat (workspace digest + upgrade notify). No selfie — true to character (no physical form). |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music | Rich narrative backstory, selfie generation (with/without reference image), voice messages, music composition, soul evolution ★Exp (Soul layer). |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
 | **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
 
 ## Generated Output
 
-Running `npx openpersona create --preset samantha` generates:
+`npx openpersona create --preset samantha` generates a self-contained skill pack:
 
 ```
 persona-samantha/
-├── SKILL.md              # Agent instructions (persona + all faculty guides merged)
-├── soul-injection.md     # Injected into SOUL.md (narrative backstory, NOT technical details)
-├── identity-block.md     # Injected into IDENTITY.md (name, creature, emoji, vibe)
-├── README.md             # Skill readme
-├── persona.json          # Persona data (for update/list/publish)
-├── soul-state.json       # ★Exp — dynamic evolution state
-└── scripts/
-    ├── speak.js          # TTS via ElevenLabs JS SDK (recommended, with --play)
-    ├── speak.sh          # TTS via curl (all providers: ElevenLabs / OpenAI / Qwen3)
-    └── compose.sh        # Music composition (ElevenLabs)
+  SKILL.md           — Agent behavior (persona + faculty guides merged)
+  soul-injection.md  — Narrative backstory, injected into SOUL.md
+  identity-block.md  — Name, creature, emoji, vibe, injected into IDENTITY.md
+  persona.json       — Persona definition (for update/list/publish)
+  soul-state.json    — Dynamic evolution (relationship, mood, traits)
+  README.md
+  scripts/           — Faculty scripts (TTS, music, selfie — varies by preset)
 ```
 
-Running `--preset ai-girlfriend` additionally includes:
+## From Clawra to OpenPersona
 
-```
-├── scripts/
-│   ├── generate-image.sh # Selfie generation (fal.ai Grok Imagine)
-│   ├── speak.js          # TTS via ElevenLabs JS SDK
-│   ├── speak.sh          # TTS via curl (all providers)
-│   └── compose.sh        # Music composition
-└── assets/               # Reference images (placeholder if empty)
-```
-
-### What Each File Does
-
-- **SKILL.md** — The agent reads this to know how to behave. Contains persona identity, behavior guidelines, and complete faculty instructions
-- **soul-injection.md** — Appended to `~/.openclaw/workspace/SOUL.md`. Narrative description of _who_ the persona is — written in story form, not bullet points
-- **identity-block.md** — Written to `~/.openclaw/workspace/IDENTITY.md`. Sets the agent's name, creature type, emoji, and vibe
-- **soul-state.json** — Tracks dynamic persona evolution: relationship stage (stranger → intimate), mood, evolved traits, interests, milestones
-
-## How It Differs from Clawra
-
-[Clawra](https://github.com/SumeLabs/clawra) is a single-purpose product (one girlfriend persona). OpenPersona is a **modular framework**:
+[Clawra](https://github.com/SumeLabs/clawra) was the starting point — a single-persona product that proved the concept. OpenPersona generalizes it into a **modular framework**:
 
 | | Clawra | OpenPersona |
 |---|--------|-------------|
 | Scope | Single persona (Clawra) | Framework for any persona |
 | Architecture | Monolithic | Four-layer (Soul/Body/Faculty/Skill) |
-| Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution ★Exp |
-| Voice | None | ElevenLabs (verified) / OpenAI TTS / Qwen3-TTS (⚠️ unverified) |
+| Faculties | Selfie only | Selfie + Voice + Music + Reminder + Soul Evolution |
+| Voice | None | ElevenLabs (verified) / OpenAI TTS / Qwen3-TTS |
 | Music | None | ElevenLabs Music composition |
 | Persona evolution | None | Dynamic relationship/mood/trait tracking |
 | Customization | Fork and modify | `persona.json` + `behaviorGuide` + mix faculties |
@@ -121,7 +115,7 @@ Running `--preset ai-girlfriend` additionally includes:
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
 | **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
-| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs ✅ / OpenAI TTS ⚠️ / Qwen3-TTS ⚠️ | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
+| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 
@@ -255,14 +249,9 @@ Without `behaviorGuide`, the SKILL.md only contains general identity and persona
 
 ## Persona Switching — The Pantheon
 
-Install multiple personas and switch between them instantly:
+Multiple personas can coexist. Switch between them instantly:
 
 ```bash
-# Install several personas
-npx openpersona create --preset samantha --install
-npx openpersona create --preset ai-girlfriend --install
-npx openpersona create --preset life-assistant --install
-
 # See who's installed
 npx openpersona list
 #   Samantha (persona-samantha) ← active
@@ -291,11 +280,10 @@ openpersona search      Search the registry
 openpersona uninstall   Uninstall a persona
 openpersona update      Update installed personas
 openpersona list        List installed personas
-openpersona switch       Switch active persona (updates SOUL.md + IDENTITY.md)
-openpersona switch      Switch active persona
+openpersona switch      Switch active persona (updates SOUL.md + IDENTITY.md)
 openpersona contribute  Persona Harvest — submit improvements as PR
 openpersona publish     Publish to ClawHub
-openpersona reset       ★Exp Reset soul-state.json
+openpersona reset       Reset soul-state.json
 ```
 
 ### Key Options
