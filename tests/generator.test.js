@@ -162,6 +162,48 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
+  it('injects skills into SKILL.md when skills array is provided', async () => {
+    const persona = {
+      personaName: 'SkillTest',
+      slug: 'skill-inject-test',
+      bio: 'skill injection tester',
+      personality: 'capable',
+      speakingStyle: 'Direct',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'weather', description: 'Query weather data', trigger: 'User asks about weather' },
+        { name: 'web-search', description: 'Search the web', trigger: 'Needs real-time info' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('Skills & Tools'), 'SKILL.md must contain Skills & Tools section');
+    assert.ok(skillMd.includes('**weather**'), 'SKILL.md must list weather skill');
+    assert.ok(skillMd.includes('**web-search**'), 'SKILL.md must list web-search skill');
+    assert.ok(skillMd.includes('Query weather data'), 'SKILL.md must include skill description');
+    assert.ok(skillMd.includes('User asks about weather'), 'SKILL.md must include skill trigger');
+    await fs.remove(TMP);
+  });
+
+  it('does not include Skills section when no skills provided', async () => {
+    const persona = {
+      personaName: 'NoSkill',
+      slug: 'no-skill-test',
+      bio: 'no skill tester',
+      personality: 'simple',
+      speakingStyle: 'Plain',
+      faculties: [{ name: 'reminder' }],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(!skillMd.includes('Skills & Tools'), 'SKILL.md must NOT contain Skills section when no skills');
+    await fs.remove(TMP);
+  });
+
   it('generates soul-state.json when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',

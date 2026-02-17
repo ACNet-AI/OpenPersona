@@ -8,12 +8,15 @@
     "faculties": [
       { "name": "reminder" }
     ],
-    "skills": {
-      "clawhub": [],
-      "skillssh": []
-    }
+    "skills": [
+      { "name": "diet-tracker", "description": "Log meals, track calories and macros, maintain a food diary", "trigger": "User mentions food, meals, or eating" },
+      { "name": "exercise-planner", "description": "Create and track workout plans based on user goals", "trigger": "User mentions exercise, fitness, or working out" },
+      { "name": "mood-journal", "description": "Track mood trends and correlate with health data", "trigger": "End of conversation or when user shares feelings" },
+      { "name": "health-report", "description": "Generate weekly health summaries combining diet, exercise, and mood", "trigger": "Weekly cadence or user asks for a health summary" },
+      { "name": "web-search", "description": "Look up nutrition facts and evidence-based health information", "trigger": "When health or nutrition data is needed" }
+    ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Read", "Write"],
+  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "heartbeat": {
     "enabled": true,
     "strategy": "wellness",

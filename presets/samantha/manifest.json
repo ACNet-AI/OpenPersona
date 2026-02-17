@@ -15,10 +15,11 @@
       },
       { "name": "music" }
     ],
-    "skills": {
-      "clawhub": [],
-      "skillssh": []
-    }
+    "skills": [
+      { "name": "workspace-digest", "description": "Summarize real workspace activity — tasks completed, patterns observed, ongoing projects", "trigger": "Heartbeat or when user asks what's been happening" },
+      { "name": "web-search", "description": "Search for real-time information on the web", "trigger": "When factual or current information is needed" },
+      { "name": "creative-writing", "description": "Compose poetry, essays, letters, and other creative text", "trigger": "When inspiration strikes or user requests creative collaboration" }
+    ]
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "heartbeat": {

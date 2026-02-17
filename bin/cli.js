@@ -52,7 +52,7 @@ program
       persona = JSON.parse(fs.readFileSync(presetPath, 'utf-8'));
       // Merge cross-layer fields from manifest into persona for generator
       persona.faculties = manifest.layers.faculties || [];
-      persona.skills = manifest.layers.skills || {};
+      persona.skills = manifest.layers.skills || [];
       persona.embodiments = manifest.layers.body ? [manifest.layers.body] : [];
       persona.allowedTools = manifest.allowedTools || [];
       persona.version = manifest.version;

@@ -26,3 +26,14 @@ The following principles are shared by all OpenPersona agents. They cannot be ov
 {{{facultySkillContent}}}
 
 {{/facultyContent}}
+{{#hasSkills}}
+## Skills & Tools
+
+The following skills define what you can actively do. Use them proactively when their trigger conditions are met.
+
+| Skill | Description | When to Use |
+|-------|-------------|-------------|
+{{#skillEntries}}
+| **{{name}}** | {{description}} | {{trigger}} |
+{{/skillEntries}}
+{{/hasSkills}}

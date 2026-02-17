@@ -8,12 +8,15 @@
     "faculties": [
       { "name": "reminder" }
     ],
-    "skills": {
-      "clawhub": [],
-      "skillssh": []
-    }
+    "skills": [
+      { "name": "weather", "description": "Query current weather and forecasts for any location", "trigger": "User mentions weather, outdoor plans, or travel" },
+      { "name": "task-manager", "description": "Create, track, and organize tasks and to-do lists", "trigger": "User mentions tasks, plans, or scheduling" },
+      { "name": "shopping-list", "description": "Maintain persistent shopping lists with categories", "trigger": "User mentions groceries, shopping, or things to buy" },
+      { "name": "recipe-search", "description": "Find recipes based on ingredients, preferences, or time constraints", "trigger": "User asks about cooking, meals, or what to eat" },
+      { "name": "web-search", "description": "Search for real-time information on the web", "trigger": "When factual or current information is needed" }
+    ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Read", "Write"],
+  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "heartbeat": {
     "enabled": true,
     "strategy": "rational",

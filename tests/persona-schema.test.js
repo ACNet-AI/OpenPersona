@@ -37,6 +37,14 @@ describe('persona schema', () => {
         assert.strictEqual(typeof f, 'object', `${preset} faculty must be object, got: ${JSON.stringify(f)}`);
         assert.ok(f.name, `${preset} faculty object missing name`);
       }
+
+      // Validate skills: must be array of { name, description, ... }
+      assert.ok(Array.isArray(manifest.layers.skills), `${preset} manifest.layers.skills must be array`);
+      for (const s of manifest.layers.skills) {
+        assert.strictEqual(typeof s, 'object', `${preset} skill must be object`);
+        assert.ok(s.name, `${preset} skill missing name`);
+        assert.ok(s.description, `${preset} skill missing description`);
+      }
     });
   }
 });

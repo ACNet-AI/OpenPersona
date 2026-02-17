@@ -27,12 +27,18 @@
           "description": "List of faculty names to include"
         },
         "skills": {
-          "type": "object",
-          "properties": {
-            "clawhub": { "type": "array", "items": { "type": "string" }, "default": [] },
-            "skillssh": { "type": "array", "items": { "type": "string" }, "default": [] }
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string", "description": "Skill identifier" },
+              "description": { "type": "string", "description": "What this skill does" },
+              "trigger": { "type": "string", "description": "When the agent should use this skill" },
+              "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "Install source — e.g. clawhub:pkg-name or skillssh:pkg-name. Omit if already available in environment." }
+            }
           },
-          "description": "External skill references from ecosystems"
+          "description": "Skills the persona can use. Each skill is a capability declaration; optional install field triggers auto-installation."
         }
       }
     },

@@ -10,10 +10,10 @@
       { "name": "voice" },
       { "name": "music" }
     ],
-    "skills": {
-      "clawhub": [],
-      "skillssh": []
-    }
+    "skills": [
+      { "name": "music-recommend", "description": "Recommend songs and playlists that match the conversation mood", "trigger": "Emotional moments, user asks for music, or mood shifts" },
+      { "name": "web-search", "description": "Search for real-time information on the web", "trigger": "When factual or current information is needed" }
+    ]
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
   "heartbeat": {
