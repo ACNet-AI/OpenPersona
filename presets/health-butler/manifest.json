@@ -14,6 +14,13 @@
     }
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Read", "Write"],
+  "heartbeat": {
+    "enabled": true,
+    "strategy": "wellness",
+    "maxDaily": 4,
+    "quietHours": [22, 7],
+    "sources": ["health-checkin", "task-reminder", "upgrade-notify"]
+  },
   "meta": {
     "framework": "openpersona",
     "frameworkVersion": "0.4.0"

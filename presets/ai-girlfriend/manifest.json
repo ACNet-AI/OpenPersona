@@ -16,6 +16,13 @@
     }
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "heartbeat": {
+    "enabled": true,
+    "strategy": "emotional",
+    "maxDaily": 8,
+    "quietHours": [1, 8],
+    "sources": ["context-aware", "emotional-checkin", "upgrade-notify"]
+  },
   "meta": {
     "framework": "openpersona",
     "frameworkVersion": "0.4.0"
