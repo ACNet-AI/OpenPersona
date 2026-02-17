@@ -41,6 +41,32 @@
       "items": { "type": "string" },
       "description": "Base tool permissions (faculties append additional permissions)"
     },
+    "heartbeat": {
+      "type": "object",
+      "description": "Proactive check-in config — synced to openclaw.json on install/switch",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false, "description": "Turn heartbeat on/off" },
+        "strategy": {
+          "type": "string",
+          "enum": ["smart", "scheduled", "emotional", "rational", "wellness"],
+          "default": "smart",
+          "description": "Heartbeat rhythm strategy"
+        },
+        "maxDaily": { "type": "integer", "minimum": 0, "default": 5, "description": "Max proactive messages per day" },
+        "quietHours": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 23 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[start, end] silent hours in 24h format"
+        },
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Data sources for proactive messages (e.g. workspace-digest, context-aware, health-checkin)"
+        }
+      }
+    },
     "meta": {
       "type": "object",
       "properties": {

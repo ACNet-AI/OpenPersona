@@ -89,6 +89,7 @@ persona-samantha/
   soul-injection.md  — Narrative backstory, injected into SOUL.md
   identity-block.md  — Name, creature, emoji, vibe, injected into IDENTITY.md
   persona.json       — Persona definition (for update/list/publish)
+  manifest.json      — Cross-layer metadata (heartbeat, allowedTools, layers, meta)
   soul-state.json    — Dynamic evolution (relationship, mood, traits)
   README.md
   scripts/           — Faculty scripts (TTS, music, selfie — varies by preset)
@@ -166,7 +167,25 @@ Personas can proactively reach out to users based on **real data**, not fabricat
 3. **OpenClaw handles scheduling.** The heartbeat config tells OpenClaw _when_ to trigger; the persona's `behaviorGuide` tells the agent _what_ to say.
 4. **User-configurable.** Users can adjust frequency, quiet hours, and sources to match their preferences.
 
-Samantha ships with heartbeat enabled (`smart` strategy, workspace-digest + upgrade-notify).
+### Dynamic Sync on Switch/Install
+
+Heartbeat config is **automatically synced** to `~/.openclaw/openclaw.json` whenever you install or switch a persona. The gateway immediately adopts the new persona's rhythm — no manual config needed.
+
+```bash
+npx openpersona switch samantha   # → gateway adopts "smart" heartbeat
+npx openpersona switch life-assistant  # → gateway switches to "rational" heartbeat
+```
+
+If the target persona has no heartbeat config, the gateway heartbeat is explicitly disabled to prevent leaking the previous persona's settings.
+
+### Per-Persona Strategies
+
+| Persona | Strategy | maxDaily | Rhythm |
+|---------|----------|----------|--------|
+| Samantha | `smart` | 5 | Perceptive — speaks when meaningful |
+| AI Girlfriend | `emotional` | 8 | Warm — frequent emotional check-ins |
+| Life Assistant | `rational` | 3 | Focused — task and schedule driven |
+| Health Butler | `wellness` | 4 | Caring — health and habit reminders |
 
 ## Persona Harvest — Community Contribution
 
