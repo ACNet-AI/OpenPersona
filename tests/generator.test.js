@@ -222,6 +222,36 @@ describe('generator', () => {
     assert.strictEqual(soulState.relationship.stage, 'stranger');
     await fs.remove(TMP);
   });
+
+  it('gracefully handles external faculty with install field', async () => {
+    const persona = {
+      personaName: 'ExtFaculty',
+      slug: 'ext-faculty-test',
+      bio: 'external faculty tester',
+      personality: 'adaptive',
+      speakingStyle: 'Flexible',
+      faculties: [
+        { name: 'reminder' },
+        { name: 'vision', install: 'clawhub:vision-faculty' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    // Should NOT throw even though "vision" doesn't exist in layers/faculties/
+    const { skillDir } = await generate(persona, TMP);
+    assert.ok(fs.existsSync(path.join(skillDir, 'SKILL.md')), 'SKILL.md must be generated');
+
+    // Local faculty (reminder) should still be included
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('reminder'), 'Local faculty should be included');
+
+    // External faculty should appear in manifest but not crash generation
+    const manifest = JSON.parse(fs.readFileSync(path.join(skillDir, 'manifest.json'), 'utf-8'));
+    assert.strictEqual(manifest.layers.faculties.length, 2, 'Both faculties should be in manifest');
+    assert.strictEqual(manifest.layers.faculties[1].name, 'vision');
+    assert.strictEqual(manifest.layers.faculties[1].install, 'clawhub:vision-faculty');
+
+    await fs.remove(TMP);
+  });
 });
 
 describe('generated SKILL.md quality', () => {

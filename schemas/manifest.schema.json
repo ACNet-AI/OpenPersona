@@ -13,24 +13,52 @@
       "type": "object",
       "required": ["soul", "faculties"],
       "properties": {
-        "soul": { "type": "string", "description": "Relative path to persona.json" },
+        "soul": {
+          "oneOf": [
+            { "type": "string", "description": "Relative path to persona.json" },
+            {
+              "type": "object",
+              "required": ["ref"],
+              "properties": {
+                "ref": { "type": "string", "description": "Relative path to persona.json" },
+                "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "Install source for external soul template/personality pack" }
+              }
+            }
+          ],
+          "description": "Soul layer. String for local persona.json path, object form for external soul templates."
+        },
         "body": {
           "oneOf": [
             { "type": "string", "description": "Embodiment name or path" },
-            { "type": "null" }
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": { "type": "string", "description": "Embodiment identifier" },
+                "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "Install source for external embodiment" }
+              }
+            }
           ],
-          "description": "Body layer reference, null for pure digital agents"
+          "description": "Body layer reference. null for pure digital agents, string for local, object with install for external."
         },
         "faculties": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "List of faculty names to include"
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "Faculty identifier" },
+              "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "Install source for external faculty" }
+            }
+          },
+          "description": "Faculties the persona uses. Each can reference a local definition in layers/faculties/ or an external package via install."
         },
         "skills": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "description"],
+            "required": ["name"],
             "properties": {
               "name": { "type": "string", "description": "Skill identifier" },
               "description": { "type": "string", "description": "What this skill does" },

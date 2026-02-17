@@ -55,14 +55,14 @@ flowchart TB
     E["cognition: reminder"]
   end
   subgraph Skill ["Skill Layer"]
-    F["ClawHub / skills.sh integrations"]
+    F["Local definitions + ClawHub / skills.sh"]
   end
 ```
 
 - **Soul** — Persona definition (constitution.md + persona.json + soul-state.json)
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
-- **Skill** — Professional skills, integrated from ClawHub / skills.sh
+- **Skill** — Professional skills: local definitions in `layers/skills/`, or external via ClawHub / skills.sh (`install` field)
 
 ### Constitution — The Soul's Foundation
 
@@ -340,12 +340,12 @@ layers/                 # Shared building blocks (four-layer module pool)
     voice/              #     expression — TTS voice synthesis
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
-  skills/               #   Skill layer modules (MVP placeholder)
+  skills/               #   Skill layer modules (local skill definitions)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-tests/                  # Tests (20 passing)
+tests/                  # Tests (45 passing)
 ```
 
 ## Development

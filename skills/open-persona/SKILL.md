@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.4.0"
+version: "0.5.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, openclaw]
@@ -35,7 +35,7 @@ Each persona is a four-layer bundle defined by two files:
   - `layers.soul` — Path to persona.json (who you are)
   - `layers.body` — Physical embodiment (null for digital agents)
   - `layers.faculties` — Array of faculty objects: `[{ "name": "voice", "provider": "elevenlabs", ... }]`
-  - `layers.skills` — External skills from ClawHub / skills.sh
+  - `layers.skills` — Array of skill objects: local definitions (resolved from `layers/skills/`), inline declarations, or external via `install` field
 
 - **`persona.json`** — Pure soul definition (personality, speaking style, vibe, boundaries, behaviorGuide)
 
@@ -65,7 +65,7 @@ When the user wants to create a persona, gather this information through natural
 
 **Cross-layer (manifest.json):**
 - **Faculties:** Which faculties to enable — use object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
-- **Skills:** External skills from ClawHub or skills.sh
+- **Skills:** Local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
 - **Body:** Physical embodiment (null for most personas)
 
 Write the collected info to a `persona.json` file, then run:
@@ -78,10 +78,11 @@ npx openpersona create --config ./persona.json --install
 After understanding the persona's purpose, search for relevant skills:
 
 1. Think about what capabilities this persona needs based on their role and bio
-2. Search ClawHub: `npx clawhub@latest search "<keywords>"`
-3. Search skills.sh: fetch `https://skills.sh/api/search?q=<keywords>`
-4. Present the top results to the user with name, description, and install count
-5. Add selected skills to the manifest under `layers.skills.clawhub` or `layers.skills.skillssh`
+2. Check if a **local definition** exists in `layers/skills/{name}/` (has `skill.json` + optional `SKILL.md`)
+3. Search ClawHub: `npx clawhub@latest search "<keywords>"`
+4. Search skills.sh: fetch `https://skills.sh/api/search?q=<keywords>`
+5. Present the top results to the user with name, description, and install count
+6. Add selected skills to `layers.skills` as objects: `{ "name": "...", "description": "..." }` for local/inline, or `{ "name": "...", "install": "clawhub:<slug>" }` for external
 
 ## Creating Custom Skills
 

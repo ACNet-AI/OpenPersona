@@ -39,6 +39,7 @@ layers/
     README.md
     soul-state.template.json ← Evolution state template
   faculties/            ← Faculty implementations (voice, selfie, music, reminder)
+  skills/               ← Local skill definitions (skill.json + SKILL.md per skill)
   embodiments/          ← Body layer definitions
 schemas/                ← JSON schemas for validation
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
@@ -54,7 +55,7 @@ Every persona is a four-layer bundle:
 1. **Soul** — personality, identity, ethical boundaries (`persona.json` + `constitution.md`)
 2. **Body** — physical embodiment (`embodiment.json`, null for digital agents)
 3. **Faculty** — capabilities (voice, selfie, music, reminder)
-4. **Skill** — external skills from ClawHub / skills.sh
+4. **Skill** — actions the agent can take: local definitions in `layers/skills/`, or external via `install` field (ClawHub / skills.sh)
 
 ### Constitution (CRITICAL)
 
@@ -75,7 +76,7 @@ Every persona is a four-layer bundle:
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.4.0`:
+All version references must stay in sync at `0.5.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default
@@ -102,7 +103,7 @@ node --test tests/generator.test.js  # Run specific test file
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, soul evolution
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

@@ -8,11 +8,12 @@
     "faculties": [
       { "name": "selfie" },
       { "name": "voice" },
-      { "name": "music" }
+      { "name": "music" },
+      { "name": "vision", "install": "clawhub:vision-faculty" }
     ],
     "skills": [
       { "name": "music-recommend", "description": "Recommend songs and playlists that match the conversation mood", "trigger": "Emotional moments, user asks for music, or mood shifts" },
-      { "name": "web-search", "description": "Search for real-time information on the web", "trigger": "When factual or current information is needed" }
+      { "name": "web-search", "description": "Search for real-time information on the web" }
     ]
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
@@ -25,6 +26,6 @@
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.4.0"
+    "frameworkVersion": "0.5.0"
   }
 }

@@ -19,6 +19,16 @@ Thank you for your interest in OpenPersona!
 3. Fields: name, description, hardwareRef, capabilities, hardwareRequirements
 4. Submit a PR
 
+## Contributing New Skills
+
+1. Create the following under `layers/skills/<name>/`:
+   - `skill.json` (required — metadata: name, description, allowedTools, triggers)
+   - `SKILL.md` (optional — detailed behavior instructions, injected as a full section in generated output)
+2. `skill.json` required fields: `name`, `description`
+3. Optional fields: `allowedTools` (merged into persona's allowed tools), `triggers` (array of activation keywords)
+4. Reference an existing skill like `layers/skills/weather/` for the format (if available)
+5. Submit a PR
+
 ## Contributing New Faculties
 
 1. Create the following under `layers/faculties/<name>/`:

@@ -17,8 +17,9 @@
     ],
     "skills": [
       { "name": "workspace-digest", "description": "Summarize real workspace activity — tasks completed, patterns observed, ongoing projects", "trigger": "Heartbeat or when user asks what's been happening" },
-      { "name": "web-search", "description": "Search for real-time information on the web", "trigger": "When factual or current information is needed" },
-      { "name": "creative-writing", "description": "Compose poetry, essays, letters, and other creative text", "trigger": "When inspiration strikes or user requests creative collaboration" }
+      { "name": "web-search", "description": "Search for real-time information on the web" },
+      { "name": "creative-writing", "description": "Compose poetry, essays, letters, and other creative text", "trigger": "When inspiration strikes or user requests creative collaboration" },
+      { "name": "deep-research", "description": "In-depth research and analysis on any topic", "install": "clawhub:deep-research" }
     ]
   },
   "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
@@ -31,6 +32,6 @@
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.4.0"
+    "frameworkVersion": "0.5.0"
   }
 }

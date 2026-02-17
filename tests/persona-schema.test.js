@@ -38,12 +38,12 @@ describe('persona schema', () => {
         assert.ok(f.name, `${preset} faculty object missing name`);
       }
 
-      // Validate skills: must be array of { name, description, ... }
+      // Validate skills: must be array of { name, ... }
+      // description is optional when a local definition exists in layers/skills/{name}/
       assert.ok(Array.isArray(manifest.layers.skills), `${preset} manifest.layers.skills must be array`);
       for (const s of manifest.layers.skills) {
         assert.strictEqual(typeof s, 'object', `${preset} skill must be object`);
         assert.ok(s.name, `${preset} skill missing name`);
-        assert.ok(s.description, `${preset} skill missing description`);
       }
     });
   }

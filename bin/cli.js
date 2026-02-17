@@ -24,7 +24,7 @@ const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
 program
   .name('openpersona')
   .description('OpenPersona - Create, manage, and orchestrate agent personas')
-  .version('0.4.0');
+  .version('0.5.0');
 
 if (process.argv.length === 2) {
   process.argv.push('create');
@@ -53,7 +53,7 @@ program
       // Merge cross-layer fields from manifest into persona for generator
       persona.faculties = manifest.layers.faculties || [];
       persona.skills = manifest.layers.skills || [];
-      persona.embodiments = manifest.layers.body ? [manifest.layers.body] : [];
+      persona.body = manifest.layers.body || null;
       persona.allowedTools = manifest.allowedTools || [];
       persona.version = manifest.version;
       persona.author = manifest.author;

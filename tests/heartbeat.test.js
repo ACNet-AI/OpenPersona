@@ -5,7 +5,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
-const { syncHeartbeat } = require('../lib/utils');
+const { syncHeartbeat, installExternal, installAllExternal } = require('../lib/utils');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-heartbeat-test-' + Date.now());
 
@@ -163,5 +163,58 @@ describe('syncHeartbeat', () => {
     assert.strictEqual(config.heartbeat.maxDaily, 3);
 
     await fs.remove(TMP);
+  });
+});
+
+describe('installExternal', () => {
+  it('returns false when entry has no install field', () => {
+    assert.strictEqual(installExternal({ name: 'weather' }, 'skill'), false);
+  });
+
+  it('returns false when entry is null', () => {
+    assert.strictEqual(installExternal(null, 'skill'), false);
+  });
+
+  it('returns false when install has invalid package name', () => {
+    assert.strictEqual(installExternal({ name: 'bad', install: 'clawhub:' }, 'skill'), false);
+  });
+
+  it('returns false when install has unknown source', () => {
+    // Unknown source like "npm:pkg" — installExternal tries execSync which will fail,
+    // but it should warn and return false, not throw
+    assert.strictEqual(installExternal({ name: 'x', install: 'unknown:pkg' }, 'skill'), false);
+  });
+});
+
+describe('installAllExternal', () => {
+  it('handles empty persona gracefully', () => {
+    // Should not throw on empty/missing layers
+    assert.doesNotThrow(() => installAllExternal({}));
+    assert.doesNotThrow(() => installAllExternal({ faculties: [], skills: [] }));
+    assert.doesNotThrow(() => installAllExternal({ body: null, faculties: [], skills: [] }));
+  });
+
+  it('skips entries without install field', () => {
+    // Should not throw — entries without install are just declarations
+    assert.doesNotThrow(() => installAllExternal({
+      body: null,
+      faculties: [{ name: 'voice' }, { name: 'music' }],
+      skills: [{ name: 'weather', description: 'Weather' }],
+    }));
+  });
+
+  it('processes body object form', () => {
+    // Body as string or null should be skipped without error
+    assert.doesNotThrow(() => installAllExternal({ body: 'humanoid', faculties: [], skills: [] }));
+    assert.doesNotThrow(() => installAllExternal({ body: null, faculties: [], skills: [] }));
+    // Body as object without install — should not throw
+    assert.doesNotThrow(() => installAllExternal({ body: { name: 'avatar' }, faculties: [], skills: [] }));
+  });
+
+  it('processes soul object form', () => {
+    // Soul as string should be skipped without error
+    assert.doesNotThrow(() => installAllExternal({ soul: './persona.json', faculties: [], skills: [] }));
+    // Soul as object without install — should not throw
+    assert.doesNotThrow(() => installAllExternal({ soul: { ref: './persona.json' }, faculties: [], skills: [] }));
   });
 });
