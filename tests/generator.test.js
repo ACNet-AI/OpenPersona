@@ -115,6 +115,53 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
+  it('generates manifest.json with heartbeat when provided', async () => {
+    const persona = {
+      personaName: 'HeartbeatGen',
+      slug: 'heartbeat-gen',
+      bio: 'heartbeat generator test',
+      personality: 'warm',
+      speakingStyle: 'Soft tone',
+      faculties: [{ name: 'reminder' }],
+      heartbeat: {
+        enabled: true,
+        strategy: 'smart',
+        maxDaily: 5,
+        quietHours: [0, 7],
+        sources: ['workspace-digest'],
+      },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const manifestPath = path.join(skillDir, 'manifest.json');
+    assert.ok(fs.existsSync(manifestPath), 'manifest.json must be generated');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    assert.strictEqual(manifest.heartbeat.enabled, true);
+    assert.strictEqual(manifest.heartbeat.strategy, 'smart');
+    assert.strictEqual(manifest.heartbeat.maxDaily, 5);
+    assert.strictEqual(manifest.name, 'heartbeat-gen');
+    assert.strictEqual(manifest.layers.soul, './persona.json');
+    await fs.remove(TMP);
+  });
+
+  it('generates manifest.json without heartbeat when not provided', async () => {
+    const persona = {
+      personaName: 'NoHB',
+      slug: 'no-hb',
+      bio: 'no heartbeat test',
+      personality: 'calm',
+      speakingStyle: 'Quiet',
+      faculties: [{ name: 'reminder' }],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const manifestPath = path.join(skillDir, 'manifest.json');
+    assert.ok(fs.existsSync(manifestPath), 'manifest.json must be generated even without heartbeat');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    assert.strictEqual(manifest.heartbeat, undefined, 'manifest should not have heartbeat when not provided');
+    await fs.remove(TMP);
+  });
+
   it('generates soul-state.json when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',

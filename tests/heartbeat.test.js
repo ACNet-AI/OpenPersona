@@ -96,6 +96,45 @@ describe('syncHeartbeat', () => {
     await fs.remove(TMP);
   });
 
+  it('falls back to persona.json when manifest has no heartbeat', async () => {
+    await fs.ensureDir(TMP);
+    // manifest.json exists but has no heartbeat
+    const manifestPath = path.join(TMP, 'manifest.json');
+    await fs.writeFile(manifestPath, JSON.stringify({ name: 'fallback-test' }));
+    // persona.json in same directory has heartbeat
+    const personaPath = path.join(TMP, 'persona.json');
+    await fs.writeFile(personaPath, JSON.stringify({
+      personaName: 'FallbackTest',
+      heartbeat: { enabled: true, strategy: 'fallback', maxDaily: 2 },
+    }));
+
+    const config = {};
+    const result = syncHeartbeat(config, manifestPath);
+
+    assert.strictEqual(result.synced, true);
+    assert.strictEqual(result.heartbeat.strategy, 'fallback');
+    assert.strictEqual(config.heartbeat.maxDaily, 2);
+    await fs.remove(TMP);
+  });
+
+  it('falls back to persona.json when manifest.json does not exist', async () => {
+    await fs.ensureDir(TMP);
+    const manifestPath = path.join(TMP, 'manifest.json');
+    // No manifest.json — only persona.json
+    const personaPath = path.join(TMP, 'persona.json');
+    await fs.writeFile(personaPath, JSON.stringify({
+      personaName: 'NoManifest',
+      heartbeat: { enabled: true, strategy: 'persona-only', maxDaily: 1 },
+    }));
+
+    const config = {};
+    const result = syncHeartbeat(config, manifestPath);
+
+    assert.strictEqual(result.synced, true);
+    assert.strictEqual(result.heartbeat.strategy, 'persona-only');
+    await fs.remove(TMP);
+  });
+
   it('switches heartbeat correctly between personas', async () => {
     await fs.ensureDir(TMP);
 
