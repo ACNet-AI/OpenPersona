@@ -345,7 +345,7 @@ schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-tests/                  # Tests (45 passing)
+tests/                  # Tests (56 passing)
 ```
 
 ## Development

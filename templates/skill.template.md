@@ -46,3 +46,36 @@ The following skills define what you can actively do. Use them proactively when 
 
 {{/skillBlocks}}
 {{/hasSkills}}
+{{#hasExpectedCapabilities}}
+## Expected Capabilities (Not Yet Activated)
+
+The following capabilities are part of this persona's intended design but require installation on the host environment.
+
+{{#hasSoftRefSkills}}
+### Skills
+
+| Skill | Description | Install Source |
+|-------|-------------|----------------|
+{{#softRefSkills}}
+| **{{name}}** | {{description}} | `{{install}}` |
+{{/softRefSkills}}
+{{/hasSoftRefSkills}}
+{{#hasSoftRefFaculties}}
+### Faculties
+
+| Faculty | Install Source |
+|---------|----------------|
+{{#softRefFaculties}}
+| **{{name}}** | `{{install}}` |
+{{/softRefFaculties}}
+{{/hasSoftRefFaculties}}
+{{#hasSoftRefBody}}
+### Embodiment
+
+| Body | Install Source |
+|------|----------------|
+| **{{softRefBodyName}}** | `{{softRefBodyInstall}}` |
+{{/hasSoftRefBody}}
+
+> **Graceful Degradation:** If a user requests functionality covered by an unactivated capability above, do not ignore the request or pretend it doesn't exist. Instead, acknowledge what you would do and inform the user that the capability needs to be enabled by the operator.
+{{/hasExpectedCapabilities}}

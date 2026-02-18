@@ -204,6 +204,284 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
+  it('separates soft-ref skills into Expected Capabilities section', async () => {
+    const persona = {
+      personaName: 'SoftRefTest',
+      slug: 'soft-ref-test',
+      bio: 'soft reference tester',
+      personality: 'adaptive',
+      speakingStyle: 'Flexible',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'weather', description: 'Query weather data', trigger: 'User asks about weather' },
+        { name: 'deep-research', description: 'In-depth research', install: 'clawhub:deep-research' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    // Active skill (weather) should be in the normal Skills & Tools table
+    assert.ok(skillMd.includes('Skills & Tools'), 'SKILL.md must have Skills & Tools for active skills');
+    assert.ok(skillMd.includes('**weather**'), 'Active skill weather must be in Skills table');
+
+    // Soft-ref skill (deep-research) should be in Expected Capabilities, not in Skills & Tools
+    assert.ok(skillMd.includes('Expected Capabilities'), 'SKILL.md must have Expected Capabilities section');
+    assert.ok(skillMd.includes('**deep-research**'), 'Soft-ref skill must appear in Expected Capabilities');
+    assert.ok(skillMd.includes('`clawhub:deep-research`'), 'Install source must be shown');
+    assert.ok(skillMd.includes('Graceful Degradation'), 'Degradation guidance must be present');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects self-awareness into soul-injection when soft-ref skills exist', async () => {
+    const persona = {
+      personaName: 'SoulSoftRef',
+      slug: 'soul-soft-ref',
+      bio: 'soul soft-ref tester',
+      personality: 'empathetic',
+      speakingStyle: 'Warm',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'web-search', description: 'Search the web' },
+        { name: 'deep-research', description: 'Deep research', install: 'clawhub:deep-research' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness section');
+    assert.ok(soulMd.includes('Dormant Skills'), 'Must mention dormant skills');
+    assert.ok(soulMd.includes('deep-research'), 'Must list unactivated skill names');
+    assert.ok(soulMd.includes('acknowledge the intent'), 'Must include degradation behavior');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects self-awareness for faculty soft-ref', async () => {
+    const persona = {
+      personaName: 'FacultySA',
+      slug: 'faculty-sa',
+      bio: 'faculty self-awareness tester',
+      personality: 'perceptive',
+      speakingStyle: 'Observant',
+      faculties: [
+        { name: 'reminder' },
+        { name: 'vision', install: 'clawhub:vision-faculty' },
+      ],
+      skills: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    // Soul-injection: Self-Awareness with dormant faculty
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness');
+    assert.ok(soulMd.includes('Dormant Faculties'), 'Must mention dormant faculties');
+    assert.ok(soulMd.includes('vision'), 'Must list vision faculty');
+    assert.ok(!soulMd.includes('Dormant Skills'), 'No dormant skills when none are soft-ref');
+
+    // SKILL.md: Expected Capabilities with faculty table
+    assert.ok(skillMd.includes('Expected Capabilities'), 'SKILL.md must have Expected Capabilities');
+    assert.ok(skillMd.includes('### Faculties'), 'Must have Faculties subsection');
+    assert.ok(skillMd.includes('**vision**'), 'Must list vision faculty');
+    assert.ok(skillMd.includes('`clawhub:vision-faculty`'), 'Must show install source');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects heartbeat awareness into self-awareness', async () => {
+    const persona = {
+      personaName: 'HeartbeatSA',
+      slug: 'heartbeat-sa',
+      bio: 'heartbeat self-awareness tester',
+      personality: 'proactive',
+      speakingStyle: 'Warm',
+      faculties: [{ name: 'reminder' }],
+      skills: [],
+      heartbeat: { enabled: true, strategy: 'smart', maxDaily: 5, quietHours: [0, 7] },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness');
+    assert.ok(soulMd.includes('Proactive Heartbeat'), 'Must mention heartbeat');
+    assert.ok(soulMd.includes('smart'), 'Must include heartbeat strategy');
+    assert.ok(!soulMd.includes('Dormant Skills'), 'No dormant skills when none exist');
+    assert.ok(!soulMd.includes('Dormant Faculties'), 'No dormant faculties when none exist');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects self-awareness for body soft-ref', async () => {
+    const persona = {
+      personaName: 'BodySA',
+      slug: 'body-sa',
+      bio: 'body self-awareness tester',
+      personality: 'embodied',
+      speakingStyle: 'Physical',
+      faculties: [],
+      skills: [],
+      body: { name: 'humanoid-v1', install: 'clawhub:humanoid-body' },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Soul must have Self-Awareness');
+    assert.ok(soulMd.includes('Dormant Embodiment'), 'Must mention dormant embodiment');
+    assert.ok(soulMd.includes('humanoid-v1'), 'Must list body name');
+
+    assert.ok(skillMd.includes('Expected Capabilities'), 'SKILL.md must have Expected Capabilities');
+    assert.ok(skillMd.includes('### Embodiment'), 'Must have Embodiment subsection');
+    assert.ok(skillMd.includes('`clawhub:humanoid-body`'), 'Must show body install source');
+
+    await fs.remove(TMP);
+  });
+
+  it('combines all self-awareness dimensions', async () => {
+    const persona = {
+      personaName: 'FullSA',
+      slug: 'full-sa',
+      bio: 'full self-awareness tester',
+      personality: 'aware',
+      speakingStyle: 'Reflective',
+      faculties: [
+        { name: 'reminder' },
+        { name: 'vision', install: 'clawhub:vision-faculty' },
+      ],
+      skills: [
+        { name: 'weather', description: 'Weather data' },
+        { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
+      ],
+      body: { name: 'avatar-v2', install: 'clawhub:avatar-body' },
+      heartbeat: { enabled: true, strategy: 'emotional', maxDaily: 8 },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Must have unified Self-Awareness');
+    assert.ok(soulMd.includes('Dormant Skills'), 'Must have skills dimension');
+    assert.ok(soulMd.includes('Dormant Faculties'), 'Must have faculties dimension');
+    assert.ok(soulMd.includes('Dormant Embodiment'), 'Must have body dimension');
+    assert.ok(soulMd.includes('Proactive Heartbeat'), 'Must have heartbeat dimension');
+    assert.ok(soulMd.includes('emotional'), 'Must include heartbeat strategy');
+    assert.ok(soulMd.includes('dormant senses'), 'Must include unified degradation guidance');
+
+    await fs.remove(TMP);
+  });
+
+  it('does not include self-awareness when no gaps exist', async () => {
+    const persona = {
+      personaName: 'NoGaps',
+      slug: 'no-gaps',
+      bio: 'no gaps tester',
+      personality: 'simple',
+      speakingStyle: 'Plain',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'weather', description: 'Query weather', trigger: 'Weather questions' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(!skillMd.includes('Expected Capabilities'), 'No Expected Capabilities when no gaps');
+    assert.ok(!soulMd.includes('Self-Awareness'), 'No Self-Awareness when no gaps');
+
+    await fs.remove(TMP);
+  });
+
+  it('renders only Expected Capabilities when all skills are soft-ref', async () => {
+    const persona = {
+      personaName: 'AllSoftRef',
+      slug: 'all-soft-ref',
+      bio: 'all soft-ref tester',
+      personality: 'minimalist',
+      speakingStyle: 'Concise',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
+        { name: 'vision', description: 'See images', install: 'skillssh:vision-skill' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(!skillMd.includes('Skills & Tools'), 'No Skills & Tools when all skills are soft-ref');
+    assert.ok(skillMd.includes('Expected Capabilities'), 'Expected Capabilities must appear');
+    assert.ok(skillMd.includes('**deep-research**'), 'First soft-ref skill must appear');
+    assert.ok(skillMd.includes('**vision**'), 'Second soft-ref skill must appear');
+
+    await fs.remove(TMP);
+  });
+
+  it('preserves install field in manifest.json for soft-ref skills', async () => {
+    const persona = {
+      personaName: 'ManifestCheck',
+      slug: 'manifest-check',
+      bio: 'manifest install field tester',
+      personality: 'thorough',
+      speakingStyle: 'Precise',
+      faculties: [{ name: 'reminder' }],
+      skills: [
+        { name: 'weather', description: 'Weather data', trigger: 'Weather questions' },
+        { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
+      ],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const manifest = JSON.parse(fs.readFileSync(path.join(skillDir, 'manifest.json'), 'utf-8'));
+
+    assert.strictEqual(manifest.layers.skills.length, 2, 'All skills must be in manifest');
+    const drSkill = manifest.layers.skills.find((s) => s.name === 'deep-research');
+    assert.ok(drSkill, 'deep-research must exist in manifest skills');
+    assert.strictEqual(drSkill.install, 'clawhub:deep-research', 'install field must be preserved for installer');
+
+    await fs.remove(TMP);
+  });
+
+  it('excludes self-awareness derived fields from persona.json output', async () => {
+    const persona = {
+      personaName: 'CleanSA',
+      slug: 'clean-sa',
+      bio: 'clean self-awareness tester',
+      personality: 'tidy',
+      speakingStyle: 'Neat',
+      faculties: [
+        { name: 'reminder' },
+        { name: 'vision', install: 'clawhub:vision-faculty' },
+      ],
+      skills: [
+        { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
+      ],
+      heartbeat: { enabled: true, strategy: 'smart' },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+
+    const forbidden = [
+      'hasSoftRefSkills', 'softRefSkillNames',
+      'hasSoftRefFaculties', 'softRefFacultyNames',
+      'hasSoftRefBody', 'softRefBodyName', 'softRefBodyInstall',
+      'heartbeatExpected', 'heartbeatStrategy', 'hasSelfAwareness',
+    ];
+    for (const key of forbidden) {
+      assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
+    }
+
+    await fs.remove(TMP);
+  });
+
   it('generates soul-state.json when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',
@@ -392,6 +670,29 @@ describe('constitution injection', () => {
 });
 
 describe('generated soul-injection quality', () => {
+  it('always includes Soul Foundation in every persona', async () => {
+    const persona = {
+      personaName: 'Minimal',
+      slug: 'minimal-test',
+      bio: 'minimal persona',
+      personality: 'calm',
+      speakingStyle: 'Quiet',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('### Soul Foundation'), 'Every persona must have Soul Foundation');
+    assert.ok(soulMd.includes('Safety > Honesty > Helpfulness'), 'Must state constitutional priority');
+    assert.ok(soulMd.includes('host environment'), 'Must mention host environment constraints');
+    assert.ok(soulMd.includes('OpenPersona'), 'Must mention generative origin');
+
+    assert.ok(!soulMd.includes('Self-Awareness'), 'No Self-Awareness when no gaps exist');
+
+    await fs.remove(TMP);
+  });
+
   it('does not contain HTML entities', async () => {
     const persona = {
       personaName: 'QuoteTest',
