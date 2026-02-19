@@ -126,7 +126,7 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Switch:** `npx openpersona switch <slug>` — switch active persona
 - **Update:** `npx openpersona update <slug>`
 - **Uninstall:** `npx openpersona uninstall <slug>`
-- **Reset (★Exp):** `npx openpersona reset <slug>` — restore soul-state.json to initial values
+- **Reset (★Exp):** `npx openpersona reset <slug>` — restore soul evolution state to initial values
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers.
 
@@ -153,7 +153,7 @@ This means you don't need to manually write degradation instructions. Just decla
 
 Soul evolution is a native Soul layer feature (not a faculty). Enable it via `evolution.enabled: true` in persona.json. The persona will automatically track relationship progression, mood, and trait emergence across conversations.
 
-Use `npx openpersona reset <slug>` to restore soul-state.json to initial values.
+Use `npx openpersona reset <slug>` to restore `soul/state.json` to initial values.
 
 ## References
 
