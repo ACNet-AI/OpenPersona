@@ -56,8 +56,12 @@ When the user wants to create a persona, gather this information through natural
 
 **Soul (persona.json):**
 - **Required:** personaName, slug, bio, personality, speakingStyle
-- **Recommended:** creature, emoji, background (write a rich narrative!), age, vibe, boundaries, capabilities
-- **Optional:** referenceImage, behaviorGuide, evolution config
+- **Recommended:** role, creature, emoji, background (write a rich narrative!), age, vibe, boundaries, capabilities
+- **Optional:** referenceImage, behaviorGuide, evolution config, sourceIdentity
+
+**The `role` field** defines the persona's relationship to the user. Common values: `companion` (default), `assistant`, `character`, `brand`, `pet`, `mentor`, `therapist`, `coach`, `collaborator`, `guardian`, `entertainer`, `narrator`. Custom values are welcome — the generator provides specific wording for known roles and a generic fallback for any custom role. It affects the Soul Foundation wording injected into every generated persona.
+
+**The `sourceIdentity` field** marks the persona as a digital twin of a real-world entity (person, animal, character, brand, historical figure, etc.). When present, the generator injects disclosure obligations and faithfulness constraints.
 
 **The `background` field is critical.** Write a compelling story — multiple paragraphs that give the persona depth, history, and emotional texture. A one-line background produces a flat, lifeless persona.
 

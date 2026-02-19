@@ -52,10 +52,17 @@ skills/open-persona/    ← Meta-skill for AI agents using the framework
 ### Four-Layer Model
 
 Every persona is a four-layer bundle:
-1. **Soul** — personality, identity, ethical boundaries (`persona.json` + `constitution.md`)
+1. **Soul** — personality, identity, ethical boundaries (`persona.json` + `constitution.md`). Key fields: `role` (free string, common values: companion/assistant/character/brand/pet/mentor/therapist/coach/collaborator/guardian/entertainer/narrator; custom values welcome), `sourceIdentity` (if present → digital twin of a real-world entity)
 2. **Body** — physical embodiment (`embodiment.json`, null for digital agents)
 3. **Faculty** — capabilities (voice, selfie, music, reminder)
 4. **Skill** — actions the agent can take: local definitions in `layers/skills/`, or external via `install` field (ClawHub / skills.sh)
+
+**Three orthogonal classification axes:**
+- **Relationship role** (`role` field) — what the persona is to the user
+- **Identity origin** (`sourceIdentity` field) — whether the persona mirrors a real-world entity
+- **Physical form** (`layers.body`) — whether the persona has a physical embodiment
+
+Note: `personaType` is deprecated — use `role` instead.
 
 ### Constitution (CRITICAL)
 

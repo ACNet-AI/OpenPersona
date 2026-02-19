@@ -8,7 +8,25 @@
   "properties": {
     "personaName": { "type": "string", "description": "Display name" },
     "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Identifier for directory and registry" },
-    "personaType": { "type": "string", "default": "virtual", "description": "Persona type (virtual, digital-twin, pet, brand, etc.)" },
+    "personaType": { "type": "string", "description": "DEPRECATED — use 'role' instead. Kept for backward compatibility." },
+    "role": {
+      "type": "string",
+      "default": "companion",
+      "description": "Relationship role — what this persona is to the user. Common values: companion, assistant, character, brand, pet, mentor, therapist, coach, collaborator, guardian, entertainer, narrator. Custom values are welcome."
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "description": "If present, this persona mirrors a real-world entity (digital twin). Null/absent for original personas.",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the source entity" },
+        "kind": { "type": "string", "description": "Entity kind (person, animal, character, brand, historical-figure, organism, etc.)" },
+        "relationship": { "type": "string", "description": "Relationship of the creator to the source (creator, owner, estate, licensee, etc.)" },
+        "consentType": { "type": "string", "description": "Authorization basis (self-granted, owner-granted, estate-granted, public-domain, licensed, etc.)" },
+        "consentGrantedBy": { "type": "string", "description": "Who granted consent" },
+        "syncStrategy": { "type": "string", "enum": ["static", "manual", "periodic"], "default": "static", "description": "How the persona stays in sync with the source entity" }
+      },
+      "required": ["name", "kind"]
+    },
     "bio": { "type": "string", "description": "One-line bio" },
     "personality": { "type": "string", "description": "Personality keywords" },
     "speakingStyle": { "type": "string", "description": "Speaking style" },

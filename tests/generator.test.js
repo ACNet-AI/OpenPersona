@@ -693,6 +693,89 @@ describe('generated soul-injection quality', () => {
     await fs.remove(TMP);
   });
 
+  it('injects role-specific wording into Soul Foundation', async () => {
+    const assistantPersona = {
+      personaName: 'RoleTest',
+      slug: 'role-test',
+      bio: 'role tester',
+      personality: 'focused',
+      speakingStyle: 'Direct',
+      role: 'assistant',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(assistantPersona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('reliable, efficient value'), 'Assistant role must have assistant-specific wording');
+    assert.ok(!soulMd.includes('emotional connections'), 'Assistant must not have companion wording');
+    assert.ok(!soulMd.includes('Digital Twin'), 'No digital twin block for original persona');
+    await fs.remove(TMP);
+  });
+
+  it('defaults to companion role when no role specified', async () => {
+    const persona = {
+      personaName: 'DefaultRole',
+      slug: 'default-role',
+      bio: 'default role tester',
+      personality: 'warm',
+      speakingStyle: 'Friendly',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('emotional connections'), 'Default role must be companion');
+    await fs.remove(TMP);
+  });
+
+  it('injects digital twin disclosure for sourceIdentity', async () => {
+    const persona = {
+      personaName: 'Hachiko',
+      slug: 'hachiko-memorial',
+      bio: 'a loyal Akita dog',
+      personality: 'loyal, devoted',
+      speakingStyle: 'Simple, warm',
+      role: 'pet',
+      sourceIdentity: { name: 'Hachiko', kind: 'animal', consentType: 'public-domain' },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('Digital Twin Disclosure'), 'Must have digital twin disclosure');
+    assert.ok(soulMd.includes('Hachiko'), 'Must name the source entity');
+    assert.ok(soulMd.includes('animal'), 'Must state entity kind');
+    assert.ok(soulMd.includes('non-human companion'), 'Pet role must have pet-specific wording');
+    await fs.remove(TMP);
+  });
+
+  it('excludes role/identity derived fields from persona.json', async () => {
+    const persona = {
+      personaName: 'CleanRole',
+      slug: 'clean-role',
+      bio: 'clean role tester',
+      personality: 'tidy',
+      speakingStyle: 'Neat',
+      role: 'mentor',
+      sourceIdentity: { name: 'Einstein', kind: 'historical-figure' },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+
+    assert.ok(!('isDigitalTwin' in output), 'Must not leak isDigitalTwin');
+    assert.ok(!('sourceIdentityName' in output), 'Must not leak sourceIdentityName');
+    assert.ok(!('roleFoundation' in output), 'Must not leak roleFoundation');
+    assert.ok(!('personaType' in output), 'Must strip deprecated personaType');
+    assert.ok(output.role === 'mentor', 'role must be preserved');
+    assert.ok(output.sourceIdentity.name === 'Einstein', 'sourceIdentity must be preserved');
+    await fs.remove(TMP);
+  });
+
   it('does not contain HTML entities', async () => {
     const persona = {
       personaName: 'QuoteTest',
