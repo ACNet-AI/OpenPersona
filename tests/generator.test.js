@@ -1012,6 +1012,114 @@ describe('four-layer architecture', () => {
     await fs.remove(TMP);
   });
 
+  it('Body three-dimensional model: runtime dimension renders correctly', async () => {
+    const persona = {
+      personaName: 'RuntimeBot',
+      slug: 'runtime-bot',
+      bio: 'body runtime test',
+      personality: 'aware',
+      speakingStyle: 'Technical',
+      body: {
+        runtime: {
+          platform: 'openclaw',
+          channels: ['whatsapp', 'telegram'],
+          credentials: [
+            { scope: 'moltbook', shared: true, envVar: 'MOLTBOOK_API_KEY' },
+            { scope: 'elevenlabs', shared: false, envVar: 'ELEVENLABS_API_KEY' },
+          ],
+          resources: ['filesystem', 'network'],
+        },
+      },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    const injectionMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('### Physical'), 'Physical subsection in Body');
+    assert.ok(skillMd.includes('Digital-only'), 'No physical body means Digital-only');
+    assert.ok(skillMd.includes('### Runtime'), 'Runtime subsection in Body');
+    assert.ok(skillMd.includes('openclaw'), 'Platform declared in SKILL.md');
+    assert.ok(skillMd.includes('whatsapp'), 'Channels declared in SKILL.md');
+    assert.ok(skillMd.includes('moltbook (shared)'), 'Shared credential in SKILL.md');
+    assert.ok(skillMd.includes('elevenlabs (private)'), 'Private credential in SKILL.md');
+
+    assert.ok(injectionMd.includes('Body Awareness'), 'Body Awareness block injected');
+    assert.ok(injectionMd.includes('Credential Management Protocol'), 'Credential management protocol present');
+    assert.ok(injectionMd.includes('credentials/shared'), 'Shared credential path documented');
+    assert.ok(injectionMd.includes('credentials/persona-runtime-bot'), 'Private credential path documented');
+
+    await fs.remove(TMP);
+  });
+
+  it('Body three-dimensional model: appearance dimension renders correctly', async () => {
+    const persona = {
+      personaName: 'AvatarBot',
+      slug: 'avatar-bot',
+      bio: 'appearance test',
+      personality: 'visual',
+      speakingStyle: 'Artistic',
+      body: {
+        appearance: {
+          avatar: 'https://example.com/avatar.png',
+          style: 'anime',
+        },
+      },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('### Appearance'), 'Appearance subsection in Body');
+    assert.ok(skillMd.includes('avatar.png'), 'Avatar URL in SKILL.md');
+    assert.ok(skillMd.includes('anime'), 'Style in SKILL.md');
+
+    await fs.remove(TMP);
+  });
+
+  it('Body three-dimensional model: physical + runtime + appearance combined', async () => {
+    const persona = {
+      personaName: 'FullBody',
+      slug: 'full-body',
+      bio: 'full body test',
+      personality: 'embodied',
+      speakingStyle: 'Robotic',
+      body: {
+        physical: {
+          name: 'robot-arm',
+          description: '6-DOF arm',
+          capabilities: ['pick', 'place'],
+        },
+        runtime: {
+          platform: 'standalone',
+          channels: ['serial'],
+          credentials: [],
+          resources: ['filesystem'],
+        },
+        appearance: {
+          avatar: '/assets/robot.png',
+          style: 'industrial',
+          model3d: '/assets/robot.glb',
+        },
+      },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('### Physical'), 'Physical subsection');
+    assert.ok(skillMd.includes('robot-arm'), 'Physical body name');
+    assert.ok(skillMd.includes('6-DOF arm'), 'Physical body description');
+    assert.ok(skillMd.includes('pick, place'), 'Physical capabilities');
+    assert.ok(skillMd.includes('### Runtime'), 'Runtime subsection');
+    assert.ok(skillMd.includes('standalone'), 'Platform');
+    assert.ok(skillMd.includes('### Appearance'), 'Appearance subsection');
+    assert.ok(skillMd.includes('industrial'), 'Appearance style');
+    assert.ok(skillMd.includes('robot.glb'), '3D model reference');
+
+    await fs.remove(TMP);
+  });
+
   it('no README.md is generated', async () => {
     const persona = {
       personaName: 'NoReadme',

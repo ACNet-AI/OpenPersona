@@ -51,7 +51,9 @@ flowchart TB
     B["state.json — Dynamic evolution"]
   end
   subgraph Body ["Body Layer"]
-    C["embodiment.json — MVP placeholder"]
+    C["physical — robots/IoT"]
+    G["runtime — platform/channels/credentials"]
+    H["appearance — avatar/3D model"]
   end
   subgraph Faculty ["Faculty Layer"]
     D["expression: selfie · voice · music"]
@@ -63,7 +65,7 @@ flowchart TB
 ```
 
 - **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
-- **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
+- **Body** — Three-dimensional: `physical` (robots/IoT), `runtime` (platform/channels/credentials/resources), `appearance` (avatar/3D model). Digital agents use `runtime` to declare their operational environment.
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills: local definitions in `layers/skills/`, or external via ClawHub / skills.sh (`install` field)
 
@@ -343,7 +345,7 @@ presets/                # Assembled products — complete persona bundles
 layers/                 # Shared building blocks (four-layer module pool)
   soul/                 #   Soul layer modules
     constitution.md     #     Universal values & boundaries (injected into all personas)
-  embodiments/          #   Body layer modules (MVP placeholder)
+  embodiments/          #   Body layer modules (physical/runtime/appearance)
   faculties/            #   Faculty layer modules
     selfie/             #     expression — AI selfie generation (fal.ai)
     voice/              #     expression — TTS voice synthesis

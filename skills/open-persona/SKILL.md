@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.8.0"
+version: "0.9.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, openclaw]
@@ -53,7 +53,7 @@ persona-<slug>/
 
 - **`manifest.json`** — Four-layer manifest declaring what the persona uses:
   - `layers.soul` — Path to persona.json (`./soul/persona.json`)
-  - `layers.body` — Physical embodiment (null for digital agents)
+  - `layers.body` — Three-dimensional Body: `physical` (robots/IoT, null for digital), `runtime` (platform/channels/credentials/resources), `appearance` (avatar/3D model)
   - `layers.faculties` — Array of faculty objects: `[{ "name": "voice", "provider": "elevenlabs", ... }]`
   - `layers.skills` — Array of skill objects: local definitions (resolved from `layers/skills/`), inline declarations, or external via `install` field
 
@@ -93,7 +93,7 @@ When the user wants to create a persona, gather this information through natural
 **Cross-layer (manifest.json):**
 - **Faculties:** Which faculties to enable — use object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
 - **Skills:** Local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
-- **Body:** Physical embodiment (null for most personas, or object with `install` for external embodiment)
+- **Body:** Three-dimensional — `physical` (robots/IoT), `runtime` (platform, channels, credentials, resources), `appearance` (avatar, 3D model). Digital agents should declare `runtime` at minimum; `physical` and `appearance` are optional.
 
 **Soft References (`install` field):** Skills, faculties, and body entries can declare an `install` field (e.g., `"install": "clawhub:deep-research"`) to reference capabilities not yet available locally. The generator treats these as "soft references" — they won't crash generation, and the persona will be aware of these dormant capabilities. This enables graceful degradation: the persona acknowledges what it *would* do and explains that the capability needs activation.
 
@@ -153,6 +153,11 @@ The generator automatically equips every persona with two layers of self-awarene
 2. **Gap Awareness** (conditional) — When a persona declares capabilities via `install` fields that aren't locally available, or has a heartbeat config, the generator detects the gap and injects:
    - **In `soul/injection.md`**: A "Self-Awareness" section listing dormant skills, faculties, embodiment, or heartbeat — with graceful degradation guidance
    - **In `SKILL.md`**: An "Expected Capabilities" section documenting unactivated capabilities with install sources
+
+3. **Body Awareness** (conditional) — When a persona declares `body.runtime`, the generator injects a "Body Awareness" block into `soul/injection.md`. This gives the persona:
+   - Knowledge of its runtime platform and connected channels
+   - A **credential management protocol**: shared credentials in `~/.openclaw/credentials/shared/`, private credentials in `~/.openclaw/credentials/persona-<slug>/`
+   - Guidance on self-managing its operational environment
 
 This means you don't need to manually write degradation instructions. Just declare `install` fields on skills/faculties/body, and the persona will automatically know what it *could* do but *can't yet*.
 

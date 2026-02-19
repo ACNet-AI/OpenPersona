@@ -1,27 +1,80 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "openpersona/body/embodiment",
-  "title": "Embodiment",
-  "description": "Body layer - Physical embodiment definition",
+  "title": "Body Layer",
+  "description": "Three-dimensional Body definition: physical substrate, runtime environment, and appearance",
   "type": "object",
-  "required": ["name", "description"],
   "properties": {
-    "name": { "type": "string", "description": "Unique identifier" },
-    "description": { "type": "string" },
-    "hardwareRef": {
-      "type": "object",
+    "physical": {
+      "type": ["object", "null"],
+      "description": "Physical embodiment (robots, IoT devices). Null for digital-only agents.",
       "properties": {
-        "platform": { "type": "string" },
-        "package": { "type": "string" }
+        "name": { "type": "string", "description": "Unique identifier for the physical body" },
+        "description": { "type": "string" },
+        "hardwareRef": {
+          "type": "object",
+          "properties": {
+            "platform": { "type": "string", "description": "Hardware platform (e.g., ros2, arduino)" },
+            "package": { "type": "string", "description": "Package/driver reference" }
+          }
+        },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "hardwareRequirements": {
+          "type": "object",
+          "properties": {
+            "interface": { "type": "string" },
+            "driver": { "type": "string" }
+          }
+        }
       }
     },
-    "capabilities": { "type": "array", "items": { "type": "string" } },
-    "hardwareRequirements": {
-      "type": "object",
+    "runtime": {
+      "type": ["object", "null"],
+      "description": "Digital runtime environment — the platform, channels, credentials, and resources available to this persona.",
       "properties": {
-        "interface": { "type": "string" },
-        "driver": { "type": "string" }
+        "platform": {
+          "type": "string",
+          "description": "Host platform identifier (e.g., openclaw, standalone)",
+          "default": "openclaw"
+        },
+        "channels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Communication channels this persona expects (e.g., whatsapp, telegram, moltbook, discord)"
+        },
+        "credentials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scope"],
+            "properties": {
+              "scope": { "type": "string", "description": "Credential scope identifier (e.g., moltbook, elevenlabs, github)" },
+              "shared": { "type": "boolean", "default": false, "description": "If true, credential is shared across all personas. If false, private to this persona." },
+              "envVar": { "type": "string", "description": "Expected environment variable name (e.g., MOLTBOOK_API_KEY)" },
+              "description": { "type": "string" }
+            }
+          },
+          "description": "Credential scopes this persona needs — not the secrets themselves, but declarations of what it requires"
+        },
+        "resources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "System resources available (e.g., filesystem, network, browser, cron)"
+        }
       }
+    },
+    "appearance": {
+      "type": ["object", "null"],
+      "description": "Visual representation of the persona.",
+      "properties": {
+        "avatar": { "type": "string", "description": "URL or path to avatar image" },
+        "model3d": { "type": ["string", "null"], "description": "URL or path to 3D model (for XR/metaverse)" },
+        "style": { "type": "string", "description": "Visual style description (e.g., anime, photorealistic, pixel-art)" }
+      }
+    },
+    "install": {
+      "type": "string",
+      "description": "Soft reference — external body package to install (e.g., clawhub:robot-arm)"
     }
   }
 }
