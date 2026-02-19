@@ -1,0 +1,52 @@
+{
+  "name": "base",
+  "version": "0.1.0",
+  "author": "openpersona",
+  "layers": {
+    "soul": "./persona.json",
+    "body": null,
+    "faculties": [
+      {
+        "name": "voice"
+      },
+      {
+        "name": "reminder"
+      }
+    ],
+    "skills": [
+      {
+        "name": "web-search",
+        "description": "Search for real-time information on the web"
+      },
+      {
+        "name": "workspace-digest",
+        "description": "Summarize workspace activity — tasks completed, patterns observed",
+        "trigger": "Heartbeat or when user asks what's been happening"
+      }
+    ]
+  },
+  "allowedTools": [
+    "Bash(npm:*)",
+    "Bash(npx:*)",
+    "Bash(openclaw:*)",
+    "Bash(curl:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
+  "heartbeat": {
+    "enabled": true,
+    "strategy": "smart",
+    "maxDaily": 3,
+    "quietHours": [0, 7],
+    "sources": [
+      "workspace-digest",
+      "upgrade-notify",
+      "context-aware"
+    ]
+  },
+  "meta": {
+    "framework": "openpersona",
+    "frameworkVersion": "0.7.0"
+  }
+}

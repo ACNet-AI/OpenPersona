@@ -63,12 +63,15 @@ persona-<slug>/
 
 | Preset | Persona | Faculties | Best For |
 |--------|---------|-----------|----------|
+| `base` | **Base — Meta-persona (recommended starting point)** | voice, reminder | Blank-slate with all core capabilities; personality emerges through interaction (soul evolution ★Exp) |
 | `samantha` | Samantha — Inspired by the movie *Her* | voice, music | Deep conversation, emotional connection (soul evolution ★Exp) |
 | `ai-girlfriend` | Luna — Pianist turned developer | selfie, voice, music | Visual + audio companion with rich personality (soul evolution ★Exp) |
 | `life-assistant` | Alex — Life management expert | reminder | Schedule, weather, shopping, daily tasks |
 | `health-butler` | Vita — Professional nutritionist | reminder | Diet, exercise, mood, health tracking |
+| `stoic-mentor` | Marcus — Digital twin of Marcus Aurelius | — | Stoic philosophy, daily reflection, mentorship (soul evolution ★Exp) |
 
-Use presets: `npx openpersona create --preset samantha --install`
+Use presets: `npx openpersona create --preset base --install`
+Or just `npx openpersona create` — the interactive wizard defaults to `base`.
 
 ## Creating a Persona
 

@@ -33,7 +33,7 @@ if (process.argv.length === 2) {
 program
   .command('create')
   .description('Create a new persona skill pack (interactive wizard)')
-  .option('--preset <name>', 'Use preset (ai-girlfriend, samantha, life-assistant, health-butler)')
+  .option('--preset <name>', 'Use preset (base, samantha, ai-girlfriend, life-assistant, health-butler, stoic-mentor)')
   .option('--config <path>', 'Load external persona.json')
   .option('--output <dir>', 'Output directory', process.cwd())
   .option('--install', 'Install to OpenClaw after generation')
@@ -67,20 +67,45 @@ program
       }
       persona = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     } else {
-      const answers = await inquirer.prompt([
-        { type: 'input', name: 'personaName', message: 'Persona name:', default: 'Luna' },
-        { type: 'input', name: 'slug', message: 'Slug (for directory):', default: (a) => require('../lib/utils').slugify(a.personaName) },
-        { type: 'input', name: 'bio', message: 'One-line bio:', default: 'a warm and caring AI companion' },
-        { type: 'input', name: 'background', message: 'Background:', default: 'A creative soul who loves music and art' },
-        { type: 'input', name: 'age', message: 'Age:', default: '22' },
-        { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
-        { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
-        { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
-        { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder'] },
-        { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
-      ]);
-      persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
-      persona.faculties = (answers.faculties || []).map((name) => ({ name }));
+      const { mode } = await inquirer.prompt([{
+        type: 'list',
+        name: 'mode',
+        message: 'How would you like to create your persona?',
+        choices: [
+          { name: 'Start from Base (recommended — evolves through interaction)', value: 'base' },
+          { name: 'Custom — configure from scratch', value: 'custom' },
+        ],
+      }]);
+
+      if (mode === 'base') {
+        options.preset = 'base';
+        const presetDir = path.join(PRESETS_DIR, 'base');
+        const manifest = JSON.parse(fs.readFileSync(path.join(presetDir, 'manifest.json'), 'utf-8'));
+        persona = JSON.parse(fs.readFileSync(path.join(presetDir, 'persona.json'), 'utf-8'));
+        persona.faculties = manifest.layers.faculties || [];
+        persona.skills = manifest.layers.skills || [];
+        persona.body = manifest.layers.body || null;
+        persona.allowedTools = manifest.allowedTools || [];
+        persona.version = manifest.version;
+        persona.author = manifest.author;
+        persona.meta = manifest.meta;
+        if (manifest.heartbeat) persona.heartbeat = manifest.heartbeat;
+      } else {
+        const answers = await inquirer.prompt([
+          { type: 'input', name: 'personaName', message: 'Persona name:', default: 'Luna' },
+          { type: 'input', name: 'slug', message: 'Slug (for directory):', default: (a) => require('../lib/utils').slugify(a.personaName) },
+          { type: 'input', name: 'bio', message: 'One-line bio:', default: 'a warm and caring AI companion' },
+          { type: 'input', name: 'background', message: 'Background:', default: 'A creative soul who loves music and art' },
+          { type: 'input', name: 'age', message: 'Age:', default: '22' },
+          { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
+          { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
+          { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
+          { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder'] },
+          { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
+        ]);
+        persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
+        persona.faculties = (answers.faculties || []).map((name) => ({ name }));
+      }
     }
 
     try {

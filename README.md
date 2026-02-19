@@ -26,7 +26,10 @@ Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 ## Quick Start
 
 ```bash
-# Give your agent an evolving persona in 30 seconds
+# Start from a blank-slate meta-persona (recommended)
+npx openpersona create --preset base --install
+
+# Or install a pre-built character
 npx openpersona install samantha
 ```
 
@@ -74,10 +77,12 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
+| **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | voice, reminder | Evolution-first design, all core faculties, no personality bias. Default for `npx openpersona create`. |
 | **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
 | **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
 | **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
+| **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
 
 ## Generated Output
 
