@@ -93,6 +93,14 @@ The generator outputs persona skill packs with this layout:
 - **`manifest.json`** — four-layer manifest (`layers.soul` → `./soul/persona.json`)
 - **`scripts/`**, **`assets/`** — implementation scripts and static assets
 
+### Local Persona Registry
+
+`persona-registry.json` at `~/.openclaw/` tracks all installed personas. Maintained automatically by `install`, `uninstall`, and `switch` commands — no manual editing needed.
+
+- Functions: `loadRegistry()`, `saveRegistry()`, `registryAdd()`, `registryRemove()`, `registrySetActive()` in `lib/utils.js`
+- All accept optional `regPath` parameter for testing (defaults to `REGISTRY_PATH`)
+- `listPersonas()` in `lib/switcher.js` uses registry as primary source, falls back to scanning `openclaw.json`
+
 Key implementation details:
 - Soft-ref detection: `lib/generator.js` checks each skill/faculty/body for `install` field + missing local definition
 - All self-awareness flags (`hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasSelfAwareness`) are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output

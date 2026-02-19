@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | reset | contribute
+ * Commands: create | install | search | uninstall | update | list | switch | publish | reset | contribute | export | import
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -16,7 +16,7 @@ const { uninstall } = require('../lib/uninstaller');
 const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
 const { switchPersona, listPersonas } = require('../lib/switcher');
-const { OP_SKILLS_DIR, printError, printSuccess, printInfo } = require('../lib/utils');
+const { OP_SKILLS_DIR, resolveSoulFile, printError, printSuccess, printInfo } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
@@ -163,7 +163,7 @@ program
       printError(`Persona not found: persona-${slug}`);
       process.exit(1);
     }
-    const personaPath = path.join(skillDir, 'persona.json');
+    const personaPath = resolveSoulFile(skillDir, 'persona.json');
     if (!fs.existsSync(personaPath)) {
       printError('persona.json not found');
       process.exit(1);
@@ -227,10 +227,10 @@ program
   .description('★Experimental: Reset soul evolution state')
   .action(async (slug) => {
     const skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
-    const personaPath = path.join(skillDir, 'persona.json');
-    const soulStatePath = path.join(skillDir, 'soul-state.json');
+    const personaPath = resolveSoulFile(skillDir, 'persona.json');
+    const soulStatePath = resolveSoulFile(skillDir, 'state.json');
     if (!fs.existsSync(personaPath) || !fs.existsSync(soulStatePath)) {
-      printError('Persona or soul-state.json not found');
+      printError('Persona or soul state not found');
       process.exit(1);
     }
     const persona = JSON.parse(fs.readFileSync(personaPath, 'utf-8'));
@@ -256,6 +256,66 @@ program
         process.exit(1);
       }
       await contribute(slug, { mode: options.mode, dryRun: options.dryRun });
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('export <slug>')
+  .description('Export persona pack (with soul state) as a zip archive')
+  .option('-o, --output <path>', 'Output file path')
+  .action(async (slug, options) => {
+    const skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+    if (!fs.existsSync(skillDir)) {
+      printError(`Persona not found: persona-${slug}`);
+      process.exit(1);
+    }
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip();
+    const addDir = (dir, zipPath) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        const zp = zipPath ? `${zipPath}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) addDir(full, zp);
+        else zip.addLocalFile(full, zipPath || '');
+      }
+    };
+    addDir(skillDir, '');
+    const outPath = options.output || `persona-${slug}.zip`;
+    zip.writeZip(outPath);
+    printSuccess(`Exported to ${outPath}`);
+  });
+
+program
+  .command('import <file>')
+  .description('Import persona pack from a zip archive and install')
+  .option('-o, --output <dir>', 'Extract directory', path.join(require('os').tmpdir(), 'openpersona-import-' + Date.now()))
+  .action(async (file, options) => {
+    if (!fs.existsSync(file)) {
+      printError(`File not found: ${file}`);
+      process.exit(1);
+    }
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip(file);
+    const extractDir = options.output;
+    await fs.ensureDir(extractDir);
+    zip.extractAllTo(extractDir, true);
+
+    const personaPath = resolveSoulFile(extractDir, 'persona.json');
+    if (!fs.existsSync(personaPath)) {
+      printError('Not a valid persona archive: persona.json not found');
+      await fs.remove(extractDir);
+      process.exit(1);
+    }
+
+    try {
+      const destDir = await install(extractDir);
+      printSuccess(`Imported and installed from ${file}`);
+      if (extractDir.startsWith(require('os').tmpdir())) {
+        await fs.remove(extractDir);
+      }
     } catch (e) {
       printError(e.message);
       process.exit(1);

@@ -6,6 +6,7 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-' + Date.now());
 
@@ -1025,5 +1026,65 @@ describe('four-layer architecture', () => {
     assert.ok(!fs.existsSync(path.join(skillDir, 'README.md')), 'README.md must not be generated');
 
     await fs.remove(TMP);
+  });
+});
+
+describe('persona registry', () => {
+  const regPath = path.join(TMP, 'test-registry.json');
+
+  it('registryAdd creates entry with correct fields', () => {
+    fs.ensureDirSync(TMP);
+    registryAdd('test-bot', { personaName: 'TestBot', slug: 'test-bot', role: 'assistant' }, '/tmp/test', regPath);
+    const reg = loadRegistry(regPath);
+
+    assert.ok(reg.personas['test-bot'], 'Entry must exist');
+    assert.strictEqual(reg.personas['test-bot'].personaName, 'TestBot');
+    assert.strictEqual(reg.personas['test-bot'].role, 'assistant');
+    assert.strictEqual(reg.personas['test-bot'].path, '/tmp/test');
+    assert.ok(reg.personas['test-bot'].installedAt, 'Must have installedAt');
+    assert.strictEqual(reg.personas['test-bot'].active, false, 'New entry defaults to inactive');
+  });
+
+  it('registrySetActive marks one active and deactivates others', () => {
+    registryAdd('alpha', { personaName: 'Alpha', slug: 'alpha' }, '/tmp/a', regPath);
+    registryAdd('beta', { personaName: 'Beta', slug: 'beta' }, '/tmp/b', regPath);
+    registrySetActive('alpha', regPath);
+
+    let reg = loadRegistry(regPath);
+    assert.strictEqual(reg.personas.alpha.active, true, 'Alpha must be active');
+    assert.strictEqual(reg.personas.beta.active, false, 'Beta must be inactive');
+    assert.ok(reg.personas.alpha.lastActiveAt, 'Alpha must have lastActiveAt');
+
+    registrySetActive('beta', regPath);
+    reg = loadRegistry(regPath);
+    assert.strictEqual(reg.personas.alpha.active, false, 'Alpha must be deactivated');
+    assert.strictEqual(reg.personas.beta.active, true, 'Beta must now be active');
+  });
+
+  it('registryRemove deletes entry and preserves others', () => {
+    registryRemove('alpha', regPath);
+    const reg = loadRegistry(regPath);
+    assert.ok(!reg.personas.alpha, 'Alpha must be removed');
+    assert.ok(reg.personas.beta, 'Beta must remain');
+    assert.ok(reg.personas['test-bot'], 'test-bot must remain');
+  });
+
+  it('registryAdd preserves installedAt on update', () => {
+    const reg1 = loadRegistry(regPath);
+    const originalDate = reg1.personas['test-bot'].installedAt;
+
+    registryAdd('test-bot', { personaName: 'TestBot v2', slug: 'test-bot', role: 'mentor' }, '/tmp/test2', regPath);
+    const reg2 = loadRegistry(regPath);
+    assert.strictEqual(reg2.personas['test-bot'].installedAt, originalDate, 'installedAt must not change on update');
+    assert.strictEqual(reg2.personas['test-bot'].personaName, 'TestBot v2', 'personaName must update');
+    assert.strictEqual(reg2.personas['test-bot'].path, '/tmp/test2', 'path must update');
+  });
+
+  it('loadRegistry returns empty registry when file missing', () => {
+    const missing = path.join(TMP, 'nonexistent-registry.json');
+    const reg = loadRegistry(missing);
+    assert.deepStrictEqual(reg, { version: 1, personas: {} });
+
+    fs.removeSync(TMP);
   });
 });

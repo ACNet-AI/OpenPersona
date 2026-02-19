@@ -126,9 +126,13 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Switch:** `npx openpersona switch <slug>` — switch active persona
 - **Update:** `npx openpersona update <slug>`
 - **Uninstall:** `npx openpersona uninstall <slug>`
+- **Export:** `npx openpersona export <slug>` — export persona pack (with soul state) as a zip archive
+- **Import:** `npx openpersona import <file>` — import persona from a zip archive and install
 - **Reset (★Exp):** `npx openpersona reset <slug>` — restore soul evolution state to initial values
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers.
+
+All install/uninstall/switch operations automatically maintain a local registry at `~/.openclaw/persona-registry.json`, tracking installed personas, active status, and timestamps. The `export` and `import` commands enable cross-device persona transfer — export a zip, move it to another machine, and import to restore the full persona including soul state.
 
 ## Publishing to ClawHub
 
