@@ -874,3 +874,156 @@ describe('generated persona.json output', () => {
     await fs.remove(TMP);
   });
 });
+
+describe('four-layer architecture', () => {
+  it('SKILL.md contains all four layer headings in correct order', async () => {
+    const persona = {
+      personaName: 'LayerOrder',
+      slug: 'layer-order',
+      bio: 'layer ordering test',
+      personality: 'structured',
+      speakingStyle: 'Direct',
+      faculties: [{ name: 'voice' }],
+      skills: [{ name: 'weather', description: 'Check weather', trigger: 'On request' }],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    const soulIdx = skillMd.indexOf('## Soul');
+    const bodyIdx = skillMd.indexOf('## Body');
+    const facultyIdx = skillMd.indexOf('## Faculty');
+    const skillIdx = skillMd.indexOf('## Skill\n');
+
+    assert.ok(soulIdx >= 0, 'Must have ## Soul');
+    assert.ok(bodyIdx >= 0, 'Must have ## Body');
+    assert.ok(facultyIdx >= 0, 'Must have ## Faculty');
+    assert.ok(skillIdx >= 0, 'Must have ## Skill');
+    assert.ok(soulIdx < bodyIdx, 'Soul must come before Body');
+    assert.ok(bodyIdx < facultyIdx, 'Body must come before Faculty');
+    assert.ok(facultyIdx < skillIdx, 'Faculty must come before Skill');
+
+    await fs.remove(TMP);
+  });
+
+  it('Soul and Body always present even without faculties or skills', async () => {
+    const persona = {
+      personaName: 'Minimal',
+      slug: 'minimal',
+      bio: 'bare minimum persona',
+      personality: 'quiet',
+      speakingStyle: 'Brief',
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('## Soul'), 'Soul section always present');
+    assert.ok(skillMd.includes('## Body'), 'Body section always present');
+    assert.ok(skillMd.includes('Digital-only'), 'Digital-only body for persona without body');
+    assert.ok(!skillMd.includes('## Faculty'), 'No Faculty section when no faculties');
+    assert.ok(!skillMd.includes('## Skill\n'), 'No Skill section when no skills');
+
+    await fs.remove(TMP);
+  });
+
+  it('soul/ directory contains all required artifacts', async () => {
+    const persona = {
+      personaName: 'SoulDir',
+      slug: 'soul-dir',
+      bio: 'soul directory test',
+      personality: 'introspective',
+      speakingStyle: 'Thoughtful',
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulDir = path.join(skillDir, 'soul');
+
+    assert.ok(fs.existsSync(path.join(soulDir, 'persona.json')), 'soul/persona.json must exist');
+    assert.ok(fs.existsSync(path.join(soulDir, 'injection.md')), 'soul/injection.md must exist');
+    assert.ok(fs.existsSync(path.join(soulDir, 'identity.md')), 'soul/identity.md must exist');
+    assert.ok(fs.existsSync(path.join(soulDir, 'constitution.md')), 'soul/constitution.md must exist');
+
+    // These files must NOT exist at root level (old layout)
+    assert.ok(!fs.existsSync(path.join(skillDir, 'persona.json')), 'persona.json must not be at root');
+    assert.ok(!fs.existsSync(path.join(skillDir, 'soul-injection.md')), 'soul-injection.md must not be at root');
+    assert.ok(!fs.existsSync(path.join(skillDir, 'constitution.md')), 'constitution.md must not be at root');
+
+    await fs.remove(TMP);
+  });
+
+  it('references/ contains faculty docs when faculties present', async () => {
+    const persona = {
+      personaName: 'RefDir',
+      slug: 'ref-dir',
+      bio: 'references directory test',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      faculties: [{ name: 'voice' }, { name: 'reminder' }],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const refsDir = path.join(skillDir, 'references');
+
+    assert.ok(fs.existsSync(path.join(refsDir, 'voice.md')), 'references/voice.md must exist');
+    assert.ok(fs.existsSync(path.join(refsDir, 'reminder.md')), 'references/reminder.md must exist');
+
+    // Faculty docs must NOT be at root
+    assert.ok(!fs.existsSync(path.join(skillDir, 'voice.md')), 'voice.md must not be at root');
+
+    await fs.remove(TMP);
+  });
+
+  it('manifest.json points soul to soul/persona.json', async () => {
+    const persona = {
+      personaName: 'ManifestPath',
+      slug: 'manifest-path',
+      bio: 'manifest path test',
+      personality: 'precise',
+      speakingStyle: 'Exact',
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const manifest = JSON.parse(fs.readFileSync(path.join(skillDir, 'manifest.json'), 'utf-8'));
+
+    assert.strictEqual(manifest.layers.soul, './soul/persona.json', 'manifest must point to soul/persona.json');
+
+    await fs.remove(TMP);
+  });
+
+  it('Body description reflects soft-ref body', async () => {
+    const persona = {
+      personaName: 'BodyRef',
+      slug: 'body-ref',
+      bio: 'body soft-ref test',
+      personality: 'embodied',
+      speakingStyle: 'Physical',
+      body: { name: 'android-v1', install: 'clawhub:android-body' },
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('## Body'), 'Body section must exist');
+    assert.ok(skillMd.includes('android-v1'), 'Must mention body name');
+    assert.ok(skillMd.includes('not yet installed'), 'Must indicate not yet installed');
+
+    await fs.remove(TMP);
+  });
+
+  it('no README.md is generated', async () => {
+    const persona = {
+      personaName: 'NoReadme',
+      slug: 'no-readme',
+      bio: 'no readme test',
+      personality: 'lean',
+      speakingStyle: 'Minimal',
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+
+    assert.ok(!fs.existsSync(path.join(skillDir, 'README.md')), 'README.md must not be generated');
+
+    await fs.remove(TMP);
+  });
+});
