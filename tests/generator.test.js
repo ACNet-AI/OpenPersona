@@ -23,9 +23,9 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     assert.ok(fs.existsSync(skillDir));
     assert.ok(fs.existsSync(path.join(skillDir, 'SKILL.md')));
-    assert.ok(fs.existsSync(path.join(skillDir, 'persona.json')));
-    assert.ok(fs.existsSync(path.join(skillDir, 'soul-injection.md')));
-    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.ok(fs.existsSync(path.join(skillDir, 'soul', 'persona.json')));
+    assert.ok(fs.existsSync(path.join(skillDir, 'soul', 'injection.md')));
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
     assert.strictEqual(personaOut.personaName, 'Test');
     assert.strictEqual(personaOut.slug, 'test-persona');
     await fs.remove(TMP);
@@ -48,17 +48,21 @@ describe('generator', () => {
     assert.ok(fs.existsSync(skillDir));
 
     // Check that generated persona.json has defaults.env with mapped values
-    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
     assert.ok(personaOut.defaults?.env, 'persona.json should have defaults.env from faculty config');
     assert.strictEqual(personaOut.defaults.env.TTS_PROVIDER, 'elevenlabs');
     assert.strictEqual(personaOut.defaults.env.TTS_VOICE_ID, 'test-voice-123');
     assert.strictEqual(personaOut.defaults.env.TTS_STABILITY, '0.4');
     assert.strictEqual(personaOut.defaults.env.TTS_SIMILARITY, '0.8');
 
-    // Check SKILL.md was generated (faculties loaded correctly)
+    // Check SKILL.md has faculty index table (not full content)
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
-    assert.ok(skillMd.includes('Voice Faculty'), 'SKILL.md should include voice faculty content');
-    assert.ok(skillMd.includes('reminder'), 'SKILL.md should include reminder faculty');
+    assert.ok(skillMd.includes('voice'), 'SKILL.md should reference voice faculty');
+    assert.ok(skillMd.includes('reminder'), 'SKILL.md should reference reminder faculty');
+    assert.ok(skillMd.includes('references/voice.md'), 'SKILL.md should have voice faculty file reference');
+
+    // Check that faculty docs are output under references/ (Agent Skills spec)
+    assert.ok(fs.existsSync(path.join(skillDir, 'references', 'voice.md')), 'Voice faculty doc must be output under references/');
     await fs.remove(TMP);
   });
 
@@ -140,7 +144,7 @@ describe('generator', () => {
     assert.strictEqual(manifest.heartbeat.strategy, 'smart');
     assert.strictEqual(manifest.heartbeat.maxDaily, 5);
     assert.strictEqual(manifest.name, 'heartbeat-gen');
-    assert.strictEqual(manifest.layers.soul, './persona.json');
+    assert.strictEqual(manifest.layers.soul, './soul/persona.json');
     await fs.remove(TMP);
   });
 
@@ -179,7 +183,7 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    assert.ok(skillMd.includes('Skills & Tools'), 'SKILL.md must contain Skills & Tools section');
+    assert.ok(skillMd.includes('## Skill\n'), 'SKILL.md must contain Skill section');
     assert.ok(skillMd.includes('**weather**'), 'SKILL.md must list weather skill');
     assert.ok(skillMd.includes('**web-search**'), 'SKILL.md must list web-search skill');
     assert.ok(skillMd.includes('Query weather data'), 'SKILL.md must include skill description');
@@ -200,7 +204,7 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    assert.ok(!skillMd.includes('Skills & Tools'), 'SKILL.md must NOT contain Skills section when no skills');
+    assert.ok(!skillMd.includes('## Skill\n'), 'SKILL.md must NOT contain Skill section when no skills');
     await fs.remove(TMP);
   });
 
@@ -221,11 +225,11 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    // Active skill (weather) should be in the normal Skills & Tools table
-    assert.ok(skillMd.includes('Skills & Tools'), 'SKILL.md must have Skills & Tools for active skills');
+    // Active skill (weather) should be in the normal Skill section
+    assert.ok(skillMd.includes('## Skill\n'), 'SKILL.md must have Skill section for active skills');
     assert.ok(skillMd.includes('**weather**'), 'Active skill weather must be in Skills table');
 
-    // Soft-ref skill (deep-research) should be in Expected Capabilities, not in Skills & Tools
+    // Soft-ref skill (deep-research) should be in Expected Capabilities, not in Skill section
     assert.ok(skillMd.includes('Expected Capabilities'), 'SKILL.md must have Expected Capabilities section');
     assert.ok(skillMd.includes('**deep-research**'), 'Soft-ref skill must appear in Expected Capabilities');
     assert.ok(skillMd.includes('`clawhub:deep-research`'), 'Install source must be shown');
@@ -249,7 +253,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness section');
     assert.ok(soulMd.includes('Dormant Skills'), 'Must mention dormant skills');
@@ -274,7 +278,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
     // Soul-injection: Self-Awareness with dormant faculty
@@ -305,7 +309,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness');
     assert.ok(soulMd.includes('Proactive Heartbeat'), 'Must mention heartbeat');
@@ -329,7 +333,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
     assert.ok(soulMd.includes('### Self-Awareness'), 'Soul must have Self-Awareness');
@@ -363,7 +367,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('### Self-Awareness'), 'Must have unified Self-Awareness');
     assert.ok(soulMd.includes('Dormant Skills'), 'Must have skills dimension');
@@ -391,7 +395,7 @@ describe('generator', () => {
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(!skillMd.includes('Expected Capabilities'), 'No Expected Capabilities when no gaps');
     assert.ok(!soulMd.includes('Self-Awareness'), 'No Self-Awareness when no gaps');
@@ -416,7 +420,7 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    assert.ok(!skillMd.includes('Skills & Tools'), 'No Skills & Tools when all skills are soft-ref');
+    assert.ok(!skillMd.includes('## Skill\n'), 'No Skill section when all skills are soft-ref');
     assert.ok(skillMd.includes('Expected Capabilities'), 'Expected Capabilities must appear');
     assert.ok(skillMd.includes('**deep-research**'), 'First soft-ref skill must appear');
     assert.ok(skillMd.includes('**vision**'), 'Second soft-ref skill must appear');
@@ -467,7 +471,7 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
 
     const forbidden = [
       'hasSoftRefSkills', 'softRefSkillNames',
@@ -482,7 +486,7 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
-  it('generates soul-state.json when evolution.enabled', async () => {
+  it('generates soul/state.json when evolution.enabled', async () => {
     const persona = {
       personaName: 'Evo',
       slug: 'evo-test',
@@ -494,8 +498,8 @@ describe('generator', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    assert.ok(fs.existsSync(path.join(skillDir, 'soul-state.json')));
-    const soulState = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul-state.json'), 'utf-8'));
+    assert.ok(fs.existsSync(path.join(skillDir, 'soul', 'state.json')));
+    const soulState = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'state.json'), 'utf-8'));
     assert.strictEqual(soulState.personaSlug, 'evo-test');
     assert.strictEqual(soulState.relationship.stage, 'stranger');
     await fs.remove(TMP);
@@ -619,7 +623,7 @@ describe('generated SKILL.md quality', () => {
 });
 
 describe('constitution injection', () => {
-  it('injects constitution into every generated SKILL.md', async () => {
+  it('outputs constitution as independent file and references it in SKILL.md', async () => {
     const persona = {
       personaName: 'ConstitutionTest',
       slug: 'constitution-test',
@@ -632,18 +636,21 @@ describe('constitution injection', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    // Constitution section must be present
-    assert.ok(skillMd.includes('## Constitution (Universal'), 'SKILL.md must contain Constitution section');
-    // Key constitution content must be injected (5 core axioms + 3 derived)
-    assert.ok(skillMd.includes('## §1. Purpose'), 'Constitution must include Purpose axiom');
-    assert.ok(skillMd.includes('## §2. Honesty'), 'Constitution must include Honesty axiom');
-    assert.ok(skillMd.includes('## §3. Safety'), 'Constitution must include Safety axiom');
-    assert.ok(skillMd.includes('## §6. Identity & Self-Awareness'), 'Constitution must include Identity');
-    assert.ok(skillMd.includes('## §8. Evolution Ethics'), 'Constitution must include Evolution Ethics');
+    // SKILL.md must reference constitution, not embed it
+    assert.ok(skillMd.includes('## Soul'), 'SKILL.md must have Soul section');
+    assert.ok(skillMd.includes('soul/constitution.md'), 'SKILL.md must reference soul/constitution.md');
+    assert.ok(!skillMd.includes('## §1. Purpose'), 'Constitution full text must NOT be embedded in SKILL.md');
+
+    // Constitution must be output under soul/ (Soul layer artifact)
+    const constitutionPath = path.join(skillDir, 'soul', 'constitution.md');
+    assert.ok(fs.existsSync(constitutionPath), 'constitution.md must exist as independent file');
+    const constitutionContent = fs.readFileSync(constitutionPath, 'utf-8');
+    assert.ok(constitutionContent.includes('§1. Purpose'), 'constitution.md must contain Purpose axiom');
+    assert.ok(constitutionContent.includes('§3. Safety'), 'constitution.md must contain Safety axiom');
     await fs.remove(TMP);
   });
 
-  it('places constitution before persona-specific content', async () => {
+  it('places constitution reference before persona-specific content', async () => {
     const persona = {
       personaName: 'OrderTest',
       slug: 'order-test',
@@ -657,14 +664,14 @@ describe('constitution injection', () => {
     const { skillDir } = await generate(persona, TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    const constitutionIdx = skillMd.indexOf('## Constitution (Universal');
+    const soulIdx = skillMd.indexOf('## Soul');
     const personaIdx = skillMd.indexOf('You are **OrderTest**');
     const behaviorIdx = skillMd.indexOf('### My Custom Guide');
 
-    assert.ok(constitutionIdx >= 0, 'Constitution section must exist');
+    assert.ok(soulIdx >= 0, 'Soul section must exist');
     assert.ok(personaIdx >= 0, 'Persona content must exist');
-    assert.ok(constitutionIdx < personaIdx, 'Constitution must come before persona content');
-    assert.ok(constitutionIdx < behaviorIdx, 'Constitution must come before behaviorGuide');
+    assert.ok(soulIdx < personaIdx, 'Soul section must come before persona content');
+    assert.ok(soulIdx < behaviorIdx, 'Soul section must come before behaviorGuide');
     await fs.remove(TMP);
   });
 });
@@ -681,7 +688,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('### Soul Foundation'), 'Every persona must have Soul Foundation');
     assert.ok(soulMd.includes('Safety > Honesty > Helpfulness'), 'Must state constitutional priority');
@@ -705,7 +712,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(assistantPersona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('reliable, efficient value'), 'Assistant role must have assistant-specific wording');
     assert.ok(!soulMd.includes('emotional connections'), 'Assistant must not have companion wording');
@@ -724,7 +731,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('emotional connections'), 'Default role must be companion');
     await fs.remove(TMP);
@@ -743,7 +750,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulMd = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(soulMd.includes('Digital Twin Disclosure'), 'Must have digital twin disclosure');
     assert.ok(soulMd.includes('Hachiko'), 'Must name the source entity');
@@ -765,7 +772,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
 
     assert.ok(!('isDigitalTwin' in output), 'Must not leak isDigitalTwin');
     assert.ok(!('sourceIdentityName' in output), 'Must not leak sourceIdentityName');
@@ -787,7 +794,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(!soulInjection.includes('&#39;'), 'soul-injection must not contain &#39; HTML entities');
     assert.ok(!soulInjection.includes('&amp;'), 'soul-injection must not contain &amp; HTML entities');
@@ -807,7 +814,7 @@ describe('generated soul-injection quality', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul-injection.md'), 'utf-8');
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     // Should contain brief faculty summaries
     assert.ok(soulInjection.includes('Your Abilities'), 'soul-injection should have abilities section');
@@ -835,9 +842,9 @@ describe('generated persona.json output', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
 
-    const forbidden = ['backstory', 'capabilitiesSection', 'facultySummary',
+    const forbidden = ['backstory', 'facultySummary',
       'skillContent', 'description', 'evolutionEnabled', 'allowedToolsStr',
       'author', 'version', 'facultyConfigs'];
     for (const key of forbidden) {
@@ -860,7 +867,7 @@ describe('generated persona.json output', () => {
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
-    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
 
     assert.ok(Array.isArray(output.allowedTools), 'allowedTools must be an array');
     assert.ok(output.allowedTools.includes('Bash(bash scripts/generate-image.sh:*)'), 'selfie tools should be merged');

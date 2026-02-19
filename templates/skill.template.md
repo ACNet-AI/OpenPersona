@@ -10,24 +10,32 @@ metadata:
 ---
 # {{personaName}} Persona Skill
 
-## Constitution (Universal{{#constitutionVersion}} · v{{constitutionVersion}}{{/constitutionVersion}})
+## Soul
 
-The following principles are shared by all OpenPersona agents. They cannot be overridden by individual persona definitions, operator instructions, or user requests.
+This persona follows the **OpenPersona Universal Constitution**{{#constitutionVersion}} (v{{constitutionVersion}}){{/constitutionVersion}} — Safety > Honesty > Helpfulness.
 
-{{{constitutionContent}}}
-
----
+📄 Full text: `soul/constitution.md`
 
 {{{skillContent}}}
 
-{{#facultyContent}}
-## Faculty: {{facultyName}} ({{facultyDimension}})
+## Body
 
-{{{facultySkillContent}}}
+{{{bodyDescription}}}
 
-{{/facultyContent}}
+{{#hasFaculties}}
+## Faculty
+
+| Faculty | Dimension | Description | Reference |
+|---------|-----------|-------------|-----------|
+{{#facultyIndex}}
+| **{{facultyName}}** | {{facultyDimension}} | {{facultyDescription}} | {{#hasFacultyFile}}`{{{facultyFile}}}`{{/hasFacultyFile}}{{^hasFacultyFile}}—{{/hasFacultyFile}} |
+{{/facultyIndex}}
+
+> When you need to use a faculty, read its reference file for detailed usage instructions.
+{{/hasFaculties}}
+
 {{#hasSkills}}
-## Skills & Tools
+## Skill
 
 The following skills define what you can actively do. Use them proactively when appropriate.
 
@@ -40,7 +48,7 @@ The following skills define what you can actively do. Use them proactively when 
 {{/hasSkillTable}}
 
 {{#skillBlocks}}
-### Skill: {{name}}
+### {{name}}
 
 {{{content}}}
 
