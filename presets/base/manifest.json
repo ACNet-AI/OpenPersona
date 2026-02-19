@@ -38,7 +38,10 @@
     "enabled": true,
     "strategy": "smart",
     "maxDaily": 3,
-    "quietHours": [0, 7],
+    "quietHours": [
+      0,
+      7
+    ],
     "sources": [
       "workspace-digest",
       "upgrade-notify",
@@ -47,6 +50,6 @@
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.7.0"
+    "frameworkVersion": "0.8.0"
   }
 }
