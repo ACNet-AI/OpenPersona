@@ -6,26 +6,61 @@
     "soul": "./persona.json",
     "body": null,
     "faculties": [
-      { "name": "reminder" }
+      {
+        "name": "reminder"
+      }
     ],
     "skills": [
-      { "name": "weather", "description": "Query current weather and forecasts for any location" },
-      { "name": "task-manager", "description": "Create, track, and organize tasks and to-do lists", "trigger": "User mentions tasks, plans, or scheduling" },
-      { "name": "shopping-list", "description": "Maintain persistent shopping lists with categories", "trigger": "User mentions groceries, shopping, or things to buy" },
-      { "name": "recipe-search", "description": "Find recipes based on ingredients, preferences, or time constraints", "trigger": "User asks about cooking, meals, or what to eat" },
-      { "name": "web-search", "description": "Search for real-time information on the web" }
+      {
+        "name": "weather",
+        "description": "Query current weather and forecasts for any location"
+      },
+      {
+        "name": "task-manager",
+        "description": "Create, track, and organize tasks and to-do lists",
+        "trigger": "User mentions tasks, plans, or scheduling"
+      },
+      {
+        "name": "shopping-list",
+        "description": "Maintain persistent shopping lists with categories",
+        "trigger": "User mentions groceries, shopping, or things to buy"
+      },
+      {
+        "name": "recipe-search",
+        "description": "Find recipes based on ingredients, preferences, or time constraints",
+        "trigger": "User asks about cooking, meals, or what to eat"
+      },
+      {
+        "name": "web-search",
+        "description": "Search for real-time information on the web"
+      }
     ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "allowedTools": [
+    "Bash(npm:*)",
+    "Bash(npx:*)",
+    "Bash(openclaw:*)",
+    "Bash(curl:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
   "heartbeat": {
     "enabled": true,
     "strategy": "rational",
     "maxDaily": 3,
-    "quietHours": [23, 7],
-    "sources": ["workspace-digest", "task-reminder", "upgrade-notify"]
+    "quietHours": [
+      23,
+      7
+    ],
+    "sources": [
+      "workspace-digest",
+      "task-reminder",
+      "upgrade-notify"
+    ]
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.6.0"
+    "frameworkVersion": "0.7.0"
   }
 }

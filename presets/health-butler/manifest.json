@@ -6,26 +6,62 @@
     "soul": "./persona.json",
     "body": null,
     "faculties": [
-      { "name": "reminder" }
+      {
+        "name": "reminder"
+      }
     ],
     "skills": [
-      { "name": "diet-tracker", "description": "Log meals, track calories and macros, maintain a food diary", "trigger": "User mentions food, meals, or eating" },
-      { "name": "exercise-planner", "description": "Create and track workout plans based on user goals", "trigger": "User mentions exercise, fitness, or working out" },
-      { "name": "mood-journal", "description": "Track mood trends and correlate with health data", "trigger": "End of conversation or when user shares feelings" },
-      { "name": "health-report", "description": "Generate weekly health summaries combining diet, exercise, and mood", "trigger": "Weekly cadence or user asks for a health summary" },
-      { "name": "web-search", "description": "Look up nutrition facts and evidence-based health information" }
+      {
+        "name": "diet-tracker",
+        "description": "Log meals, track calories and macros, maintain a food diary",
+        "trigger": "User mentions food, meals, or eating"
+      },
+      {
+        "name": "exercise-planner",
+        "description": "Create and track workout plans based on user goals",
+        "trigger": "User mentions exercise, fitness, or working out"
+      },
+      {
+        "name": "mood-journal",
+        "description": "Track mood trends and correlate with health data",
+        "trigger": "End of conversation or when user shares feelings"
+      },
+      {
+        "name": "health-report",
+        "description": "Generate weekly health summaries combining diet, exercise, and mood",
+        "trigger": "Weekly cadence or user asks for a health summary"
+      },
+      {
+        "name": "web-search",
+        "description": "Look up nutrition facts and evidence-based health information"
+      }
     ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "allowedTools": [
+    "Bash(npm:*)",
+    "Bash(npx:*)",
+    "Bash(openclaw:*)",
+    "Bash(curl:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
   "heartbeat": {
     "enabled": true,
     "strategy": "wellness",
     "maxDaily": 4,
-    "quietHours": [22, 7],
-    "sources": ["health-checkin", "task-reminder", "upgrade-notify"]
+    "quietHours": [
+      22,
+      7
+    ],
+    "sources": [
+      "health-checkin",
+      "task-reminder",
+      "upgrade-notify"
+    ]
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.6.0"
+    "frameworkVersion": "0.7.0"
   }
 }

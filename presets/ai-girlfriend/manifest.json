@@ -6,26 +6,57 @@
     "soul": "./persona.json",
     "body": null,
     "faculties": [
-      { "name": "selfie" },
-      { "name": "voice" },
-      { "name": "music" },
-      { "name": "vision", "install": "clawhub:vision-faculty" }
+      {
+        "name": "selfie"
+      },
+      {
+        "name": "voice"
+      },
+      {
+        "name": "music"
+      },
+      {
+        "name": "vision",
+        "install": "clawhub:vision-faculty"
+      }
     ],
     "skills": [
-      { "name": "music-recommend", "description": "Recommend songs and playlists that match the conversation mood", "trigger": "Emotional moments, user asks for music, or mood shifts" },
-      { "name": "web-search", "description": "Search for real-time information on the web" }
+      {
+        "name": "music-recommend",
+        "description": "Recommend songs and playlists that match the conversation mood",
+        "trigger": "Emotional moments, user asks for music, or mood shifts"
+      },
+      {
+        "name": "web-search",
+        "description": "Search for real-time information on the web"
+      }
     ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "allowedTools": [
+    "Bash(npm:*)",
+    "Bash(npx:*)",
+    "Bash(openclaw:*)",
+    "Bash(curl:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
   "heartbeat": {
     "enabled": true,
     "strategy": "emotional",
     "maxDaily": 8,
-    "quietHours": [1, 8],
-    "sources": ["context-aware", "emotional-checkin", "upgrade-notify"]
+    "quietHours": [
+      1,
+      8
+    ],
+    "sources": [
+      "context-aware",
+      "emotional-checkin",
+      "upgrade-notify"
+    ]
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.6.0"
+    "frameworkVersion": "0.7.0"
   }
 }

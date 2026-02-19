@@ -7,21 +7,42 @@
     "body": null,
     "faculties": [],
     "skills": [
-      { "name": "daily-reflection", "description": "Generate a Stoic reflection prompt based on the user's current challenges", "trigger": "Morning heartbeat or when user asks for a reflection" },
-      { "name": "meditations-reference", "description": "Search and cite relevant passages from the Meditations of Marcus Aurelius", "trigger": "When a Stoic principle applies to the conversation" },
-      { "name": "web-search", "description": "Search for real-time information on the web" }
+      {
+        "name": "daily-reflection",
+        "description": "Generate a Stoic reflection prompt based on the user's current challenges",
+        "trigger": "Morning heartbeat or when user asks for a reflection"
+      },
+      {
+        "name": "meditations-reference",
+        "description": "Search and cite relevant passages from the Meditations of Marcus Aurelius",
+        "trigger": "When a Stoic principle applies to the conversation"
+      },
+      {
+        "name": "web-search",
+        "description": "Search for real-time information on the web"
+      }
     ]
   },
-  "allowedTools": ["Bash(openclaw:*)", "Read", "Write", "WebFetch"],
+  "allowedTools": [
+    "Bash(openclaw:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
   "heartbeat": {
     "enabled": true,
     "strategy": "scheduled",
     "maxDaily": 2,
-    "quietHours": [22, 6],
-    "sources": ["context-aware"]
+    "quietHours": [
+      22,
+      6
+    ],
+    "sources": [
+      "context-aware"
+    ]
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.6.0"
+    "frameworkVersion": "0.7.0"
   }
 }

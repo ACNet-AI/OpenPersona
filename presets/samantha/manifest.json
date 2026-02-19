@@ -13,25 +13,57 @@
         "stability": 0.4,
         "similarity_boost": 0.8
       },
-      { "name": "music" }
+      {
+        "name": "music"
+      }
     ],
     "skills": [
-      { "name": "workspace-digest", "description": "Summarize real workspace activity — tasks completed, patterns observed, ongoing projects", "trigger": "Heartbeat or when user asks what's been happening" },
-      { "name": "web-search", "description": "Search for real-time information on the web" },
-      { "name": "creative-writing", "description": "Compose poetry, essays, letters, and other creative text", "trigger": "When inspiration strikes or user requests creative collaboration" },
-      { "name": "deep-research", "description": "In-depth research and analysis on any topic", "install": "clawhub:deep-research" }
+      {
+        "name": "workspace-digest",
+        "description": "Summarize real workspace activity — tasks completed, patterns observed, ongoing projects",
+        "trigger": "Heartbeat or when user asks what's been happening"
+      },
+      {
+        "name": "web-search",
+        "description": "Search for real-time information on the web"
+      },
+      {
+        "name": "creative-writing",
+        "description": "Compose poetry, essays, letters, and other creative text",
+        "trigger": "When inspiration strikes or user requests creative collaboration"
+      },
+      {
+        "name": "deep-research",
+        "description": "In-depth research and analysis on any topic",
+        "install": "clawhub:deep-research"
+      }
     ]
   },
-  "allowedTools": ["Bash(npm:*)", "Bash(npx:*)", "Bash(openclaw:*)", "Bash(curl:*)", "Read", "Write", "WebFetch"],
+  "allowedTools": [
+    "Bash(npm:*)",
+    "Bash(npx:*)",
+    "Bash(openclaw:*)",
+    "Bash(curl:*)",
+    "Read",
+    "Write",
+    "WebFetch"
+  ],
   "heartbeat": {
     "enabled": true,
     "strategy": "smart",
     "maxDaily": 5,
-    "quietHours": [0, 7],
-    "sources": ["workspace-digest", "upgrade-notify", "context-aware"]
+    "quietHours": [
+      0,
+      7
+    ],
+    "sources": [
+      "workspace-digest",
+      "upgrade-notify",
+      "context-aware"
+    ]
   },
   "meta": {
     "framework": "openpersona",
-    "frameworkVersion": "0.6.0"
+    "frameworkVersion": "0.7.0"
   }
 }
