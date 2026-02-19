@@ -113,9 +113,9 @@ program
       if (options.dryRun) {
         printInfo('Dry run — preview only, no files written.');
         printInfo(`Would generate: persona-${persona.slug || require('../lib/utils').slugify(persona.personaName)}/`);
-        printInfo(`  SKILL.md, soul-injection.md, identity-block.md, README.md, persona.json`);
+        printInfo(`  SKILL.md, soul/, references/, manifest.json, scripts/`);
         if (persona.evolution?.enabled) {
-          printInfo(`  soul-state.json (★Experimental)`);
+          printInfo(`  soul/state.json (★Experimental)`);
         }
         const faculties = persona.faculties || [];
         if (faculties.length) {
@@ -266,7 +266,7 @@ program
     const moodBaseline = persona.personality?.split(',')[0]?.trim() || 'neutral';
     const soulState = Mustache.render(tpl, { slug, createdAt: now, lastUpdatedAt: now, moodBaseline });
     fs.writeFileSync(soulStatePath, soulState);
-    printSuccess('Reset soul-state.json');
+    printSuccess('Reset soul evolution state');
   });
 
 program

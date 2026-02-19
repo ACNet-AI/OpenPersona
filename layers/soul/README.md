@@ -7,12 +7,18 @@ The Soul layer defines **who a persona is** — identity, personality, values, a
 The **`constitution.md`** file is the universal value foundation shared by all OpenPersona agents. It is automatically injected into every generated SKILL.md, before any persona-specific content.
 
 ```
-Soul Layer internal structure:
+Soul Layer internal structure (in source):
 
-  constitution.md   ← Shared foundation (all personas inherit, cannot be overridden)
-  persona.json      ← Individual persona definition (personality, style, behavior)
-  soul-state.json           ← Dynamic evolution state (★Experimental)
+  constitution.md           ← Shared foundation (all personas inherit, cannot be overridden)
   soul-state.template.json  ← Evolution state template (used by generator & CLI reset)
+
+Generated output (in persona skill pack soul/ directory):
+
+  persona.json       ← Individual persona definition (personality, style, behavior)
+  constitution.md    ← Copy of shared foundation
+  injection.md       ← Soul injection for host integration
+  identity.md        ← Identity block
+  state.json         ← Dynamic evolution state (★Experimental)
 ```
 
 The constitution is built on five core axioms (**Purpose**, **Honesty**, **Safety**, **Autonomy**, **Hierarchy**), from which all other principles derive:

@@ -48,7 +48,7 @@ npx openpersona install samantha
 flowchart TB
   subgraph Soul ["Soul Layer"]
     A["persona.json — Who you are"]
-    B["soul-state.json — Dynamic evolution"]
+    B["state.json — Dynamic evolution"]
   end
   subgraph Body ["Body Layer"]
     C["embodiment.json — MVP placeholder"]
@@ -62,7 +62,7 @@ flowchart TB
   end
 ```
 
-- **Soul** — Persona definition (constitution.md + persona.json + soul-state.json)
+- **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
 - **Body** — Physical embodiment (MVP placeholder, for robots/IoT devices)
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills: local definitions in `layers/skills/`, or external via ClawHub / skills.sh (`install` field)
@@ -90,14 +90,18 @@ Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
 
 ```
 persona-samantha/
-  SKILL.md           — Agent behavior (persona + faculty guides merged)
-  soul-injection.md  — Narrative backstory, injected into SOUL.md
-  identity-block.md  — Name, creature, emoji, vibe, injected into IDENTITY.md
-  persona.json       — Persona definition (for update/list/publish)
-  manifest.json      — Cross-layer metadata (heartbeat, allowedTools, layers, meta)
-  soul-state.json    — Dynamic evolution (relationship, mood, traits)
-  README.md
-  scripts/           — Faculty scripts (TTS, music, selfie — varies by preset)
+├── SKILL.md              ← Four-layer index (## Soul / ## Body / ## Faculty / ## Skill)
+├── soul/                 ← Soul layer artifacts
+│   ├── persona.json      ← Pure soul definition
+│   ├── injection.md      ← Soul injection for host integration
+│   ├── identity.md       ← Identity block
+│   ├── constitution.md   ← Universal ethical foundation
+│   └── state.json        ← Evolution state (when enabled)
+├── references/           ← On-demand detail docs
+│   └── <faculty>.md      ← Per-faculty usage instructions
+├── manifest.json         ← Four-layer manifest (heartbeat, allowedTools, layers, meta)
+├── scripts/              ← Faculty scripts (TTS, music, selfie — varies by preset)
+└── assets/               ← Static assets
 ```
 
 ## Faculty Reference
@@ -291,7 +295,7 @@ openpersona list        List installed personas
 openpersona switch      Switch active persona (updates SOUL.md + IDENTITY.md)
 openpersona contribute  Persona Harvest — submit improvements as PR
 openpersona publish     Publish to ClawHub
-openpersona reset       Reset soul-state.json
+openpersona reset       Reset soul evolution state
 ```
 
 ### Key Options
