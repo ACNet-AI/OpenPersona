@@ -2499,6 +2499,26 @@ describe('agent card and acn config', () => {
     assert.strictEqual(manifest.acn.registerConfig, './acn-config.json', 'registerConfig reference should be correct');
   });
 
+  it('acn-config.json uses placeholder when acn_gateway not in body.runtime', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(basePersona, AC_TMP);
+    const config = JSON.parse(fs.readFileSync(path.join(skillDir, 'acn-config.json'), 'utf-8'));
+
+    assert.strictEqual(config.acn_gateway, '<RUNTIME_ACN_GATEWAY>', 'acn_gateway should be placeholder when not declared');
+  });
+
+  it('acn-config.json uses body.runtime.acn_gateway when declared', async () => {
+    await fs.ensureDir(AC_TMP);
+    const persona = {
+      ...basePersona,
+      body: { runtime: { platform: 'openclaw', acn_gateway: 'https://acn.agenticplanet.space' } },
+    };
+    const { skillDir } = await generate(persona, AC_TMP);
+    const config = JSON.parse(fs.readFileSync(path.join(skillDir, 'acn-config.json'), 'utf-8'));
+
+    assert.strictEqual(config.acn_gateway, 'https://acn.agenticplanet.space', 'acn_gateway should come from body.runtime');
+  });
+
   it('cleanup agent card test dir', () => {
     fs.removeSync(AC_TMP);
   });

@@ -126,6 +126,56 @@
           "additionalProperties": false
         }
       }
+    },
+    "body": {
+      "type": "object",
+      "description": "Body layer — substrate of existence. Three dimensions: runtime (REQUIRED), physical (optional), appearance (optional).",
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "description": "REQUIRED for all agents — minimum viable body: the platform/channels/credentials/resources the persona lives in.",
+          "properties": {
+            "platform": { "type": "string", "description": "Platform name (e.g. 'openclaw', 'claude-desktop', 'cursor')" },
+            "channels": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ],
+              "description": "Communication channels (e.g. 'chat', ['voice', 'text'])"
+            },
+            "credentials": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ],
+              "description": "Required credential scopes or service names"
+            },
+            "resources": { "type": "string", "description": "Resource requirements or identifiers" },
+            "acn_gateway": {
+              "type": "string",
+              "description": "ACN gateway base URL (e.g. 'https://acn.agenticplanet.space'). Written into acn-config.json at generation time. Omit to use '<RUNTIME_ACN_GATEWAY>' placeholder — the host fills it at deployment."
+            }
+          }
+        },
+        "physical": {
+          "type": "object",
+          "description": "Optional — physical embodiment for robots/IoT agents.",
+          "properties": {
+            "form": { "type": "string", "description": "Physical form description" },
+            "sensors": { "type": "array", "items": { "type": "string" }, "description": "Available sensors" },
+            "actuators": { "type": "array", "items": { "type": "string" }, "description": "Available actuators" }
+          }
+        },
+        "appearance": {
+          "type": "object",
+          "description": "Optional — visual/avatar representation.",
+          "properties": {
+            "avatar": { "type": "string", "description": "Avatar URL or path" },
+            "model3d": { "type": "string", "description": "3D model reference" },
+            "voiceId": { "type": "string", "description": "TTS voice identifier" }
+          }
+        }
+      }
     }
   }
 }
