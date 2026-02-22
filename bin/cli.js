@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | reset | contribute | export | import
+ * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -267,6 +267,19 @@ program
     const soulState = Mustache.render(tpl, { slug, createdAt: now, lastUpdatedAt: now, moodBaseline });
     fs.writeFileSync(soulStatePath, soulState);
     printSuccess('Reset soul evolution state');
+  });
+
+program
+  .command('evolve-report <slug>')
+  .description('★Experimental: Show evolution report for a persona')
+  .action(async (slug) => {
+    try {
+      const { evolveReport } = require('../lib/evolution');
+      await evolveReport(slug);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
   });
 
 program

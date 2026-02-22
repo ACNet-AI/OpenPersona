@@ -25,6 +25,7 @@ node --test tests/ # Run all tests — must pass before any PR
 bin/cli.js              ← CLI entry point (commander-based)
 lib/
   generator.js          ← Core persona generation logic (the heart of the project)
+  evolution.js          ← Evolution governance (evolve-report CLI)
   installer.js          ← Persona installation to OpenClaw
   publisher/clawhub.js  ← Publishing to ClawHub registry
   contributor.js        ← Persona Harvest (community contribution)
@@ -74,6 +75,7 @@ Note: `personaType` is deprecated — use `role` instead.
 - Section references use `§` prefix: `§1`, `§2`, etc. — never use `S1`, `S2`
 - Priority ordering: **Safety > Honesty > Helpfulness**
 - The generator (`lib/generator.js`) includes a compliance check that rejects `persona.json` boundaries attempting to loosen constitutional constraints
+- The generator also validates `evolution.boundaries`: `immutableTraits` must be a string array (non-empty, max 100 chars each), and formality bounds must be in range 1-10 with `minFormality < maxFormality`
 
 ### Self-Awareness System
 
@@ -145,7 +147,7 @@ node --test tests/generator.test.js  # Run specific test file
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion)
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report)
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

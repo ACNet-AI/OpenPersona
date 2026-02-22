@@ -1498,6 +1498,345 @@ describe('context handoff', () => {
   });
 });
 
+// --- Evolution Governance (Phase D) ---
+describe('evolution governance — compliance checks', () => {
+  it('rejects minFormality >= maxFormality', async () => {
+    const persona = {
+      personaName: 'BadFormality',
+      slug: 'bad-formality',
+      bio: 'formality test',
+      personality: 'rigid',
+      speakingStyle: 'Stiff',
+      evolution: {
+        enabled: true,
+        boundaries: { minFormality: 8, maxFormality: 3 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /minFormality.*must be less than.*maxFormality/,
+      'Should reject min >= max formality'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('rejects equal minFormality and maxFormality', async () => {
+    const persona = {
+      personaName: 'EqualFormality',
+      slug: 'equal-formality',
+      bio: 'formality test',
+      personality: 'balanced',
+      speakingStyle: 'Neutral',
+      evolution: {
+        enabled: true,
+        boundaries: { minFormality: 5, maxFormality: 5 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /minFormality.*must be less than.*maxFormality/,
+      'Should reject equal formality bounds'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('allows valid formality bounds', async () => {
+    const persona = {
+      personaName: 'GoodFormality',
+      slug: 'good-formality',
+      bio: 'formality test',
+      personality: 'balanced',
+      speakingStyle: 'Varied',
+      evolution: {
+        enabled: true,
+        boundaries: { minFormality: 2, maxFormality: 8 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    assert.ok(fs.existsSync(skillDir));
+    await fs.remove(TMP);
+  });
+
+  it('rejects non-array immutableTraits', async () => {
+    const persona = {
+      personaName: 'BadTraits',
+      slug: 'bad-traits',
+      bio: 'traits test',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: 'loyal' },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /immutableTraits must be an array/,
+      'Should reject non-array immutableTraits'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('rejects empty string in immutableTraits', async () => {
+    const persona = {
+      personaName: 'EmptyTrait',
+      slug: 'empty-trait',
+      bio: 'traits test',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['loyal', '', 'kind'] },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /immutableTraits contains invalid entry/,
+      'Should reject empty strings in immutableTraits'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('rejects overly long immutableTraits entry', async () => {
+    const persona = {
+      personaName: 'LongTrait',
+      slug: 'long-trait',
+      bio: 'traits test',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['a'.repeat(101)] },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /immutableTraits entry too long/,
+      'Should reject traits over 100 chars'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('allows valid evolution boundaries', async () => {
+    const persona = {
+      personaName: 'ValidEvo',
+      slug: 'valid-evo',
+      bio: 'valid evo test',
+      personality: 'flexible',
+      speakingStyle: 'Adaptive',
+      evolution: {
+        enabled: true,
+        boundaries: {
+          immutableTraits: ['loyal', 'honest'],
+          minFormality: 3,
+          maxFormality: 9,
+        },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    assert.ok(fs.existsSync(skillDir));
+    await fs.remove(TMP);
+  });
+
+  it('rejects non-numeric formality values', async () => {
+    const persona = {
+      personaName: 'StringFormality',
+      slug: 'string-formality',
+      bio: 'type test',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: { minFormality: 'abc', maxFormality: 5 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /minFormality must be a number/,
+      'Should reject non-numeric formality'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('rejects formality out of 1-10 range', async () => {
+    const persona = {
+      personaName: 'OutOfRange',
+      slug: 'out-of-range',
+      bio: 'range test',
+      personality: 'strict',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: { minFormality: 0, maxFormality: 15 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /must be between 1 and 10/,
+      'Should reject formality outside 1-10 range'
+    );
+    await fs.remove(TMP);
+  });
+
+  it('validates boundaries even when evolution not enabled', async () => {
+    const persona = {
+      personaName: 'NoEvoCheck',
+      slug: 'no-evo-check',
+      bio: 'check without enabled',
+      personality: 'cautious',
+      speakingStyle: 'Careful',
+      evolution: {
+        boundaries: { minFormality: 9, maxFormality: 2 },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    await assert.rejects(
+      () => generate(persona, TMP),
+      /minFormality.*must be less than.*maxFormality/,
+      'Should validate boundaries regardless of enabled flag'
+    );
+    await fs.remove(TMP);
+  });
+});
+
+describe('evolution governance — stateHistory', () => {
+  it('generated state.json includes stateHistory field', async () => {
+    const persona = {
+      personaName: 'HistoryTest',
+      slug: 'history-test',
+      bio: 'history test',
+      personality: 'adaptive',
+      speakingStyle: 'Flexible',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const state = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'state.json'), 'utf-8'));
+    assert.ok(Array.isArray(state.stateHistory), 'state.json must have stateHistory array');
+    assert.strictEqual(state.stateHistory.length, 0, 'stateHistory must be empty initially');
+    await fs.remove(TMP);
+  });
+
+  it('soul-injection includes snapshot instruction when evolution enabled', async () => {
+    const persona = {
+      personaName: 'SnapshotTest',
+      slug: 'snapshot-test',
+      bio: 'snapshot test',
+      personality: 'careful',
+      speakingStyle: 'Thorough',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injection.includes('stateHistory'), 'injection must mention stateHistory');
+    assert.ok(injection.includes('Snapshot'), 'injection must mention snapshot step');
+    await fs.remove(TMP);
+  });
+});
+
+describe('evolution report', () => {
+  const EVO_TMP = path.join(require('os').tmpdir(), 'openpersona-evo-test-' + Date.now());
+  const { evolveReport } = require('../lib/evolution');
+
+  it('returns state for persona with evolution', async () => {
+    const personaDir = path.join(EVO_TMP, 'persona-evo-report');
+    const soulDir = path.join(personaDir, 'soul');
+    await fs.ensureDir(soulDir);
+    await fs.writeFile(path.join(soulDir, 'persona.json'), JSON.stringify({
+      personaName: 'ReportBot',
+      slug: 'evo-report',
+    }));
+    await fs.writeFile(path.join(soulDir, 'state.json'), JSON.stringify({
+      personaSlug: 'evo-report',
+      createdAt: '2025-01-01T00:00:00Z',
+      lastUpdatedAt: '2025-06-15T12:00:00Z',
+      relationship: { stage: 'friend', interactionCount: 25, stageHistory: [] },
+      mood: { current: 'content', intensity: 0.7, baseline: 'calm' },
+      evolvedTraits: ['curious', 'playful'],
+      speakingStyleDrift: { formality: -2, emoji_frequency: 1, verbosity: 0 },
+      interests: { cooking: 5, travel: 3, music: 8 },
+      milestones: [
+        { type: 'relationship_stage', description: 'Reached friend stage', timestamp: '2025-03-01' },
+      ],
+      stateHistory: [],
+    }));
+
+    const result = await evolveReport('evo-report', { skillsDir: EVO_TMP, quiet: true });
+    assert.ok(result.state, 'must return state');
+    assert.strictEqual(result.state.relationship.stage, 'friend');
+    assert.strictEqual(result.personaName, 'ReportBot');
+    assert.strictEqual(result.state.evolvedTraits.length, 2);
+    assert.strictEqual(result.state.milestones.length, 1);
+  });
+
+  it('throws for missing persona', async () => {
+    await assert.rejects(
+      () => evolveReport('nonexistent', { skillsDir: EVO_TMP, quiet: true }),
+      /not found/i,
+    );
+  });
+
+  it('throws for persona without evolution state', async () => {
+    const personaDir = path.join(EVO_TMP, 'persona-no-evo');
+    await fs.ensureDir(path.join(personaDir, 'soul'));
+    await fs.writeFile(path.join(personaDir, 'soul', 'persona.json'), JSON.stringify({
+      personaName: 'NoEvo',
+      slug: 'no-evo',
+    }));
+    await assert.rejects(
+      () => evolveReport('no-evo', { skillsDir: EVO_TMP, quiet: true }),
+      /evolution state/i,
+    );
+  });
+
+  it('works with generated persona end-to-end', async () => {
+    const persona = {
+      personaName: 'E2EReport',
+      slug: 'e2e-report',
+      bio: 'end-to-end report test',
+      personality: 'thorough',
+      speakingStyle: 'Detailed',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    const genTmp = path.join(EVO_TMP, 'gen-output');
+    await fs.ensureDir(genTmp);
+    const { skillDir } = await generate(persona, genTmp);
+
+    const result = await evolveReport('e2e-report', { skillsDir: genTmp, quiet: true });
+    assert.ok(result.state);
+    assert.strictEqual(result.state.personaSlug, 'e2e-report');
+    assert.strictEqual(result.state.relationship.stage, 'stranger');
+    assert.strictEqual(result.personaName, 'E2EReport');
+  });
+
+  it('cleanup evolution test dir', () => {
+    fs.removeSync(EVO_TMP);
+  });
+});
+
 // --- Memory Faculty (Phase C) ---
 describe('memory faculty', () => {
   const MEM_TMP = path.join(require('os').tmpdir(), 'openpersona-memory-test-' + Date.now());
