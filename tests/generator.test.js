@@ -1497,3 +1497,175 @@ describe('context handoff', () => {
     fs.removeSync(HANDOFF_TMP);
   });
 });
+
+// --- Memory Faculty (Phase C) ---
+describe('memory faculty', () => {
+  const MEM_TMP = path.join(require('os').tmpdir(), 'openpersona-memory-test-' + Date.now());
+  const memoryScript = path.join(__dirname, '..', 'layers', 'faculties', 'memory', 'scripts', 'memory.js');
+  const { execSync } = require('child_process');
+
+  function runMemory(args) {
+    const env = {
+      ...process.env,
+      MEMORY_PROVIDER: 'local',
+      MEMORY_BASE_PATH: MEM_TMP,
+      PERSONA_SLUG: 'test-mem',
+    };
+    const out = execSync(`node ${memoryScript} ${args}`, { env, encoding: 'utf-8', timeout: 10000 });
+    return JSON.parse(out.trim());
+  }
+
+  it('faculty.json is valid', () => {
+    const facultyPath = path.join(__dirname, '..', 'layers', 'faculties', 'memory', 'faculty.json');
+    assert.ok(fs.existsSync(facultyPath));
+    const fac = JSON.parse(fs.readFileSync(facultyPath, 'utf-8'));
+    assert.strictEqual(fac.name, 'memory');
+    assert.strictEqual(fac.dimension, 'cognition');
+    assert.ok(fac.allowedTools.length > 0);
+    assert.ok(fac.envVars.includes('MEMORY_PROVIDER'));
+    assert.ok(fac.files.includes('scripts/memory.js'));
+  });
+
+  it('SKILL.md exists and has key sections', () => {
+    const skillPath = path.join(__dirname, '..', 'layers', 'faculties', 'memory', 'SKILL.md');
+    const content = fs.readFileSync(skillPath, 'utf-8');
+    assert.ok(content.includes('Memory Faculty'), 'must have title');
+    assert.ok(content.includes('When to Store'), 'must have store guidance');
+    assert.ok(content.includes('When to Recall'), 'must have recall guidance');
+    assert.ok(content.includes('Evolution Bridge'), 'must have evolution bridge');
+    assert.ok(content.includes('Privacy'), 'must have privacy section');
+  });
+
+  it('store creates a memory', () => {
+    const result = runMemory('store "User likes pizza" --tags "food,preference" --importance 0.8 --type preference');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.action, 'store');
+    assert.ok(result.memory.id.startsWith('mem_'));
+    assert.strictEqual(result.memory.content, 'User likes pizza');
+    assert.deepStrictEqual(result.memory.tags, ['food', 'preference']);
+    assert.strictEqual(result.memory.importance, 0.8);
+    assert.strictEqual(result.memory.type, 'preference');
+  });
+
+  it('store handles importance=0 correctly', () => {
+    const result = runMemory('store "ephemeral note" --tags "temp" --importance 0');
+    assert.strictEqual(result.memory.importance, 0, 'importance 0 must not become 0.5');
+    // verify it sorts below a higher-importance memory
+    runMemory('store "important note" --tags "temp" --importance 0.9');
+    const retrieved = runMemory('retrieve --tags "temp" --limit 10');
+    assert.strictEqual(retrieved.memories[0].importance, 0.9, 'importance=0.9 must rank first');
+    assert.strictEqual(retrieved.memories[1].importance, 0, 'importance=0 must rank last');
+    // clean up for subsequent tests
+    for (const m of retrieved.memories) runMemory(`forget ${m.id}`);
+  });
+
+  it('store appends to existing memories', () => {
+    runMemory('store "User has a cat named Mochi" --tags "pet,family" --importance 0.9 --type personal_fact');
+    runMemory('store "User prefers dark mode" --tags "preference,ui" --importance 0.4');
+    const stats = runMemory('stats');
+    assert.strictEqual(stats.totalMemories, 3, 'must have 3 memories total');
+  });
+
+  it('retrieve returns all memories sorted by score', () => {
+    const result = runMemory('retrieve --limit 10');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.count, 3);
+    assert.ok(result.memories.length === 3);
+  });
+
+  it('retrieve filters by tags', () => {
+    const result = runMemory('retrieve --tags "food" --limit 10');
+    assert.strictEqual(result.count, 1);
+    assert.ok(result.memories[0].content.includes('pizza'));
+  });
+
+  it('search finds memories by content', () => {
+    const result = runMemory('search "cat" --limit 5');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.count, 1);
+    assert.ok(result.memories[0].content.includes('Mochi'));
+  });
+
+  it('search returns empty for no match', () => {
+    const result = runMemory('search "quantum physics" --limit 5');
+    assert.strictEqual(result.count, 0);
+  });
+
+  it('forget removes a memory by ID', () => {
+    const all = runMemory('retrieve --limit 10');
+    const targetId = all.memories[all.memories.length - 1].id;
+    const result = runMemory(`forget ${targetId}`);
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.action, 'forget');
+    const after = runMemory('stats');
+    assert.strictEqual(after.totalMemories, 2);
+  });
+
+  it('stats returns correct summary', () => {
+    const result = runMemory('stats');
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.totalMemories, 2);
+    assert.ok(result.topTags.length > 0);
+    assert.ok(result.oldestMemory);
+    assert.ok(result.newestMemory);
+    assert.ok(typeof result.avgImportance === 'number');
+  });
+
+  it('stats returns empty for fresh store', () => {
+    const emptyTmp = path.join(MEM_TMP, 'empty-sub');
+    const env = { ...process.env, MEMORY_PROVIDER: 'local', MEMORY_BASE_PATH: emptyTmp, PERSONA_SLUG: 'empty' };
+    const out = execSync(`node ${memoryScript} stats`, { env, encoding: 'utf-8' });
+    const result = JSON.parse(out.trim());
+    assert.strictEqual(result.totalMemories, 0);
+    assert.deepStrictEqual(result.topTags, []);
+  });
+
+  it('generator integrates memory faculty correctly', async () => {
+    const persona = {
+      personaName: 'MemBot',
+      slug: 'mem-bot',
+      bio: 'memory test persona',
+      personality: 'observant',
+      speakingStyle: 'attentive',
+      faculties: [{ name: 'memory' }],
+    };
+    const genTmp = path.join(MEM_TMP, 'gen-output');
+    await fs.ensureDir(genTmp);
+    const { skillDir } = await generate(persona, genTmp);
+
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('memory'), 'SKILL.md must reference memory faculty');
+
+    const refDir = path.join(skillDir, 'references');
+    const memRef = path.join(refDir, 'memory.md');
+    assert.ok(fs.existsSync(memRef), 'references/memory.md must exist');
+    const memContent = fs.readFileSync(memRef, 'utf-8');
+    assert.ok(memContent.includes('Memory Faculty'), 'memory reference must have content');
+
+    const scriptDest = path.join(skillDir, 'scripts', 'memory.js');
+    assert.ok(fs.existsSync(scriptDest), 'scripts/memory.js must be copied to output');
+  });
+
+  it('generator maps memory faculty config to env vars', async () => {
+    const persona = {
+      personaName: 'MemEnvBot',
+      slug: 'mem-env-bot',
+      bio: 'memory env test',
+      personality: 'precise',
+      speakingStyle: 'clear',
+      faculties: [{ name: 'memory', provider: 'mem0', apiKey: 'test-key-123' }],
+    };
+    const genTmp = path.join(MEM_TMP, 'gen-env-output');
+    await fs.ensureDir(genTmp);
+    const { skillDir } = await generate(persona, genTmp);
+
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+    assert.strictEqual(personaOut.defaults.env.MEMORY_PROVIDER, 'mem0', 'MEMORY_PROVIDER must be set');
+    assert.strictEqual(personaOut.defaults.env.MEMORY_API_KEY, 'test-key-123', 'MEMORY_API_KEY must be set');
+  });
+
+  // Cleanup
+  it('cleanup memory test dir', () => {
+    fs.removeSync(MEM_TMP);
+  });
+});

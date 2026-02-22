@@ -38,7 +38,7 @@ layers/
     constitution.md     ← ⚠️ PROTECTED — universal ethical foundation
     README.md
     soul-state.template.json ← Evolution state template
-  faculties/            ← Faculty implementations (voice, selfie, music, reminder)
+  faculties/            ← Faculty implementations (voice, selfie, music, reminder, memory)
   skills/               ← Local skill definitions (skill.json + SKILL.md per skill)
   embodiments/          ← Body layer definitions
 schemas/                ← JSON schemas for validation
@@ -54,7 +54,7 @@ skills/open-persona/    ← Meta-skill for AI agents using the framework
 Every persona is a four-layer bundle:
 1. **Soul** — personality, identity, ethical boundaries (`persona.json` + `constitution.md`). Key fields: `role` (free string, common values: companion/assistant/character/brand/pet/mentor/therapist/coach/collaborator/guardian/entertainer/narrator; custom values welcome), `sourceIdentity` (if present → digital twin of a real-world entity)
 2. **Body** — substrate of existence: the complete environment that enables a persona to exist and act. Three dimensions: `physical` (optional — robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources; every agent's minimum viable body), `appearance` (optional — avatar/3D model). Body is never null — digital agents have a virtual body (runtime-only).
-3. **Faculty** — capabilities (voice, selfie, music, reminder)
+3. **Faculty** — capabilities (voice, selfie, music, reminder, memory)
 4. **Skill** — actions the agent can take: local definitions in `layers/skills/`, or external via `install` field (ClawHub / skills.sh)
 
 **Three orthogonal classification axes:**

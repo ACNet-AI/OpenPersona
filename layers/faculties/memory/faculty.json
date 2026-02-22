@@ -1,0 +1,9 @@
+{
+  "name": "memory",
+  "dimension": "cognition",
+  "description": "Cross-session memory — store, retrieve, and search memories with provider-pluggable backend (local JSON lines default, Mem0/Zep optional)",
+  "allowedTools": ["Bash(node scripts/memory.js:*)"],
+  "envVars": ["MEMORY_PROVIDER", "MEMORY_API_KEY", "MEMORY_BASE_PATH"],
+  "triggers": ["remember this", "do you remember", "what did I say about", "recall", "forget this", "what do you know about me"],
+  "files": ["SKILL.md", "scripts/memory.js"]
+}
