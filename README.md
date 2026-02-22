@@ -33,6 +33,14 @@ npx openpersona create --preset base --install
 npx openpersona install samantha
 ```
 
+### Install as Agent Skill
+
+Give your AI coding agent the ability to create and manage personas — works with Cursor, Claude Code, Codex, Windsurf, and [37+ agents](https://github.com/vercel-labs/skills#supported-agents):
+
+```bash
+npx skills add acnlabs/OpenPersona
+```
+
 ## Key Features
 
 - **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
@@ -361,7 +369,10 @@ npx openpersona create --preset ai-girlfriend --output ./my-personas
 Install the OpenPersona framework skill into OpenClaw, giving the agent the ability to create and manage personas through conversation:
 
 ```bash
-# From GitHub
+# Via skills CLI (recommended — works with OpenClaw and 37+ agents)
+npx skills add acnlabs/OpenPersona
+
+# Or manually from GitHub
 git clone https://github.com/acnlabs/OpenPersona.git ~/.openclaw/skills/open-persona
 
 # Or copy locally
