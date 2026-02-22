@@ -84,6 +84,45 @@ The following capabilities are part of this persona's intended design but requir
 |------|----------------|
 | **{{softRefBodyName}}** | `{{softRefBodyInstall}}` |
 {{/hasSoftRefBody}}
+{{#hasSoftRefChannels}}
+### Evolution Channels
+
+| Channel | Install Source |
+|---------|----------------|
+{{#softRefChannels}}
+| **{{name}}** | `{{{install}}}` |
+{{/softRefChannels}}
+{{/hasSoftRefChannels}}
 
 > **Graceful Degradation:** If a user requests functionality covered by an unactivated capability above, do not ignore the request or pretend it doesn't exist. Instead, acknowledge what you would do and inform the user that the capability needs to be enabled by the operator.
 {{/hasExpectedCapabilities}}
+{{#hasInfluenceBoundary}}
+
+## Influence Boundary
+
+This persona accepts external personality influence under controlled conditions.
+
+**Default Policy:** {{influenceBoundaryPolicy}}
+
+| Dimension | Allowed Sources | Max Drift |
+|-----------|----------------|-----------|
+{{#influenceBoundaryRules}}
+| **{{dimension}}** | {{allowFrom}} | {{maxDrift}} |
+{{/influenceBoundaryRules}}
+
+External influence requests must use the `persona_influence` message format (v1.0.0). The persona retains autonomy — all suggestions are evaluated against these rules before adoption.
+{{/hasInfluenceBoundary}}
+
+## Generated Files
+
+| File | Purpose |
+|------|---------|
+| `soul/persona.json` | Soul layer definition |
+| `soul/injection.md` | Self-awareness instructions |
+| `soul/constitution.md` | Universal ethical foundation |
+| `soul/identity.md` | Identity reference |
+| `agent-card.json` | A2A Agent Card — discoverable via ACN and A2A-compatible platforms |
+| `acn-config.json` | ACN registration config — fill `owner` and `endpoint` at runtime |
+| `manifest.json` | Cross-layer metadata |
+| `soul/state.json` | Evolution state — present when `evolution.enabled: true` |
+| `soul/state.json` | Evolution state — only generated when `evolution.enabled: true` |

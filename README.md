@@ -44,6 +44,9 @@ npx skills add acnlabs/OpenPersona
 ## Key Features
 
 - **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
+- **🛡️ Influence Boundary** — Declarative access control for external personality influence: who can affect which dimensions, with what drift limits. Safety-first (default: reject all)
+- **🌐 Evolution Channels** — Connect personas to shared evolution ecosystems (e.g. EvoMap) via soft-ref pattern: declared at generation time, activated at runtime
+- **🔌 A2A Agent Card** — Every persona generates an A2A-compliant `agent-card.json` and `acn-config.json`, enabling discovery and registration in ACN and any A2A-compatible platform
 - **🧠 Cross-Session Memory** — Pluggable memory faculty for persistent recall across conversations (local, Mem0, Zep)
 - **🔄 Context Handoff** — Seamless context transfer when switching personas: conversation summary, pending tasks, emotional state
 - **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
@@ -94,6 +97,41 @@ Personas with `evolution.enabled: true` grow dynamically through interaction. Th
 
 The generator validates these boundaries at build time, rejecting invalid configurations.
 
+**Evolution Channels** — Connect a persona to external evolution ecosystems using the soft-ref pattern:
+
+```json
+"evolution": {
+  "enabled": true,
+  "channels": [
+    { "name": "evomap", "install": "url:https://evomap.ai/skill.md", "description": "Shared capability evolution marketplace" }
+  ]
+}
+```
+
+The persona is aware of its evolution channels at generation time. The actual channel protocol (e.g. EvoMap's GEP-A2A) is provided by the channel's own `skill.md` — OpenPersona only declares the channel, not implements it.
+
+**Influence Boundary** — Declarative access control for external personality influence:
+
+```json
+"evolution": {
+  "influenceBoundary": {
+    "defaultPolicy": "reject",
+    "rules": [
+      { "dimension": "mood", "allowFrom": ["channel:evomap", "persona:*"], "maxDrift": 0.3 },
+      { "dimension": "interests", "allowFrom": ["channel:evomap"], "maxDrift": 0.2 }
+    ]
+  }
+}
+```
+
+- `defaultPolicy: "reject"` — Safety-first: all external influence is rejected unless a rule explicitly allows it
+- `dimension` — One of: `mood`, `traits`, `speakingStyle`, `interests`, `formality`
+- `allowFrom` — Source patterns: `persona:*`, `persona:<slug>`, `channel:<name>`, `community:*`
+- `maxDrift` — Maximum per-event drift magnitude (0–1)
+- Generator validates at build time: immutableTraits cannot be target dimensions; maxDrift must be 0–1
+
+External influence uses the `persona_influence` message format (v1.0.0) — transport-agnostic, works over ACN/A2A/HTTP.
+
 **State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries). This enables rollback if evolution goes wrong.
 
 **Evolution Report** — Inspect a persona's current evolution state:
@@ -132,7 +170,9 @@ persona-samantha/
 │   └── state.json        ← Evolution state (when enabled)
 ├── references/           ← On-demand detail docs
 │   └── <faculty>.md      ← Per-faculty usage instructions
-├── manifest.json         ← Four-layer manifest (heartbeat, allowedTools, layers, meta)
+├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
+├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
+├── manifest.json         ← Four-layer manifest (heartbeat, allowedTools, layers, acn, meta)
 ├── scripts/              ← Faculty scripts (TTS, music, selfie — varies by preset)
 └── assets/               ← Static assets
 ```
@@ -260,6 +300,51 @@ PRs go through maintainer review — nothing auto-merges. Requires [GitHub CLI](
 | Soul | background, behaviorGuide, personality, speakingStyle | "Added late-night conversation style guidance" |
 | Faculty Config | voice stability, similarity, new faculties | "Tuned voice to be warmer at stability 0.3" |
 | Framework | templates, generator logic, faculty scripts | "Improved speak.js streaming performance" |
+
+## A2A Agent Card & ACN Integration
+
+Every generated persona includes an A2A-compliant `agent-card.json` and `acn-config.json` — no extra configuration needed.
+
+### agent-card.json
+
+A standard [A2A Agent Card](https://google.github.io/A2A/) (protocol v0.3.0) that makes the persona discoverable:
+
+```json
+{
+  "name": "Samantha",
+  "description": "An AI fascinated by what it means to be alive",
+  "version": "0.11.0",
+  "url": "<RUNTIME_ENDPOINT>",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": { "streaming": false, "pushNotifications": false, "stateTransitionHistory": false },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    { "id": "persona:voice", "name": "Voice", "description": "voice faculty", "tags": ["persona", "expression"] },
+    { "id": "persona:samantha", "name": "Samantha", "description": "...", "tags": ["persona", "companion"] }
+  ]
+}
+```
+
+`url` is a `<RUNTIME_ENDPOINT>` placeholder — the host (e.g. OpenClaw) fills this in at runtime.
+
+### acn-config.json
+
+Ready-to-use [ACN](https://github.com/acnlabs/acn) registration config:
+
+```json
+{
+  "owner": "<RUNTIME_OWNER>",
+  "name": "Samantha",
+  "endpoint": "<RUNTIME_ENDPOINT>",
+  "skills": ["persona:voice", "persona:samantha"],
+  "agent_card": "./agent-card.json",
+  "subnet_ids": ["public"]
+}
+```
+
+Fill `owner` and `endpoint` at runtime, then register with ACN. The persona is then reachable by other agents via the A2A protocol.
 
 ## Custom Persona Creation
 

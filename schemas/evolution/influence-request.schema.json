@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/evolution/influence-request",
+  "title": "Influence Request",
+  "description": "Standard format for external sources to suggest personality dimension changes to a persona. Transport-agnostic — can be wrapped in ACN/A2A/HTTP envelopes.",
+  "type": "object",
+  "required": ["type", "version", "target", "dimension", "operation", "value", "source", "timestamp"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "persona_influence",
+      "description": "Message type identifier"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Protocol version"
+    },
+    "target": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Target persona slug"
+    },
+    "dimension": {
+      "type": "string",
+      "enum": ["mood", "traits", "speakingStyle", "interests", "formality"],
+      "description": "Which personality dimension to influence"
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["suggest"],
+      "description": "Operation type — only 'suggest' is supported (persona retains autonomy)"
+    },
+    "value": {
+      "type": "object",
+      "description": "Suggested change details",
+      "properties": {
+        "toward": {
+          "type": "string",
+          "description": "Description of the suggested direction (e.g. 'more empathetic', 'casual tone')"
+        },
+        "delta": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Suggested drift magnitude (0-1). Actual drift is capped by maxDrift in influence boundary."
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["type", "id"],
+      "description": "Who is suggesting this influence",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["persona", "channel", "community"],
+          "description": "Source category for boundary matching"
+        },
+        "id": {
+          "type": "string",
+          "description": "Source identifier (persona slug, channel name, or community id)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this influence is suggested (for auditability)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    }
+  },
+  "additionalProperties": false
+}

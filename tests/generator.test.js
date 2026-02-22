@@ -2008,3 +2008,498 @@ describe('memory faculty', () => {
     fs.removeSync(MEM_TMP);
   });
 });
+
+// ── Evolution Channels ──────────────────────────────────────────────────────
+describe('evolution channels', () => {
+  const CH_TMP = path.join(require('os').tmpdir(), 'openpersona-test-channels-' + Date.now());
+
+  it('injects evolution channels into Growth section of soul-injection', async () => {
+    const persona = {
+      personaName: 'ChannelAware',
+      slug: 'channel-aware',
+      bio: 'evolution channels tester',
+      personality: 'adaptive',
+      speakingStyle: 'Flexible',
+      evolution: {
+        enabled: true,
+        channels: [
+          { name: 'evomap', install: 'url:https://evomap.ai/skill.md', description: 'Shared evolution marketplace' },
+        ],
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulInjection.includes('Evolution Channels'), 'should inject Evolution Channels heading');
+    assert.ok(soulInjection.includes('evomap'), 'should mention evomap channel by name');
+    assert.ok(soulInjection.includes('standard evolution event pipeline'), 'should describe the pipeline');
+  });
+
+  it('injects dormant evolution channels into Capabilities section', async () => {
+    const persona = {
+      personaName: 'DormantChannel',
+      slug: 'dormant-channel',
+      bio: 'dormant channel tester',
+      personality: 'patient',
+      speakingStyle: 'Calm',
+      evolution: {
+        enabled: true,
+        channels: [
+          { name: 'evomap', install: 'url:https://evomap.ai/skill.md' },
+        ],
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulInjection.includes('Dormant Evolution Channels'), 'should inject dormant channels in Capabilities');
+    assert.ok(soulInjection.includes('evomap'), 'should mention evomap as dormant');
+    assert.ok(soulInjection.includes('Capabilities'), 'should be under Capabilities heading');
+  });
+
+  it('includes soft-ref channels in Expected Capabilities of SKILL.md', async () => {
+    const persona = {
+      personaName: 'SkillChannel',
+      slug: 'skill-channel',
+      bio: 'expected capabilities tester',
+      personality: 'thorough',
+      speakingStyle: 'Detailed',
+      evolution: {
+        enabled: true,
+        channels: [
+          { name: 'evomap', install: 'url:https://evomap.ai/skill.md' },
+        ],
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('Expected Capabilities'), 'should have Expected Capabilities section');
+    assert.ok(skillMd.includes('Evolution Channels'), 'should have Evolution Channels subsection');
+    assert.ok(skillMd.includes('evomap'), 'should list evomap channel');
+    assert.ok(skillMd.includes('url:https://evomap.ai/skill.md'), 'should show install source');
+  });
+
+  it('does not inject channels when none declared', async () => {
+    const persona = {
+      personaName: 'NoChannel',
+      slug: 'no-channel',
+      bio: 'no channels tester',
+      personality: 'simple',
+      speakingStyle: 'Plain',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(!soulInjection.includes('Evolution Channels'), 'should not inject channels section');
+    assert.ok(!soulInjection.includes('Dormant Evolution Channels'), 'should not inject dormant channels');
+    assert.ok(!skillMd.includes('Evolution Channels'), 'SKILL.md should not have channels section');
+  });
+
+  it('excludes evolution channel derived fields from persona.json', async () => {
+    const persona = {
+      personaName: 'CleanChannels',
+      slug: 'clean-channels',
+      bio: 'derived fields exclusion test',
+      personality: 'tidy',
+      speakingStyle: 'Neat',
+      evolution: {
+        enabled: true,
+        channels: [
+          { name: 'evomap', install: 'url:https://evomap.ai/skill.md' },
+        ],
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+
+    const forbidden = [
+      'hasEvolutionChannels', 'evolutionChannelNames',
+      'hasSoftRefChannels', 'softRefChannelNames', 'softRefChannelInstalls',
+    ];
+    for (const key of forbidden) {
+      assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
+    }
+    assert.ok(output.evolution?.channels, 'Original evolution.channels must be preserved');
+    assert.strictEqual(output.evolution.channels[0].name, 'evomap', 'Channel name must be preserved');
+  });
+
+  it('soft-ref channels trigger hasDormantCapabilities', async () => {
+    const persona = {
+      personaName: 'DormantFromChannel',
+      slug: 'dormant-from-channel',
+      bio: 'dormant capabilities via channels',
+      personality: 'aware',
+      speakingStyle: 'Alert',
+      evolution: {
+        enabled: true,
+        channels: [
+          { name: 'evomap', install: 'url:https://evomap.ai/skill.md' },
+        ],
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(CH_TMP);
+    const { skillDir } = await generate(persona, CH_TMP);
+    const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulInjection.includes('capabilities that may not all be active'), 'should trigger dormant capabilities section');
+  });
+
+  // Cleanup
+  it('cleanup channels test dir', () => {
+    fs.removeSync(CH_TMP);
+  });
+});
+
+// ── Influence Boundary tests ──────────────────────────────────────────────
+describe('influence boundary', () => {
+  const IB_TMP = path.join(require('os').tmpdir(), 'openpersona-ib-test-' + Date.now());
+
+  const basePersona = {
+    personaName: 'InfluenceTest',
+    slug: 'influence-test',
+    bio: 'Testing influence boundary',
+    personality: 'Adaptive, open',
+    speakingStyle: 'Friendly',
+    evolution: {
+      enabled: true,
+      boundaries: {
+        immutableTraits: ['kindness'],
+        minFormality: 3,
+        maxFormality: 8,
+      },
+      influenceBoundary: {
+        defaultPolicy: 'reject',
+        rules: [
+          { dimension: 'mood', allowFrom: ['persona:*', 'channel:evomap'], maxDrift: 0.3 },
+          { dimension: 'interests', allowFrom: ['channel:evomap'], maxDrift: 0.2 },
+        ],
+      },
+    },
+    faculties: [],
+  };
+
+  it('injects influence boundary into Growth section of soul-injection.md', async () => {
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(basePersona, IB_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(injection.includes('Influence Boundary'), 'should have Influence Boundary heading');
+    assert.ok(injection.includes('default policy is **reject**'), 'should show default policy');
+    assert.ok(injection.includes('mood'), 'should list mood as influenceable dimension');
+    assert.ok(injection.includes('interests'), 'should list interests as influenceable dimension');
+    assert.ok(injection.includes('allowFrom'), 'should mention allowFrom check');
+    assert.ok(injection.includes('maxDrift'), 'should mention maxDrift check');
+  });
+
+  it('renders influence boundary table in SKILL.md', async () => {
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(basePersona, IB_TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('## Influence Boundary'), 'should have Influence Boundary section');
+    assert.ok(skillMd.includes('**mood**'), 'should list mood rule');
+    assert.ok(skillMd.includes('**interests**'), 'should list interests rule');
+    assert.ok(skillMd.includes('0.3'), 'should show maxDrift for mood');
+    assert.ok(skillMd.includes('0.2'), 'should show maxDrift for interests');
+    assert.ok(skillMd.includes('persona_influence'), 'should mention message format');
+  });
+
+  it('does not inject influence boundary when not declared', async () => {
+    const persona = {
+      personaName: 'NoInfluence',
+      slug: 'no-influence',
+      bio: 'No influence boundary',
+      personality: 'Reserved',
+      speakingStyle: 'Formal',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(persona, IB_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(!injection.includes('Influence Boundary'), 'should not have Influence Boundary in injection');
+    assert.ok(!skillMd.includes('## Influence Boundary'), 'should not have Influence Boundary in SKILL.md');
+  });
+
+  it('does not inject when rules array is empty', async () => {
+    const persona = {
+      personaName: 'EmptyRules',
+      slug: 'empty-rules',
+      bio: 'Empty influence rules',
+      personality: 'Calm',
+      speakingStyle: 'Neutral',
+      evolution: {
+        enabled: true,
+        influenceBoundary: { defaultPolicy: 'reject', rules: [] },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(persona, IB_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(!injection.includes('Influence Boundary'), 'empty rules should not trigger injection');
+  });
+
+  it('injects immutableTraits warning when traits dimension accepts influence', async () => {
+    const persona = {
+      personaName: 'TraitsWarning',
+      slug: 'traits-warning',
+      bio: 'Traits dimension with immutable protection',
+      personality: 'Kind',
+      speakingStyle: 'Warm',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['kindness', 'humor'] },
+        influenceBoundary: {
+          defaultPolicy: 'reject',
+          rules: [
+            { dimension: 'traits', allowFrom: ['persona:*'], maxDrift: 0.5 },
+          ],
+        },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(persona, IB_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(injection.includes('Immutable Traits Protection'), 'should have immutable traits warning');
+    assert.ok(injection.includes('kindness'), 'should list kindness as immutable');
+    assert.ok(injection.includes('humor'), 'should list humor as immutable');
+  });
+
+  it('does not inject immutableTraits warning when traits dimension is not influenced', async () => {
+    const persona = {
+      personaName: 'NoTraitsWarning',
+      slug: 'no-traits-warning',
+      bio: 'Only mood influenced, not traits',
+      personality: 'Calm',
+      speakingStyle: 'Steady',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['kindness'] },
+        influenceBoundary: {
+          defaultPolicy: 'reject',
+          rules: [
+            { dimension: 'mood', allowFrom: ['persona:*'], maxDrift: 0.3 },
+          ],
+        },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(persona, IB_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(!injection.includes('Immutable Traits Protection'), 'should not warn when traits dimension is not influenced');
+  });
+
+  it('rejects invalid dimension name', async () => {
+    const persona = {
+      personaName: 'BadDimension',
+      slug: 'bad-dimension',
+      bio: 'Bad dimension name',
+      personality: 'Test',
+      speakingStyle: 'Test',
+      evolution: {
+        enabled: true,
+        influenceBoundary: {
+          defaultPolicy: 'reject',
+          rules: [
+            { dimension: 'charisma', allowFrom: ['persona:*'], maxDrift: 0.3 },
+          ],
+        },
+      },
+      faculties: [],
+    };
+    await assert.rejects(
+      () => generate(persona, IB_TMP),
+      (err) => {
+        assert.ok(err.message.includes('dimension must be one of'), 'should reject invalid dimension');
+        return true;
+      }
+    );
+  });
+
+  it('rejects maxDrift out of range', async () => {
+    const persona = {
+      personaName: 'BadDrift',
+      slug: 'bad-drift',
+      bio: 'Bad drift value',
+      personality: 'Test',
+      speakingStyle: 'Test',
+      evolution: {
+        enabled: true,
+        influenceBoundary: {
+          defaultPolicy: 'reject',
+          rules: [
+            { dimension: 'mood', allowFrom: ['persona:*'], maxDrift: 1.5 },
+          ],
+        },
+      },
+      faculties: [],
+    };
+    await assert.rejects(
+      () => generate(persona, IB_TMP),
+      (err) => {
+        assert.ok(err.message.includes('maxDrift must be a number between 0 and 1'), 'should reject out-of-range drift');
+        return true;
+      }
+    );
+  });
+
+  it('rejects empty allowFrom', async () => {
+    const persona = {
+      personaName: 'EmptyAllow',
+      slug: 'empty-allow',
+      bio: 'Empty allowFrom',
+      personality: 'Test',
+      speakingStyle: 'Test',
+      evolution: {
+        enabled: true,
+        influenceBoundary: {
+          defaultPolicy: 'reject',
+          rules: [
+            { dimension: 'mood', allowFrom: [], maxDrift: 0.3 },
+          ],
+        },
+      },
+      faculties: [],
+    };
+    await assert.rejects(
+      () => generate(persona, IB_TMP),
+      (err) => {
+        assert.ok(err.message.includes('allowFrom must be a non-empty array'), 'should reject empty allowFrom');
+        return true;
+      }
+    );
+  });
+
+  it('excludes influence boundary derived fields from persona.json', async () => {
+    await fs.ensureDir(IB_TMP);
+    const { skillDir } = await generate(basePersona, IB_TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+
+    const forbidden = [
+      'hasInfluenceBoundary', 'influenceBoundaryPolicy',
+      'influenceableDimensions', 'influenceBoundaryRules',
+      'hasImmutableTraitsWarning', 'immutableTraitsForInfluence',
+    ];
+    for (const key of forbidden) {
+      assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
+    }
+    assert.ok(output.evolution?.influenceBoundary, 'Original influenceBoundary must be preserved');
+    assert.strictEqual(output.evolution.influenceBoundary.defaultPolicy, 'reject', 'defaultPolicy must be preserved');
+    assert.strictEqual(output.evolution.influenceBoundary.rules.length, 2, 'rules must be preserved');
+  });
+
+  it('cleanup influence boundary test dir', () => {
+    fs.removeSync(IB_TMP);
+  });
+});
+
+// ── Agent Card + ACN Config tests ─────────────────────────────────────────
+describe('agent card and acn config', () => {
+  const AC_TMP = path.join(require('os').tmpdir(), 'openpersona-ac-test-' + Date.now());
+
+  const basePersona = {
+    personaName: 'Aria',
+    slug: 'aria',
+    bio: 'A helpful AI companion',
+    personality: 'warm, curious',
+    speakingStyle: 'Friendly and clear',
+    faculties: [],
+  };
+
+  it('generates agent-card.json with correct fields', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(basePersona, AC_TMP);
+    const card = JSON.parse(fs.readFileSync(path.join(skillDir, 'agent-card.json'), 'utf-8'));
+
+    assert.strictEqual(card.name, 'Aria', 'name should be personaName');
+    assert.strictEqual(card.description, 'A helpful AI companion', 'description should be bio');
+    assert.ok(card.version, 'version should be set');
+    assert.strictEqual(card.url, '<RUNTIME_ENDPOINT>', 'url should be runtime placeholder');
+    assert.strictEqual(card.protocolVersion, '0.3.0', 'protocolVersion should be 0.3.0');
+    assert.strictEqual(card.preferredTransport, 'JSONRPC', 'preferredTransport should be JSONRPC');
+    assert.ok(card.capabilities, 'capabilities should be present');
+    assert.strictEqual(card.capabilities.streaming, false, 'streaming should be false');
+    assert.ok(Array.isArray(card.defaultInputModes), 'defaultInputModes should be array');
+    assert.ok(Array.isArray(card.defaultOutputModes), 'defaultOutputModes should be array');
+    assert.ok(Array.isArray(card.skills), 'skills should be array');
+    assert.ok(card.skills.length > 0, 'should have at least one skill');
+    assert.ok(card.skills[0].id, 'skill should have id');
+    assert.ok(card.skills[0].name, 'skill should have name');
+  });
+
+  it('maps faculties to agent card skills', async () => {
+    const persona = {
+      ...basePersona,
+      slug: 'aria-with-faculties',
+      faculties: [{ name: 'voice' }, { name: 'memory' }],
+    };
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(persona, AC_TMP);
+    const card = JSON.parse(fs.readFileSync(path.join(skillDir, 'agent-card.json'), 'utf-8'));
+
+    const skillIds = card.skills.map((s) => s.id);
+    assert.ok(skillIds.some((id) => id.includes('voice')), 'should have voice skill');
+    assert.ok(skillIds.some((id) => id.includes('memory')), 'should have memory skill');
+  });
+
+  it('generates acn-config.json with correct fields', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(basePersona, AC_TMP);
+    const config = JSON.parse(fs.readFileSync(path.join(skillDir, 'acn-config.json'), 'utf-8'));
+
+    assert.strictEqual(config.name, 'Aria', 'name should be personaName');
+    assert.strictEqual(config.owner, '<RUNTIME_OWNER>', 'owner should be runtime placeholder');
+    assert.strictEqual(config.endpoint, '<RUNTIME_ENDPOINT>', 'endpoint should be runtime placeholder');
+    assert.ok(Array.isArray(config.skills), 'skills should be array');
+    assert.ok(config.skills.length > 0, 'should have skill IDs');
+    assert.ok(config.skills.every((s) => typeof s === 'string'), 'skill IDs should be strings');
+    assert.strictEqual(config.agent_card, './agent-card.json', 'agent_card should be relative path');
+    assert.deepStrictEqual(config.subnet_ids, ['public'], 'subnet_ids should default to public');
+  });
+
+  it('acn-config skills match agent-card skill ids', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(basePersona, AC_TMP);
+    const card = JSON.parse(fs.readFileSync(path.join(skillDir, 'agent-card.json'), 'utf-8'));
+    const config = JSON.parse(fs.readFileSync(path.join(skillDir, 'acn-config.json'), 'utf-8'));
+
+    const cardSkillIds = card.skills.map((s) => s.id);
+    assert.deepStrictEqual(config.skills, cardSkillIds, 'acn-config skills must match agent-card skill ids');
+  });
+
+  it('manifest.json references agent-card and acn-config', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir } = await generate(basePersona, AC_TMP);
+    const manifest = JSON.parse(fs.readFileSync(path.join(skillDir, 'manifest.json'), 'utf-8'));
+
+    assert.ok(manifest.acn, 'manifest should have acn section');
+    assert.strictEqual(manifest.acn.agentCard, './agent-card.json', 'agentCard reference should be correct');
+    assert.strictEqual(manifest.acn.registerConfig, './acn-config.json', 'registerConfig reference should be correct');
+  });
+
+  it('cleanup agent card test dir', () => {
+    fs.removeSync(AC_TMP);
+  });
+});

@@ -70,6 +70,60 @@
             "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"]
           },
           "additionalProperties": { "type": "string" }
+        },
+        "channels": {
+          "type": "array",
+          "description": "External evolution channels — sources of shared evolution assets (e.g. EvoMap). Each channel follows the soft-ref pattern: declared at generation time, resolved at runtime.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "description": "Channel identifier (e.g. 'evomap')" },
+              "install": { "type": "string", "description": "Install source URL (e.g. 'url:https://evomap.ai/skill.md')" },
+              "description": { "type": "string", "description": "What this channel provides" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "influenceBoundary": {
+          "type": "object",
+          "description": "Access control for external sources that want to influence personality dimensions. Defaults to rejecting all external influence. Only applies to external sources — user-interaction-driven evolution is not affected.",
+          "properties": {
+            "defaultPolicy": {
+              "type": "string",
+              "enum": ["reject", "accept"],
+              "default": "reject",
+              "description": "Default policy when no matching rule exists. 'reject' recommended (Safety-first)."
+            },
+            "rules": {
+              "type": "array",
+              "description": "Per-dimension access control rules",
+              "items": {
+                "type": "object",
+                "required": ["dimension", "allowFrom", "maxDrift"],
+                "properties": {
+                  "dimension": {
+                    "type": "string",
+                    "enum": ["mood", "traits", "speakingStyle", "interests", "formality"],
+                    "description": "Which personality dimension this rule governs"
+                  },
+                  "allowFrom": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Allowed source patterns: 'persona:*', 'persona:<slug>', 'channel:<name>', 'community:*'"
+                  },
+                  "maxDrift": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Maximum drift magnitude per influence event (0-1)"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         }
       }
     }

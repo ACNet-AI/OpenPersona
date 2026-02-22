@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.10.0"
+version: "0.11.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
@@ -170,11 +170,49 @@ Soul evolution is a native Soul layer feature (not a faculty). Enable it via `ev
 
 Invalid boundary configurations are rejected by the generator with descriptive error messages.
 
+**Evolution Channels** — Connect the persona to external evolution ecosystems (soft-ref pattern):
+
+```json
+"evolution": {
+  "channels": [{ "name": "evomap", "install": "url:https://evomap.ai/skill.md" }]
+}
+```
+
+Channels are declared at generation time, activated at runtime by the host. The persona is aware of its dormant channels and can request activation via the Signal Protocol.
+
+**Influence Boundary** — Declarative access control for external personality influence:
+
+```json
+"evolution": {
+  "influenceBoundary": {
+    "defaultPolicy": "reject",
+    "rules": [
+      { "dimension": "mood", "allowFrom": ["channel:evomap", "persona:*"], "maxDrift": 0.3 }
+    ]
+  }
+}
+```
+
+- `defaultPolicy: "reject"` — Safety-first: all external influence is rejected unless explicitly allowed
+- Valid dimensions: `mood`, `traits`, `speakingStyle`, `interests`, `formality`
+- `immutableTraits` dimensions are protected and cannot be externally influenced
+- External influence uses `persona_influence` message format (v1.0.0), transport-agnostic
+
 **State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries), enabling rollback if evolution goes wrong.
 
 **Evolution Report** — Use `npx openpersona evolve-report <slug>` to view a formatted report of a persona's evolution state including relationship, mood, traits, drift, interests, milestones, and history.
 
 Use `npx openpersona reset <slug>` to restore `soul/state.json` to initial values.
+
+## A2A Agent Card & ACN Integration
+
+Every generated persona automatically includes:
+
+- **`agent-card.json`** — A2A Agent Card (protocol v0.3.0): `name`, `description`, `version`, `url` (`<RUNTIME_ENDPOINT>` placeholder), faculties and skills mapped to `skills[]`
+- **`acn-config.json`** — ACN registration config: `owner` and `endpoint` are runtime placeholders, `skills` extracted from agent-card, `subnet_ids: ["public"]`
+- **`manifest.json`** — includes `acn.agentCard` and `acn.registerConfig` references
+
+The host (e.g. OpenClaw) fills in `<RUNTIME_ENDPOINT>` and `<RUNTIME_OWNER>` at deployment time and registers with ACN. No additional configuration in `persona.json` is needed — A2A discoverability is a baseline capability of every persona.
 
 ## References
 
