@@ -7,9 +7,9 @@ description: >
 version: "0.10.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
-tags: [persona, agent, skill-pack, meta-skill, openclaw]
+tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
 allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
-compatibility: Requires OpenClaw installed and configured
+compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) requires OpenClaw.
 ---
 
 # OpenPersona — Build & Manage Persona Skill Packs

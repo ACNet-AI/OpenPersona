@@ -34,7 +34,7 @@
       "properties": {
         "platform": {
           "type": "string",
-          "description": "Host platform identifier (e.g., openclaw, standalone)",
+          "description": "Host platform identifier (e.g., openclaw, zeroclaw, standalone)",
           "default": "openclaw"
         },
         "channels": {

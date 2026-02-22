@@ -2,7 +2,7 @@
 name: persona-{{slug}}
 description: {{description}}
 allowed-tools: {{{allowedToolsStr}}}
-compatibility: Requires OpenClaw installed and configured
+compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) requires OpenClaw.
 metadata:
   author: {{author}}
   version: "{{version}}"

@@ -1,8 +1,8 @@
 # OpenPersona 🦞
 
-The open framework for creating and orchestrating dynamic agent personas.
+The open, agent-agnostic framework for creating and orchestrating dynamic agent personas.
 
-Four-layer architecture — **Soul / Body / Faculty / Skill** — on top of [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
+Four-layer architecture — **Soul / Body / Faculty / Skill** — generates standard SKILL.md skill packs that work with any compatible agent. Default integration with [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
 
 ## 🚀 Live Demo
 
@@ -364,9 +364,9 @@ npx openpersona create --config ./persona.json --install
 npx openpersona create --preset ai-girlfriend --output ./my-personas
 ```
 
-## Install as OpenClaw Skill
+## Install as Agent Skill (OpenClaw / Manual)
 
-Install the OpenPersona framework skill into OpenClaw, giving the agent the ability to create and manage personas through conversation:
+Install the OpenPersona framework skill into your agent platform, giving it the ability to create and manage personas through conversation:
 
 ```bash
 # Via skills CLI (recommended — works with OpenClaw and 37+ agents)

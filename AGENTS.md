@@ -4,7 +4,7 @@ Instructions for AI coding agents working on the OpenPersona codebase.
 
 ## Project Overview
 
-OpenPersona is an open four-layer agent framework (Soul / Body / Faculty / Skill) for creating, composing, and orchestrating agent persona skill packs. It generates self-contained skill packs that give AI agents a complete identity.
+OpenPersona is an open, agent-agnostic four-layer framework (Soul / Body / Faculty / Skill) for creating, composing, and orchestrating agent persona skill packs. It generates self-contained SKILL.md-based skill packs that work with any compatible agent (Cursor, Claude Code, Codex, ZeroClaw, OpenClaw, and 30+ others via `npx skills add`). CLI management features (install/switch/uninstall) default to OpenClaw.
 
 **Key distinction:** This repo is the *framework itself*, not a persona. The `skills/open-persona/SKILL.md` is a meta-skill for *using* the framework; this file guides *developing* it.
 
