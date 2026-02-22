@@ -46,7 +46,9 @@ persona-<slug>/
 │   └── state.json          ← Evolution state (when enabled)
 ├── references/             ← Agent-readable detail docs (on demand)
 │   └── <faculty>.md        ← Per-faculty usage instructions
-├── manifest.json           ← Four-layer manifest
+├── agent-card.json         ← A2A Agent Card (protocol v0.3.0)
+├── acn-config.json         ← ACN registration config (runtime fills owner/endpoint)
+├── manifest.json           ← Four-layer manifest + ACN refs
 ├── scripts/                ← Implementation scripts
 └── assets/                 ← Static assets
 ```
@@ -155,7 +157,7 @@ The generator injects a unified **Self-Awareness** section into every persona's 
 
 3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a bidirectional demand protocol that lets the persona request capabilities from its host environment. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
 
-4. **Growth** (conditional, when `evolution.enabled`) — The persona reads its evolution state at conversation start, applies evolved traits and speaking style drift, and respects hard constraints (`immutableTraits`, formality bounds).
+4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies evolved traits, speaking style drift, interests, and mood, and respects hard constraints (`immutableTraits`, formality bounds). If evolution channels are declared, the persona is aware of its dormant channels and can request activation via the Signal Protocol. If `influenceBoundary` is declared, the persona processes external `persona_influence` requests against the access control rules and retains full autonomy over acceptance.
 
 This means you don't need to manually write degradation instructions. Just declare `install` fields on skills/faculties/body, and the persona will automatically know what it *could* do but *can't yet*.
 

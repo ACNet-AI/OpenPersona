@@ -124,5 +124,4 @@ External influence requests must use the `persona_influence` message format (v1.
 | `agent-card.json` | A2A Agent Card — discoverable via ACN and A2A-compatible platforms |
 | `acn-config.json` | ACN registration config — fill `owner` and `endpoint` at runtime |
 | `manifest.json` | Cross-layer metadata |
-| `soul/state.json` | Evolution state — present when `evolution.enabled: true` |
 | `soul/state.json` | Evolution state — only generated when `evolution.enabled: true` |
