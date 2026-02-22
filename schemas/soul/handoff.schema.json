@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/soul/handoff",
+  "title": "Context Handoff",
+  "description": "Runtime context transferred from one persona to another during a switch",
+  "type": "object",
+  "required": ["previousPersona", "timestamp"],
+  "properties": {
+    "previousPersona": {
+      "type": "object",
+      "required": ["slug", "name"],
+      "properties": {
+        "slug": { "type": "string", "description": "Previous persona's slug identifier" },
+        "name": { "type": "string", "description": "Previous persona's display name" },
+        "role": { "type": "string", "description": "Previous persona's relationship role" }
+      },
+      "additionalProperties": false
+    },
+    "conversationSummary": {
+      "type": "string",
+      "description": "Brief summary of the conversation state at handoff time"
+    },
+    "pendingItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string" },
+          "priority": { "type": "string", "enum": ["high", "medium", "low"], "default": "medium" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "description": "Unfinished tasks or follow-ups from the previous persona"
+    },
+    "moodSnapshot": {
+      "type": "object",
+      "properties": {
+        "current": { "type": "string", "description": "Mood at handoff time" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "userSentiment": { "type": "string", "description": "Perceived user sentiment at handoff" }
+      },
+      "additionalProperties": false
+    },
+    "relationshipStage": {
+      "type": "string",
+      "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"],
+      "description": "Relationship stage reached with the user"
+    },
+    "sharedInterests": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Topics the user has shown interest in"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the handoff occurred"
+    }
+  },
+  "additionalProperties": false
+}

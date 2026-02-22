@@ -1,6 +1,6 @@
-# Body Layer — Three-Dimensional Body Model
+# Body Layer — Substrate of Existence
 
-The Body layer defines how a persona **exists** — physically, digitally, and visually.
+The Body layer defines the complete environment that enables a persona to **exist and act**. Every agent has a body — digital agents have a virtual body (runtime-only), physical agents have both a physical and virtual body.
 
 ## Three Dimensions
 
@@ -13,7 +13,7 @@ Body
 
 ### Physical (Optional)
 
-For robots, IoT devices, and hardware-embodied agents. Null for digital-only agents.
+For robots, IoT devices, and hardware-embodied agents. Not applicable for digital-only agents (they still have a body via runtime).
 
 ```json
 {
@@ -27,9 +27,9 @@ For robots, IoT devices, and hardware-embodied agents. Null for digital-only age
 }
 ```
 
-### Runtime (Recommended for digital agents)
+### Runtime (REQUIRED -- every agent's minimum viable body)
 
-Declares the digital substrate the persona expects. Enables **Body Awareness** — the persona knows what platform it runs on, what channels are connected, and what credentials it needs.
+Declares the digital substrate the persona expects. When present, the generator injects runtime details into the **Self-Awareness > Body** section of `soul/injection.md` — the persona knows what platform it runs on, what channels are connected, and what credentials it needs.
 
 ```json
 {
@@ -63,9 +63,9 @@ Visual representation for UI, XR, and metaverse contexts.
 }
 ```
 
-## Body Awareness
+## Self-Awareness: Body
 
-When `body.runtime` is declared, the generator automatically injects a **Body Awareness** section into `soul/injection.md`. This gives the persona:
+Every persona has a **Body** sub-section within Self-Awareness that includes the Signal Protocol. When `body.runtime` is declared, the generator additionally injects:
 
 1. Knowledge of its runtime platform and connected channels
 2. A credential management protocol (shared vs. private paths)

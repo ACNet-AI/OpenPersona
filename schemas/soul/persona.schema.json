@@ -48,7 +48,29 @@
         "moodTracking": { "type": "boolean", "default": true },
         "traitEmergence": { "type": "boolean", "default": true },
         "speakingStyleDrift": { "type": "boolean", "default": true },
-        "interestDiscovery": { "type": "boolean", "default": true }
+        "interestDiscovery": { "type": "boolean", "default": true },
+        "boundaries": {
+          "type": "object",
+          "description": "Hard constraints that evolution must never violate",
+          "properties": {
+            "immutableTraits": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Traits that cannot be overridden by evolution"
+            },
+            "maxFormality": { "type": "number", "minimum": 1, "maximum": 10, "description": "Formality ceiling (1-10)" },
+            "minFormality": { "type": "number", "minimum": 1, "maximum": 10, "description": "Formality floor (1-10)" }
+          },
+          "additionalProperties": false
+        },
+        "stageBehaviors": {
+          "type": "object",
+          "description": "Custom behavior descriptions per relationship stage, overriding defaults",
+          "propertyNames": {
+            "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"]
+          },
+          "additionalProperties": { "type": "string" }
+        }
       }
     }
   }

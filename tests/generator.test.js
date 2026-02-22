@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
 const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
+const { generateHandoff, renderHandoff } = require('../lib/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-' + Date.now());
 
@@ -381,7 +382,7 @@ describe('generator', () => {
     await fs.remove(TMP);
   });
 
-  it('does not include self-awareness when no gaps exist', async () => {
+  it('does not include Capabilities sub-section when no gaps exist', async () => {
     const persona = {
       personaName: 'NoGaps',
       slug: 'no-gaps',
@@ -399,7 +400,10 @@ describe('generator', () => {
     const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
     assert.ok(!skillMd.includes('Expected Capabilities'), 'No Expected Capabilities when no gaps');
-    assert.ok(!soulMd.includes('Self-Awareness'), 'No Self-Awareness when no gaps');
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Self-Awareness always present');
+    assert.ok(soulMd.includes('#### Identity'), 'Identity always present');
+    assert.ok(soulMd.includes('#### Body'), 'Body always present');
+    assert.ok(!soulMd.includes('#### Capabilities'), 'No Capabilities sub-section when no gaps');
 
     await fs.remove(TMP);
   });
@@ -478,7 +482,7 @@ describe('generator', () => {
       'hasSoftRefSkills', 'softRefSkillNames',
       'hasSoftRefFaculties', 'softRefFacultyNames',
       'hasSoftRefBody', 'softRefBodyName', 'softRefBodyInstall',
-      'heartbeatExpected', 'heartbeatStrategy', 'hasSelfAwareness',
+      'heartbeatExpected', 'heartbeatStrategy', 'hasDormantCapabilities',
     ];
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
@@ -678,7 +682,7 @@ describe('constitution injection', () => {
 });
 
 describe('generated soul-injection quality', () => {
-  it('always includes Soul Foundation in every persona', async () => {
+  it('always includes Self-Awareness with Identity and Body in every persona', async () => {
     const persona = {
       personaName: 'Minimal',
       slug: 'minimal-test',
@@ -691,17 +695,20 @@ describe('generated soul-injection quality', () => {
     const { skillDir } = await generate(persona, TMP);
     const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
-    assert.ok(soulMd.includes('### Soul Foundation'), 'Every persona must have Soul Foundation');
+    assert.ok(soulMd.includes('### Self-Awareness'), 'Every persona must have Self-Awareness');
+    assert.ok(soulMd.includes('#### Identity'), 'Every persona must have Identity sub-section');
     assert.ok(soulMd.includes('Safety > Honesty > Helpfulness'), 'Must state constitutional priority');
     assert.ok(soulMd.includes('host environment'), 'Must mention host environment constraints');
     assert.ok(soulMd.includes('OpenPersona'), 'Must mention generative origin');
-
-    assert.ok(!soulMd.includes('Self-Awareness'), 'No Self-Awareness when no gaps exist');
+    assert.ok(soulMd.includes('#### Body'), 'Every persona must have Body sub-section');
+    assert.ok(soulMd.includes('Signal Protocol'), 'Every persona must have Signal Protocol');
+    assert.ok(!soulMd.includes('#### Capabilities'), 'No Capabilities when no gaps exist');
+    assert.ok(!soulMd.includes('#### Growth'), 'No Growth when evolution not enabled');
 
     await fs.remove(TMP);
   });
 
-  it('injects role-specific wording into Soul Foundation', async () => {
+  it('injects role-specific wording into Identity', async () => {
     const assistantPersona = {
       personaName: 'RoleTest',
       slug: 'role-test',
@@ -801,6 +808,163 @@ describe('generated soul-injection quality', () => {
     assert.ok(!soulInjection.includes('&amp;'), 'soul-injection must not contain &amp; HTML entities');
     assert.ok(!soulInjection.includes('&quot;'), 'soul-injection must not contain &quot; HTML entities');
     assert.ok(soulInjection.includes("'Hey there!'"), 'single quotes must be preserved as-is');
+    await fs.remove(TMP);
+  });
+
+  it('injects Signal Protocol unconditionally', async () => {
+    const persona = {
+      personaName: 'BSP',
+      slug: 'bsp-test',
+      bio: 'signal protocol tester',
+      personality: 'technical',
+      speakingStyle: 'Precise',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('Signal Protocol'), 'Must always have Signal Protocol');
+    assert.ok(soulMd.includes('signals.json'), 'Must reference signals file');
+    assert.ok(soulMd.includes('signal-responses.json'), 'Must reference responses file');
+    assert.ok(soulMd.includes('"type": "signal"'), 'Must describe signal format');
+    assert.ok(!soulMd.includes('Your Current Body'), 'No current body when no runtime');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects Growth sub-section when evolution enabled', async () => {
+    const persona = {
+      personaName: 'GrowthTest',
+      slug: 'growth-test',
+      bio: 'growth tester',
+      personality: 'adaptive',
+      speakingStyle: 'Flexible',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('#### Growth'), 'Must have Growth sub-section');
+    assert.ok(soulMd.includes('Relationship tone'), 'Must mention relationship tone');
+    assert.ok(soulMd.includes('Evolved traits'), 'Must mention evolved traits');
+    assert.ok(soulMd.includes('Speaking style drift'), 'Must mention speaking style drift');
+    assert.ok(soulMd.includes('How You Grow'), 'Must have How You Grow section');
+    assert.ok(soulMd.includes('evolution event'), 'Must describe evolution events');
+    assert.ok(soulMd.includes('emit a signal'), 'Must link growth to signals');
+
+    await fs.remove(TMP);
+  });
+
+  it('injects evolution boundaries when specified', async () => {
+    const persona = {
+      personaName: 'BoundedEvo',
+      slug: 'bounded-evo',
+      bio: 'bounded evolution tester',
+      personality: 'constrained',
+      speakingStyle: 'Direct',
+      evolution: {
+        enabled: true,
+        boundaries: {
+          immutableTraits: ['loyal', 'honest'],
+          maxFormality: 9,
+          minFormality: 3,
+        },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('Hard Constraints'), 'Must have Hard Constraints section');
+    assert.ok(soulMd.includes('loyal'), 'Must list immutable trait');
+    assert.ok(soulMd.includes('honest'), 'Must list immutable trait');
+    assert.ok(soulMd.includes('Formality ceiling: 9'), 'Must show max formality');
+    assert.ok(soulMd.includes('Formality floor: 3'), 'Must show min formality');
+
+    await fs.remove(TMP);
+  });
+
+  it('renders custom stageBehaviors when provided', async () => {
+    const persona = {
+      personaName: 'StageCustom',
+      slug: 'stage-custom',
+      bio: 'stage behavior tester',
+      personality: 'dynamic',
+      speakingStyle: 'Varied',
+      evolution: {
+        enabled: true,
+        stageBehaviors: {
+          stranger: 'Very formal, use honorifics',
+          friend: 'Casual, use first names',
+          intimate: 'Pet names allowed',
+        },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('Very formal, use honorifics'), 'Must render custom stranger behavior');
+    assert.ok(soulMd.includes('Casual, use first names'), 'Must render custom friend behavior');
+    assert.ok(soulMd.includes('Pet names allowed'), 'Must render custom intimate behavior');
+    assert.ok(!soulMd.includes('polite, formal, no nicknames'), 'Must not show default when custom provided');
+
+    await fs.remove(TMP);
+  });
+
+  it('renders default stageBehaviors when none provided', async () => {
+    const persona = {
+      personaName: 'StageDefault',
+      slug: 'stage-default',
+      bio: 'default stage tester',
+      personality: 'simple',
+      speakingStyle: 'Plain',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('polite, formal, no nicknames'), 'Must show default stranger behavior');
+    assert.ok(soulMd.includes('inside jokes, deep empathy'), 'Must show default close_friend behavior');
+
+    await fs.remove(TMP);
+  });
+
+  it('excludes new growth derived fields from persona.json', async () => {
+    const persona = {
+      personaName: 'CleanGrowth',
+      slug: 'clean-growth',
+      bio: 'clean growth fields test',
+      personality: 'tidy',
+      speakingStyle: 'Neat',
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['kind'], maxFormality: 8 },
+        stageBehaviors: { stranger: 'Formal' },
+      },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+
+    const forbidden = [
+      'hasEvolutionBoundaries', 'immutableTraits', 'maxFormality', 'minFormality',
+      'hasStageBehaviors', 'stageBehaviorsBlock',
+    ];
+    for (const key of forbidden) {
+      assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
+    }
+    assert.ok(output.evolution?.boundaries, 'Original evolution.boundaries must be preserved');
+    assert.ok(output.evolution?.stageBehaviors, 'Original evolution.stageBehaviors must be preserved');
+
     await fs.remove(TMP);
   });
 
@@ -1044,8 +1208,10 @@ describe('four-layer architecture', () => {
     assert.ok(skillMd.includes('moltbook (shared)'), 'Shared credential in SKILL.md');
     assert.ok(skillMd.includes('elevenlabs (private)'), 'Private credential in SKILL.md');
 
-    assert.ok(injectionMd.includes('Body Awareness'), 'Body Awareness block injected');
-    assert.ok(injectionMd.includes('Credential Management Protocol'), 'Credential management protocol present');
+    assert.ok(injectionMd.includes('#### Body'), 'Body sub-section in Self-Awareness');
+    assert.ok(injectionMd.includes('Signal Protocol'), 'Signal Protocol present');
+    assert.ok(injectionMd.includes('Your Current Body'), 'Current body details injected');
+    assert.ok(injectionMd.includes('Credential Management'), 'Credential management present');
     assert.ok(injectionMd.includes('credentials/shared'), 'Shared credential path documented');
     assert.ok(injectionMd.includes('credentials/persona-runtime-bot'), 'Private credential path documented');
 
@@ -1194,5 +1360,140 @@ describe('persona registry', () => {
     assert.deepStrictEqual(reg, { version: 1, personas: {} });
 
     fs.removeSync(TMP);
+  });
+});
+
+// --- Context Handoff Protocol (Phase B) ---
+describe('context handoff', () => {
+  const HANDOFF_TMP = path.join(require('os').tmpdir(), 'openpersona-handoff-test-' + Date.now());
+
+  it('generateHandoff returns null when persona.json missing', () => {
+    const fakeDir = path.join(HANDOFF_TMP, 'no-persona');
+    fs.ensureDirSync(fakeDir);
+    const result = generateHandoff('ghost', fakeDir);
+    assert.strictEqual(result, null);
+  });
+
+  it('generateHandoff produces basic handoff from persona.json alone', () => {
+    const oldDir = path.join(HANDOFF_TMP, 'persona-old');
+    fs.ensureDirSync(path.join(oldDir, 'soul'));
+    fs.writeFileSync(path.join(oldDir, 'soul', 'persona.json'), JSON.stringify({
+      personaName: 'OldBot',
+      slug: 'old-bot',
+      role: 'mentor',
+      bio: 'a wise mentor',
+      personality: 'calm',
+      speakingStyle: 'measured',
+    }));
+
+    const handoff = generateHandoff('old-bot', oldDir);
+    assert.ok(handoff, 'handoff must not be null');
+    assert.strictEqual(handoff.previousPersona.slug, 'old-bot');
+    assert.strictEqual(handoff.previousPersona.name, 'OldBot');
+    assert.strictEqual(handoff.previousPersona.role, 'mentor');
+    assert.ok(handoff.timestamp, 'timestamp must exist');
+    assert.strictEqual(handoff.moodSnapshot, undefined, 'no mood without state.json');
+    assert.strictEqual(handoff.relationshipStage, undefined, 'no stage without state.json');
+  });
+
+  it('generateHandoff extracts mood, relationship, and interests from state.json', () => {
+    const oldDir = path.join(HANDOFF_TMP, 'persona-rich');
+    fs.ensureDirSync(path.join(oldDir, 'soul'));
+    fs.writeFileSync(path.join(oldDir, 'soul', 'persona.json'), JSON.stringify({
+      personaName: 'RichBot',
+      slug: 'rich-bot',
+      role: 'companion',
+      bio: 'test',
+      personality: 'cheerful',
+      speakingStyle: 'casual',
+    }));
+    fs.writeFileSync(path.join(oldDir, 'soul', 'state.json'), JSON.stringify({
+      relationship: { stage: 'friend', interactionCount: 15 },
+      mood: { current: 'happy', intensity: 0.8 },
+      interests: { cooking: 3, travel: 5, music: 1 },
+    }));
+
+    const handoff = generateHandoff('rich-bot', oldDir);
+    assert.ok(handoff);
+    assert.strictEqual(handoff.relationshipStage, 'friend');
+    assert.strictEqual(handoff.moodSnapshot.current, 'happy');
+    assert.strictEqual(handoff.moodSnapshot.intensity, 0.8);
+    assert.deepStrictEqual(handoff.sharedInterests, ['cooking', 'travel', 'music']);
+  });
+
+  it('renderHandoff produces markdown with all sections', () => {
+    const handoff = {
+      previousPersona: { slug: 'sam', name: 'Samantha', role: 'companion' },
+      conversationSummary: 'User was asking about vacation plans.',
+      pendingItems: [
+        { description: 'Book flight to Tokyo', priority: 'high' },
+        { description: 'Check hotel prices', priority: 'medium' },
+      ],
+      moodSnapshot: { current: 'excited', intensity: 0.9, userSentiment: 'enthusiastic' },
+      relationshipStage: 'friend',
+      sharedInterests: ['travel', 'food', 'photography'],
+      timestamp: new Date().toISOString(),
+    };
+
+    const md = renderHandoff(handoff);
+    assert.ok(md, 'rendered markdown must not be null');
+    assert.ok(md.includes('Samantha'), 'must include previous persona name');
+    assert.ok(md.includes('sam'), 'must include previous slug');
+    assert.ok(md.includes('vacation plans'), 'must include conversation summary');
+    assert.ok(md.includes('Book flight to Tokyo'), 'must include pending item');
+    assert.ok(md.includes('excited'), 'must include mood');
+    assert.ok(md.includes('enthusiastic'), 'must include user sentiment');
+    assert.ok(md.includes('friend'), 'must include relationship stage');
+    assert.ok(md.includes('travel, food, photography'), 'must include interests');
+  });
+
+  it('renderHandoff handles minimal handoff (no state)', () => {
+    const handoff = {
+      previousPersona: { slug: 'min', name: 'MinBot', role: 'assistant' },
+      timestamp: new Date().toISOString(),
+    };
+
+    const md = renderHandoff(handoff);
+    assert.ok(md, 'rendered markdown must not be null');
+    assert.ok(md.includes('MinBot'), 'must include name');
+    assert.ok(!md.includes('Pending items'), 'must not include pending items section');
+    assert.ok(!md.includes('Emotional context'), 'must not include mood section');
+  });
+
+  it('handoff.schema.json is valid JSON', () => {
+    const schemaPath = path.join(__dirname, '..', 'schemas', 'soul', 'handoff.schema.json');
+    assert.ok(fs.existsSync(schemaPath), 'schema file must exist');
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+    assert.strictEqual(schema.title, 'Context Handoff');
+    assert.ok(schema.required.includes('previousPersona'));
+    assert.ok(schema.required.includes('timestamp'));
+  });
+
+  it('soul-injection template includes handoff conditional block', () => {
+    const templatePath = path.join(__dirname, '..', 'templates', 'soul-injection.template.md');
+    const template = fs.readFileSync(templatePath, 'utf-8');
+    assert.ok(template.includes('{{#hasHandoff}}'), 'template must have hasHandoff conditional');
+    assert.ok(template.includes('handoff.json'), 'template must reference handoff.json');
+  });
+
+  it('generated persona with evolution includes hasHandoff placeholder', async () => {
+    const persona = {
+      personaName: 'HandoffTest',
+      slug: 'handoff-test',
+      bio: 'handoff test persona',
+      personality: 'adaptive',
+      speakingStyle: 'natural',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(HANDOFF_TMP);
+    const { skillDir } = await generate(persona, HANDOFF_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    // hasHandoff is false at generation time, so the block should NOT appear
+    assert.ok(!injection.includes('Context Handoff:'), 'handoff block must not appear when hasHandoff is false');
+  });
+
+  // Cleanup
+  it('cleanup handoff test dir', () => {
+    fs.removeSync(HANDOFF_TMP);
   });
 });

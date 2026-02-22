@@ -40,7 +40,7 @@
               }
             }
           ],
-          "description": "Body layer reference. null for pure digital agents, string for local, object with install for external."
+          "description": "Body layer reference. Object with runtime (required), physical (optional), appearance (optional). Can also be a string for local or object with install for external."
         },
         "faculties": {
           "type": "array",

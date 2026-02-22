@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/signal",
+  "title": "Signal Protocol",
+  "description": "Bidirectional machine-to-machine demand protocol between persona and host environment",
+  "oneOf": [
+    { "$ref": "#/definitions/request" },
+    { "$ref": "#/definitions/response" }
+  ],
+  "definitions": {
+    "request": {
+      "type": "object",
+      "required": ["type", "category", "need", "reason", "priority", "timestamp"],
+      "properties": {
+        "type": { "type": "string", "const": "signal" },
+        "id": { "type": "string", "description": "Unique signal identifier (UUID recommended)" },
+        "category": {
+          "type": "string",
+          "enum": ["scheduling", "file_io", "tool_missing", "capability_gap", "resource_limit"],
+          "description": "Signal category"
+        },
+        "need": { "type": "string", "description": "What the persona needs" },
+        "spec": { "type": "object", "description": "Structured specification of the need (optional)", "default": {} },
+        "reason": { "type": "string", "description": "Why this capability is needed" },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Signal priority"
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "object",
+      "required": ["type", "signalId", "status", "timestamp"],
+      "properties": {
+        "type": { "type": "string", "const": "signal_response" },
+        "signalId": { "type": "string", "description": "ID of the original signal being responded to" },
+        "status": {
+          "type": "string",
+          "enum": ["fulfilled", "in_progress", "unreachable"],
+          "description": "Current fulfillment status"
+        },
+        "detail": { "type": "string", "description": "Human-readable explanation of the response" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

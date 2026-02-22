@@ -7,7 +7,7 @@
   "properties": {
     "physical": {
       "type": ["object", "null"],
-      "description": "Physical embodiment (robots, IoT devices). Null for digital-only agents.",
+      "description": "Physical embodiment (robots, IoT devices). Not applicable for digital-only agents.",
       "properties": {
         "name": { "type": "string", "description": "Unique identifier for the physical body" },
         "description": { "type": "string" },

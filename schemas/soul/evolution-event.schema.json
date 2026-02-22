@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/soul/evolution-event",
+  "title": "Evolution Event",
+  "description": "Structured evolution event logged during persona growth",
+  "type": "object",
+  "required": ["type", "trigger", "delta", "timestamp"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["relationship_signal", "mood_shift", "trait_emergence", "interest_discovery", "milestone", "speaking_style_drift"],
+      "description": "Category of evolution event"
+    },
+    "trigger": {
+      "type": "string",
+      "description": "What happened (one sentence)"
+    },
+    "delta": {
+      "type": "object",
+      "description": "What changed — key-value pairs of field names to new values",
+      "additionalProperties": true
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}
