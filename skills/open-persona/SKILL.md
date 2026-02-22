@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.9.0"
+version: "0.10.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, openclaw]
@@ -19,7 +19,7 @@ You are the meta-skill for creating, installing, updating, and publishing agent 
 ## What You Can Do
 
 1. **Create Persona** — Design a new agent persona through conversation, generate a skill pack
-2. **Recommend Faculties** — Suggest faculties (voice, selfie, music, etc.) based on persona needs → see `references/FACULTIES.md`
+2. **Recommend Faculties** — Suggest faculties (voice, selfie, music, memory, etc.) based on persona needs → see `references/FACULTIES.md`
 3. **Recommend Skills** — Search ClawHub and skills.sh for external skills
 4. **Create Custom Skills** — Write SKILL.md files for capabilities not found in ecosystems
 5. **Install Persona** — Deploy persona to OpenClaw (SOUL.md, IDENTITY.md, openclaw.json)
@@ -132,8 +132,9 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Export:** `npx openpersona export <slug>` — export persona pack (with soul state) as a zip archive
 - **Import:** `npx openpersona import <file>` — import persona from a zip archive and install
 - **Reset (★Exp):** `npx openpersona reset <slug>` — restore soul evolution state to initial values
+- **Evolve Report (★Exp):** `npx openpersona evolve-report <slug>` — display a formatted evolution report (relationship, mood, traits, drift, interests, milestones, state history)
 
-When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers.
+When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 
 All install/uninstall/switch operations automatically maintain a local registry at `~/.openclaw/persona-registry.json`, tracking installed personas, active status, and timestamps. The `export` and `import` commands enable cross-device persona transfer — export a zip, move it to another machine, and import to restore the full persona including soul state.
 
@@ -161,6 +162,17 @@ This means you don't need to manually write degradation instructions. Just decla
 ## Soul Evolution (★Experimental)
 
 Soul evolution is a native Soul layer feature (not a faculty). Enable it via `evolution.enabled: true` in persona.json. The persona will automatically track relationship progression, mood, and trait emergence across conversations.
+
+**Evolution Boundaries** — Governance constraints validated at generation time:
+
+- `evolution.boundaries.immutableTraits` — Array of non-empty strings (max 100 chars each) that evolution cannot modify
+- `evolution.boundaries.minFormality` / `maxFormality` — Numeric bounds (1–10) constraining speaking style drift; `minFormality` must be less than `maxFormality`
+
+Invalid boundary configurations are rejected by the generator with descriptive error messages.
+
+**State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries), enabling rollback if evolution goes wrong.
+
+**Evolution Report** — Use `npx openpersona evolve-report <slug>` to view a formatted report of a persona's evolution state including relationship, mood, traits, drift, interests, milestones, and history.
 
 Use `npx openpersona reset <slug>` to restore `soul/state.json` to initial values.
 

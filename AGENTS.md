@@ -120,7 +120,7 @@ Key implementation details:
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.9.0`:
+All version references must stay in sync at `0.10.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default

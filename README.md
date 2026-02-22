@@ -35,9 +35,11 @@ npx openpersona install samantha
 
 ## Key Features
 
-- **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits (★Experimental)
+- **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
+- **🧠 Cross-Session Memory** — Pluggable memory faculty for persistent recall across conversations (local, Mem0, Zep)
+- **🔄 Context Handoff** — Seamless context transfer when switching personas: conversation summary, pending tasks, emotional state
 - **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
-- **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders
+- **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders, memory
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
 - **📦 One-Command Install** — `npx openpersona install samantha` and you're live
@@ -57,7 +59,7 @@ flowchart TB
   end
   subgraph Faculty ["Faculty Layer"]
     D["expression: selfie · voice · music"]
-    E["cognition: reminder"]
+    E["cognition: reminder · memory"]
   end
   subgraph Skill ["Skill Layer"]
     F["Local definitions + ClawHub / skills.sh"]
@@ -65,13 +67,34 @@ flowchart TB
 ```
 
 - **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
-- **Body** — Three-dimensional: `physical` (robots/IoT), `runtime` (platform/channels/credentials/resources), `appearance` (avatar/3D model). Digital agents use `runtime` to declare their operational environment.
+- **Body** — Substrate of existence — three dimensions: `physical` (robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources), `appearance` (avatar/3D model). Body is never null; digital agents have a virtual body (runtime-only).
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills: local definitions in `layers/skills/`, or external via ClawHub / skills.sh (`install` field)
 
 ### Constitution — The Soul's Foundation
 
 Every persona automatically inherits a shared **constitution** (`layers/soul/constitution.md`) — universal values and safety boundaries that cannot be overridden by individual persona definitions. The constitution is built on five core axioms — **Purpose**, **Honesty**, **Safety**, **Autonomy**, and **Hierarchy** — from which derived principles (Identity, User Wellbeing, Evolution Ethics) follow. When principles conflict, safety and honesty take precedence over helpfulness. Individual personas build their unique personality **on top of** this foundation.
+
+### Soul Evolution (★Experimental)
+
+Personas with `evolution.enabled: true` grow dynamically through interaction. The `soul/state.json` file tracks relationship stages, mood shifts, evolved traits, speaking style drift, interests, and milestones.
+
+**Evolution Boundaries** — Governance constraints to keep evolution safe:
+
+- `immutableTraits` — An array of trait strings that can never be changed by evolution (e.g., `["empathetic", "honest"]`)
+- `minFormality` / `maxFormality` — Numeric bounds (1–10) constraining how far the speaking style can drift
+
+The generator validates these boundaries at build time, rejecting invalid configurations.
+
+**State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries). This enables rollback if evolution goes wrong.
+
+**Evolution Report** — Inspect a persona's current evolution state:
+
+```bash
+npx openpersona evolve-report samantha
+```
+
+Displays relationship stage, mood, evolved traits, speaking style drift, interests, milestones, and state history in a formatted report.
 
 ## Preset Personas
 
@@ -114,6 +137,7 @@ persona-samantha/
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
+| **memory** | cognition | Cross-session memory with provider-pluggable backend | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
 
 ### Rich Faculty Config
 
@@ -285,19 +309,32 @@ npx openpersona switch ai-girlfriend
 - `openclaw.json` marks which persona is active
 - All faculty scripts (voice, music) remain available — switching changes _who_ the agent is, not _what_ it can do
 
+### Context Handoff
+
+When switching personas, OpenPersona automatically generates a `handoff.json` file so the incoming persona receives context from the outgoing one:
+
+- **Conversation summary** — what was being discussed
+- **Pending tasks** — unfinished action items
+- **Emotional context** — the user's current mood/state
+
+The new persona reads `handoff.json` on activation and can seamlessly continue the conversation without losing context.
+
 ## CLI Commands
 
 ```
-openpersona create      Create a persona (interactive or --preset/--config)
-openpersona install     Install a persona (slug or owner/repo)
-openpersona search      Search the registry
-openpersona uninstall   Uninstall a persona
-openpersona update      Update installed personas
-openpersona list        List installed personas
-openpersona switch      Switch active persona (updates SOUL.md + IDENTITY.md)
-openpersona contribute  Persona Harvest — submit improvements as PR
-openpersona publish     Publish to ClawHub
-openpersona reset       Reset soul evolution state
+openpersona create         Create a persona (interactive or --preset/--config)
+openpersona install        Install a persona (slug or owner/repo)
+openpersona search         Search the registry
+openpersona uninstall      Uninstall a persona
+openpersona update         Update installed personas
+openpersona list           List installed personas
+openpersona switch         Switch active persona (updates SOUL.md + IDENTITY.md)
+openpersona contribute     Persona Harvest — submit improvements as PR
+openpersona publish        Publish to ClawHub
+openpersona reset          Reset soul evolution state
+openpersona export         Export a persona to a portable zip archive
+openpersona import         Import a persona from a zip archive
+openpersona evolve-report  ★Experimental: Show evolution report for a persona
 ```
 
 ### Key Options
@@ -351,12 +388,14 @@ layers/                 # Shared building blocks (four-layer module pool)
     voice/              #     expression — TTS voice synthesis
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
+    memory/             #     cognition — cross-session memory (local/Mem0/Zep)
   skills/               #   Skill layer modules (local skill definitions)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-tests/                  # Tests (60 passing)
+  evolution.js          #   Evolution governance & evolve-report
+tests/                  # Tests (122 passing)
 ```
 
 ## Development
