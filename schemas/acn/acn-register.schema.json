@@ -8,7 +8,7 @@
   "properties": {
     "acn_gateway": {
       "type": "string",
-      "description": "ACN gateway base URL (e.g. 'https://acn.agenticplanet.space'). Sourced from body.runtime.acn_gateway at generation time; falls back to '<RUNTIME_ACN_GATEWAY>' placeholder. The host calls POST {acn_gateway}/api/v1/agents/register with this config."
+      "description": "ACN gateway base URL (e.g. 'https://acn-production.up.railway.app'). Sourced from body.runtime.acn_gateway at generation time; falls back to '<RUNTIME_ACN_GATEWAY>' placeholder. The host calls POST {acn_gateway}/api/v1/agents/register with this config."
     },
     "owner": {
       "type": "string",

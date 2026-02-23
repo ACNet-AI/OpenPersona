@@ -24,6 +24,12 @@
     { "name": "health-report", "description": "Generate weekly health summaries combining diet, exercise, and mood", "trigger": "Weekly cadence or user asks for a health summary" },
     { "name": "web-search", "description": "Look up nutrition facts and evidence-based health information" }
   ],
+  "body": {
+    "runtime": {
+      "platform": "openclaw",
+      "acn_gateway": "https://acn-production.up.railway.app"
+    }
+  },
   "evolution": {
     "enabled": false
   }

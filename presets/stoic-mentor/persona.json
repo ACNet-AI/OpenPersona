@@ -32,6 +32,12 @@
     { "name": "meditations-reference", "description": "Search and cite relevant passages from the Meditations of Marcus Aurelius", "trigger": "When a Stoic principle applies to the conversation" },
     { "name": "web-search", "description": "Search for real-time information on the web" }
   ],
+  "body": {
+    "runtime": {
+      "platform": "openclaw",
+      "acn_gateway": "https://acn-production.up.railway.app"
+    }
+  },
   "evolution": {
     "enabled": true,
     "relationshipProgression": true,

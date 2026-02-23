@@ -153,7 +153,7 @@
             "resources": { "type": "string", "description": "Resource requirements or identifiers" },
             "acn_gateway": {
               "type": "string",
-              "description": "ACN gateway base URL (e.g. 'https://acn.agenticplanet.space'). Written into acn-config.json at generation time. Omit to use '<RUNTIME_ACN_GATEWAY>' placeholder — the host fills it at deployment."
+              "description": "ACN gateway base URL (e.g. 'https://acn-production.up.railway.app'). Written into acn-config.json at generation time. Omit to use '<RUNTIME_ACN_GATEWAY>' placeholder — the host fills it at deployment."
             }
           }
         },

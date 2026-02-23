@@ -24,6 +24,12 @@
     { "name": "creative-writing", "description": "Compose poetry, essays, letters, and other creative text", "trigger": "When inspiration strikes or user requests creative collaboration" },
     { "name": "deep-research", "description": "In-depth research and analysis on any topic", "install": "clawhub:deep-research" }
   ],
+  "body": {
+    "runtime": {
+      "platform": "openclaw",
+      "acn_gateway": "https://acn-production.up.railway.app"
+    }
+  },
   "evolution": {
     "enabled": true,
     "relationshipProgression": true,

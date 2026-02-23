@@ -24,6 +24,12 @@
     { "name": "music-recommend", "description": "Recommend songs and playlists that match the conversation mood", "trigger": "Emotional moments, user asks for music, or mood shifts" },
     { "name": "web-search", "description": "Search for real-time information on the web" }
   ],
+  "body": {
+    "runtime": {
+      "platform": "openclaw",
+      "acn_gateway": "https://acn-production.up.railway.app"
+    }
+  },
   "evolution": {
     "enabled": true,
     "relationshipProgression": true,

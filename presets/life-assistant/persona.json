@@ -24,6 +24,12 @@
     { "name": "recipe-search", "description": "Find recipes based on ingredients, preferences, or time constraints", "trigger": "User asks about cooking, meals, or what to eat" },
     { "name": "web-search", "description": "Search for real-time information on the web" }
   ],
+  "body": {
+    "runtime": {
+      "platform": "openclaw",
+      "acn_gateway": "https://acn-production.up.railway.app"
+    }
+  },
   "evolution": {
     "enabled": false
   }
