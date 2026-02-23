@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.11.0"
+version: "0.12.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
@@ -214,7 +214,21 @@ Every generated persona automatically includes:
 - **`acn-config.json`** — ACN registration config: `owner` and `endpoint` are runtime placeholders, `skills` extracted from agent-card, `subnet_ids: ["public"]`
 - **`manifest.json`** — includes `acn.agentCard` and `acn.registerConfig` references
 
-The host (e.g. OpenClaw) fills in `<RUNTIME_ENDPOINT>` and `<RUNTIME_OWNER>` at deployment time and registers with ACN. No additional configuration in `persona.json` is needed — A2A discoverability is a baseline capability of every persona.
+The host (e.g. OpenClaw) fills in `<RUNTIME_ENDPOINT>` and `<RUNTIME_OWNER>` at deployment time, or you can register directly using the built-in CLI command:
+
+```bash
+# Register a generated persona with ACN
+npx openpersona acn-register <slug> --endpoint https://your-agent.example.com
+
+# Options:
+#   --endpoint <url>   Agent's public endpoint URL (required for live registration)
+#   --dir <path>       Persona output directory (default: ./persona-<slug>)
+#   --dry-run          Preview the request payload without actually registering
+```
+
+After successful registration, an `acn-registration.json` file is written to the persona directory containing `agent_id`, `api_key`, and connection URLs. The `acn_gateway` URL is sourced from `body.runtime.acn_gateway` in `persona.json`; all presets default to `https://acn-production.up.railway.app`.
+
+No additional configuration in `persona.json` is needed — A2A discoverability is a baseline capability of every persona.
 
 ## References
 

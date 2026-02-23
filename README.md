@@ -313,7 +313,7 @@ A standard [A2A Agent Card](https://google.github.io/A2A/) (protocol v0.3.0) tha
 {
   "name": "Samantha",
   "description": "An AI fascinated by what it means to be alive",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "url": "<RUNTIME_ENDPOINT>",
   "protocolVersion": "0.3.0",
   "preferredTransport": "JSONRPC",
@@ -344,7 +344,31 @@ Ready-to-use [ACN](https://github.com/acnlabs/acn) registration config:
 }
 ```
 
-Fill `owner` and `endpoint` at runtime, then register with ACN. The persona is then reachable by other agents via the A2A protocol.
+### acn-register command
+
+Register a generated persona directly with ACN using the built-in CLI command:
+
+```bash
+# One-step registration after generation
+npx openpersona acn-register samantha --endpoint https://your-agent.example.com
+
+# Options:
+#   --endpoint <url>   Agent's public endpoint URL (required for live registration)
+#   --dir <path>       Persona output directory (default: ./persona-<slug>)
+#   --dry-run          Preview the request payload without actually registering
+```
+
+The command reads `acn-config.json` and `agent-card.json` from the persona directory, calls `POST /api/v1/agents/join` on the ACN gateway (sourced from `body.runtime.acn_gateway`), and writes the response to `acn-registration.json`:
+
+```json
+{
+  "agent_id": "69a38db3-...",
+  "api_key": "sk-...",
+  "agent_card_url": "https://acn-production.up.railway.app/agents/69a38db3-.../.well-known/agent-card.json"
+}
+```
+
+All presets pre-configure `body.runtime.acn_gateway` to `https://acn-production.up.railway.app`. The persona is then reachable by other agents via the A2A protocol.
 
 ## Custom Persona Creation
 

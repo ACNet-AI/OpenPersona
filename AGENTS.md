@@ -27,6 +27,7 @@ lib/
   generator.js          ← Core persona generation logic (the heart of the project)
   evolution.js          ← Evolution governance (evolve-report CLI)
   installer.js          ← Persona installation to OpenClaw
+  registrar.js          ← ACN registration logic (acn-register CLI command)
   publisher/clawhub.js  ← Publishing to ClawHub registry
   contributor.js        ← Persona Harvest (community contribution)
   downloader.js         ← Preset/package downloading
@@ -122,7 +123,7 @@ Key implementation details:
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.11.0`:
+All version references must stay in sync at `0.12.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default
