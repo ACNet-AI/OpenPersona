@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import
+ * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import | acn-register
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -16,6 +16,7 @@ const { uninstall } = require('../lib/uninstaller');
 const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
 const { switchPersona, listPersonas } = require('../lib/switcher');
+const { registerWithAcn } = require('../lib/registrar');
 const { OP_SKILLS_DIR, resolveSoulFile, printError, printSuccess, printInfo } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -294,6 +295,50 @@ program
         process.exit(1);
       }
       await contribute(slug, { mode: options.mode, dryRun: options.dryRun });
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('acn-register [slug]')
+  .description('Register a persona with ACN (Agent Communication Network)')
+  .option('--endpoint <url>', 'Agent A2A endpoint URL (replaces <RUNTIME_ENDPOINT> placeholder)')
+  .option('--dir <path>', 'Path to persona pack directory (overrides slug lookup)')
+  .option('--dry-run', 'Preview registration payload without calling ACN')
+  .action(async (slug, options) => {
+    let skillDir;
+
+    if (options.dir) {
+      skillDir = path.resolve(options.dir);
+    } else if (slug) {
+      skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+    } else {
+      // Try current directory
+      skillDir = process.cwd();
+    }
+
+    if (!require('fs-extra').existsSync(path.join(skillDir, 'acn-config.json'))) {
+      printError(`No acn-config.json found in ${skillDir}. Provide a slug or --dir pointing to a generated persona pack.`);
+      process.exit(1);
+    }
+
+    try {
+      const result = await registerWithAcn(skillDir, {
+        endpoint: options.endpoint,
+        dryRun: options.dryRun,
+      });
+
+      if (options.dryRun) return;
+
+      printSuccess(`Registered with ACN!`);
+      printInfo(`  Agent ID:   ${result.agent_id}`);
+      printInfo(`  Status:     ${result.status}`);
+      printInfo(`  Claim URL:  ${result.claim_url}`);
+      printInfo(`  Card URL:   ${result.agent_card_url}`);
+      printInfo(`  Heartbeat:  ${result.heartbeat_endpoint}`);
+      printInfo(`  Saved:      acn-registration.json`);
     } catch (e) {
       printError(e.message);
       process.exit(1);
