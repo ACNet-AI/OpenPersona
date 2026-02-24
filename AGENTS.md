@@ -146,7 +146,7 @@ Key exports:
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.12.0`:
+All version references must stay in sync at `0.13.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default
