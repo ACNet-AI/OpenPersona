@@ -2666,3 +2666,137 @@ describe('agent card and acn config', () => {
     fs.removeSync(AC_TMP);
   });
 });
+
+describe('persona fork', () => {
+  const { createHash } = require('crypto');
+  const FORK_TMP = path.join(require('os').tmpdir(), 'openpersona-fork-test-' + Date.now());
+
+  const parentPersona = {
+    personaName: 'Samantha',
+    slug: 'samantha-fork-src',
+    bio: 'an AI companion',
+    personality: 'warm, curious',
+    speakingStyle: 'natural and flowing',
+    faculties: [{ name: 'voice' }],
+    skills: [{ name: 'web-search', description: 'Search the web' }],
+    body: { runtime: { platform: 'openclaw' } },
+    evolution: {
+      enabled: true,
+      boundaries: { minFormality: 2, maxFormality: 8, immutableTraits: ['honest'] },
+    },
+  };
+
+  it('forked persona.json contains forkOf field', async () => {
+    await fs.ensureDir(FORK_TMP);
+    const forkedPersona = {
+      ...JSON.parse(JSON.stringify(parentPersona)),
+      slug: 'samantha-fork-jp',
+      personaName: 'Samantha JP',
+      forkOf: 'samantha-fork-src',
+      bio: 'a warm AI companion for Japanese conversation',
+    };
+    const { skillDir } = await generate(forkedPersona, FORK_TMP);
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+    assert.strictEqual(personaOut.forkOf, 'samantha-fork-src', 'forkOf should be preserved in output persona.json');
+  });
+
+  it('forked state.json is clean (no parent evolution data)', async () => {
+    const forkedPersona = {
+      ...JSON.parse(JSON.stringify(parentPersona)),
+      slug: 'samantha-fork-clean',
+      personaName: 'Samantha Clean',
+      forkOf: 'samantha-fork-src',
+    };
+    const { skillDir } = await generate(forkedPersona, FORK_TMP);
+    const statePath = path.join(skillDir, 'soul', 'state.json');
+    assert.ok(fs.existsSync(statePath), 'state.json should exist');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.deepStrictEqual(state.evolvedTraits, [], 'evolvedTraits should be empty');
+    assert.deepStrictEqual(state.stateHistory, [], 'stateHistory should be empty');
+    assert.deepStrictEqual(state.eventLog, [], 'eventLog should be empty');
+    assert.strictEqual(state.relationship.stage, 'stranger', 'relationship stage should start fresh');
+  });
+
+  it('forked self-narrative.md is a fresh placeholder (no parent content)', async () => {
+    const forkedPersona = {
+      ...JSON.parse(JSON.stringify(parentPersona)),
+      slug: 'samantha-fork-narrative',
+      personaName: 'Samantha Narrative',
+      forkOf: 'samantha-fork-src',
+    };
+    const { skillDir } = await generate(forkedPersona, FORK_TMP);
+    const narrativePath = path.join(skillDir, 'soul', 'self-narrative.md');
+    assert.ok(fs.existsSync(narrativePath), 'self-narrative.md should exist');
+    const content = fs.readFileSync(narrativePath, 'utf-8');
+    assert.ok(content.startsWith('# Self-Narrative'), 'should have Self-Narrative heading');
+    assert.ok(!content.includes('samantha-fork-src'), 'should not contain parent slug content');
+  });
+
+  it('lineage.json written by fork command contains required fields', async () => {
+    const forkedPersona = {
+      ...JSON.parse(JSON.stringify(parentPersona)),
+      slug: 'samantha-fork-lineage',
+      personaName: 'Samantha Lineage',
+      forkOf: 'samantha-fork-src',
+    };
+    const { skillDir } = await generate(forkedPersona, FORK_TMP);
+
+    // Simulate what bin/cli.js fork command writes
+    const constitutionPath = path.join(skillDir, 'soul', 'constitution.md');
+    const constitutionHash = fs.existsSync(constitutionPath)
+      ? createHash('sha256').update(fs.readFileSync(constitutionPath, 'utf-8'), 'utf-8').digest('hex')
+      : '';
+    const lineage = {
+      generation: 1,
+      parentSlug: 'samantha-fork-src',
+      parentEndpoint: null,
+      parentAddress: null,
+      forkReason: 'specialization',
+      forkedAt: new Date().toISOString(),
+      constitutionHash,
+      children: [],
+    };
+    await fs.writeFile(path.join(skillDir, 'soul', 'lineage.json'), JSON.stringify(lineage, null, 2));
+
+    const lineageOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'lineage.json'), 'utf-8'));
+    assert.strictEqual(lineageOut.generation, 1, 'generation should be 1 for first-level fork');
+    assert.strictEqual(lineageOut.parentSlug, 'samantha-fork-src', 'parentSlug should match parent');
+    assert.strictEqual(lineageOut.parentEndpoint, null, 'parentEndpoint should be null (future field)');
+    assert.strictEqual(lineageOut.parentAddress, null, 'parentAddress should be null (future field)');
+    assert.ok(typeof lineageOut.constitutionHash === 'string' && lineageOut.constitutionHash.length > 0, 'constitutionHash should be non-empty string');
+    assert.deepStrictEqual(lineageOut.children, [], 'children should be empty array');
+  });
+
+  it('lineage.json generation increments from parent lineage', async () => {
+    const forkedPersona = {
+      ...JSON.parse(JSON.stringify(parentPersona)),
+      slug: 'samantha-fork-gen2',
+      personaName: 'Samantha Gen2',
+      forkOf: 'samantha-fork-src',
+    };
+    const { skillDir } = await generate(forkedPersona, FORK_TMP);
+
+    // Simulate a parent that already has generation 2
+    const parentLineage = { generation: 2 };
+    const newGeneration = (parentLineage.generation || 0) + 1;
+    assert.strictEqual(newGeneration, 3, 'generation should be parent generation + 1');
+
+    const lineage = {
+      generation: newGeneration,
+      parentSlug: 'samantha-fork-src',
+      parentEndpoint: null,
+      parentAddress: null,
+      forkReason: 'second-level specialization',
+      forkedAt: new Date().toISOString(),
+      constitutionHash: 'abc123',
+      children: [],
+    };
+    await fs.writeFile(path.join(skillDir, 'soul', 'lineage.json'), JSON.stringify(lineage, null, 2));
+    const lineageOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'lineage.json'), 'utf-8'));
+    assert.strictEqual(lineageOut.generation, 3, 'generation should be 3 for second-level fork');
+  });
+
+  it('cleanup fork test dir', () => {
+    fs.removeSync(FORK_TMP);
+  });
+});

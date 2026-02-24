@@ -211,6 +211,91 @@ program
   });
 
 program
+  .command('fork <parent-slug>')
+  .description('Fork an installed persona into a specialized child')
+  .requiredOption('--as <new-slug>', 'Slug for the child persona')
+  .option('--name <name>', 'Child persona name (default: "<ParentName>-<new-slug>")')
+  .option('--bio <bio>', 'Override bio')
+  .option('--personality <keywords>', 'Override personality (comma-separated)')
+  .option('--reason <text>', 'Fork reason, written into lineage.json', 'specialization')
+  .option('--output <dir>', 'Output directory', process.cwd())
+  .option('--install', 'Install to OpenClaw after generation')
+  .action(async (parentSlug, options) => {
+    const { createHash } = require('crypto');
+    const parentDir = path.join(OP_SKILLS_DIR, `persona-${parentSlug}`);
+    const parentPersonaPath = path.join(parentDir, 'soul', 'persona.json');
+    if (!fs.existsSync(parentPersonaPath)) {
+      printError(`Persona not found: persona-${parentSlug}. Install it first.`);
+      process.exit(1);
+    }
+
+    const newSlug = options.as;
+    const childDir = path.join(OP_SKILLS_DIR, `persona-${newSlug}`);
+    if (fs.existsSync(childDir)) {
+      printError(`Persona already exists: persona-${newSlug}. Choose a different slug.`);
+      process.exit(1);
+    }
+
+    const parentPersona = JSON.parse(fs.readFileSync(parentPersonaPath, 'utf-8'));
+
+    // Read parent lineage for generation depth
+    const parentLineagePath = path.join(parentDir, 'soul', 'lineage.json');
+    const parentLineage = fs.existsSync(parentLineagePath)
+      ? JSON.parse(fs.readFileSync(parentLineagePath, 'utf-8'))
+      : null;
+    const generation = parentLineage ? (parentLineage.generation || 0) + 1 : 1;
+
+    // Build forked persona
+    const forkedPersona = JSON.parse(JSON.stringify(parentPersona));
+    forkedPersona.slug = newSlug;
+    forkedPersona.personaName = options.name || `${parentPersona.personaName}-${newSlug}`;
+    forkedPersona.forkOf = parentSlug;
+    if (options.bio) forkedPersona.bio = options.bio;
+    if (options.personality) forkedPersona.personality = options.personality;
+
+    try {
+      const outputDir = path.resolve(options.output);
+      const { skillDir } = await generate(forkedPersona, outputDir);
+
+      // Write lineage.json
+      const constitutionPath = path.join(skillDir, 'soul', 'constitution.md');
+      let constitutionHash = '';
+      if (fs.existsSync(constitutionPath)) {
+        constitutionHash = createHash('sha256')
+          .update(fs.readFileSync(constitutionPath, 'utf-8'), 'utf-8')
+          .digest('hex');
+      }
+      const lineage = {
+        generation,
+        parentSlug,
+        parentEndpoint: null,
+        parentAddress: null,
+        forkReason: options.reason,
+        forkedAt: new Date().toISOString(),
+        constitutionHash,
+        children: [],
+      };
+      await fs.writeFile(
+        path.join(skillDir, 'soul', 'lineage.json'),
+        JSON.stringify(lineage, null, 2)
+      );
+
+      printSuccess(`Forked: ${skillDir}`);
+      printInfo(`  Parent: persona-${parentSlug}  →  Child: persona-${newSlug} (generation ${generation})`);
+      printInfo(`  Constitution hash: ${constitutionHash.slice(0, 16)}...`);
+
+      if (options.install) {
+        await install(skillDir);
+      } else {
+        printInfo(`To install: npx openpersona install ${skillDir}`);
+      }
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+program
   .command('list')
   .description('List installed personas')
   .action(async () => {
