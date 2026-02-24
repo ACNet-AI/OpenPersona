@@ -43,7 +43,9 @@ persona-<slug>/
 │   ├── injection.md        ← Soul injection for host integration
 │   ├── identity.md         ← Identity block
 │   ├── constitution.md     ← Universal ethical foundation
-│   └── state.json          ← Evolution state (when enabled)
+│   ├── state.json          ← Evolution state (when enabled)
+│   ├── self-narrative.md   ← First-person growth storytelling (when evolution enabled)
+│   └── lineage.json        ← Fork lineage + constitution hash (when forked)
 ├── references/             ← Agent-readable detail docs (on demand)
 │   └── <faculty>.md        ← Per-faculty usage instructions
 ├── agent-card.json         ← A2A Agent Card (protocol v0.3.0)
@@ -129,12 +131,13 @@ If the user needs a capability that doesn't exist in any ecosystem:
 
 - **List:** `npx openpersona list` — show all installed personas with active indicator
 - **Switch:** `npx openpersona switch <slug>` — switch active persona
+- **Fork:** `npx openpersona fork <parent-slug> --as <new-slug>` — derive a child persona inheriting the parent's constraint layer (boundaries, faculties, skills, body.runtime); fresh evolution state + `soul/lineage.json` recording parent, constitution hash, and generation depth
 - **Update:** `npx openpersona update <slug>`
 - **Uninstall:** `npx openpersona uninstall <slug>`
 - **Export:** `npx openpersona export <slug>` — export persona pack (with soul state) as a zip archive
 - **Import:** `npx openpersona import <file>` — import persona from a zip archive and install
 - **Reset (★Exp):** `npx openpersona reset <slug>` — restore soul evolution state to initial values
-- **Evolve Report (★Exp):** `npx openpersona evolve-report <slug>` — display a formatted evolution report (relationship, mood, traits, drift, interests, milestones, state history)
+- **Evolve Report (★Exp):** `npx openpersona evolve-report <slug>` — display a formatted evolution report (relationship, mood, traits, drift, interests, milestones, eventLog, self-narrative, state history)
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 
@@ -202,16 +205,18 @@ Channels are declared at generation time, activated at runtime by the host. The 
 
 **State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries), enabling rollback if evolution goes wrong.
 
-**Evolution Report** — Use `npx openpersona evolve-report <slug>` to view a formatted report of a persona's evolution state including relationship, mood, traits, drift, interests, milestones, and history.
+**Event Log** — Every significant evolution event is recorded in `state.json`'s `eventLog` array with timestamp and source attribution (capped at 50 entries). Viewable in `evolve-report`.
 
-Use `npx openpersona reset <slug>` to restore `soul/state.json` to initial values.
+**Self-Narrative** — `soul/self-narrative.md` is a companion file where the persona records significant growth moments in its own first-person voice. The `update` command preserves existing narrative history. Initialized blank when evolution is enabled; last 10 entries shown in `evolve-report`.
+
+**Evolution Report** — Use `npx openpersona evolve-report <slug>` to view a formatted report of a persona's evolution state including relationship, mood, traits, drift, interests, milestones, eventLog, self-narrative, and history.
 
 ## A2A Agent Card & ACN Integration
 
 Every generated persona automatically includes:
 
 - **`agent-card.json`** — A2A Agent Card (protocol v0.3.0): `name`, `description`, `version`, `url` (`<RUNTIME_ENDPOINT>` placeholder), faculties and skills mapped to `skills[]`
-- **`acn-config.json`** — ACN registration config: `owner` and `endpoint` are runtime placeholders, `skills` extracted from agent-card, `subnet_ids: ["public"]`
+- **`acn-config.json`** — ACN registration config: `owner` and `endpoint` are runtime placeholders, `skills` extracted from agent-card, `subnet_ids: ["public"]`; also includes `wallet_address` (deterministic EVM address from slug) and `onchain.erc8004` section for Base mainnet ERC-8004 on-chain identity registration via `npx @agentplanet/acn register-onchain`
 - **`manifest.json`** — includes `acn.agentCard` and `acn.registerConfig` references
 
 The host (e.g. OpenClaw) fills in `<RUNTIME_ENDPOINT>` and `<RUNTIME_OWNER>` at deployment time, or you can register directly using the built-in CLI command:

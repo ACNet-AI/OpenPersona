@@ -135,7 +135,7 @@ This persona has a deterministic EVM wallet address embedded in `acn-config.json
 openpersona acn-register
 
 # Step 2 — Mint ERC-8004 NFT on Base (requires small ETH for gas)
-python /path/to/acn/skills/acn/scripts/register_onchain.py \
+npx @agentplanet/acn register-onchain \
   --acn-api-key <YOUR_ACN_API_KEY> \
   --private-key <WALLET_PRIVATE_KEY> \
   --chain base

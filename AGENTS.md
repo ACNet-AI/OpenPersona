@@ -88,16 +88,16 @@ The generator injects a unified **Self-Awareness** section (`### Self-Awareness`
 
 3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** (bidirectional demand protocol: persona emits `signal` to `~/.openclaw/feedback/signals.json`, host responds via `signal-responses.json`). Signal categories: `scheduling`, `file_io`, `tool_missing`, `capability_gap`, `resource_limit`, `agent_communication`. Every persona also knows it has an A2A Agent Card (`agent-card.json`) for discovery via ACN and A2A-compatible platforms. When `body.runtime` is declared, specific platform/channels/credentials/resources are also injected.
 
-4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.boundaries`). When `evolution.channels` are declared, the persona knows its evolution sources. When `evolution.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
+4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.boundaries`). Significant events are appended to `state.json`'s `eventLog` array (capped at 50, with timestamp + source attribution). `soul/self-narrative.md` records major growth moments in the persona's own first-person voice. When `evolution.channels` are declared, the persona knows its evolution sources. When `evolution.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
 
 ### Generated Skill Pack Structure
 
 The generator outputs persona skill packs with this layout:
 - **`SKILL.md`** — agent-facing index with four layer headings: `## Soul`, `## Body`, `## Faculty`, `## Skill`
-- **`soul/`** — Soul layer artifacts: `persona.json`, `injection.md`, `identity.md`, `constitution.md`, `state.json`
+- **`soul/`** — Soul layer artifacts: `persona.json`, `injection.md`, `identity.md`, `constitution.md`, `state.json`; when evolution enabled: `self-narrative.md` (first-person growth log); when forked: `lineage.json` (parent slug, constitution SHA-256, generation depth)
 - **`references/`** — on-demand detail docs: `<faculty>.md` per active faculty
 - **`agent-card.json`** — A2A Agent Card (a2a-sdk compatible, protocol v0.3.0); `url` is `<RUNTIME_ENDPOINT>` placeholder
-- **`acn-config.json`** — ACN `AgentRegisterRequest` config; `owner` and `endpoint` are runtime placeholders
+- **`acn-config.json`** — ACN `AgentRegisterRequest` config; `owner` and `endpoint` are runtime placeholders; includes `wallet_address` (deterministic EVM address derived from slug via SHA-256) and `onchain.erc8004` section (chain: base, identity_contract, registration_script) for ERC-8004 on-chain identity registration
 - **`manifest.json`** — four-layer manifest (`layers.soul` → `./soul/persona.json`), includes `acn` section with references to agent-card and acn-config
 - **`scripts/`**, **`assets/`** — implementation scripts and static assets
 
@@ -113,6 +113,22 @@ Key implementation details:
 - Soft-ref detection: `lib/generator.js` checks each skill/faculty/body/channel for `install` field + missing local definition
 - All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
+
+### Persona Fork
+
+`openpersona fork <parent-slug> --as <new-slug>` derives a child persona from an installed parent. Implementation in `bin/cli.js`.
+
+**What is inherited:** `evolution.boundaries`, faculties, skills, `body.runtime` — the constraint layer stays intact.
+
+**What is discarded:** `soul/state.json` (reset to blank), `soul/self-narrative.md` (initialized empty) — fresh runtime state.
+
+**`soul/lineage.json`** is written with:
+- `parent` — parent slug
+- `constitutionHash` — SHA-256 of `constitution.md` at fork time (verifies constraint chain integrity)
+- `generationDepth` — incremented from parent's depth (or 1 if parent has no lineage)
+- `parentAddress` / `parentEndpoint` — `null` placeholders (forward-compatible with autonomous economic entity roadmap)
+
+The fork command reads the parent's installed directory, copies the persona pack, resets evolution files, and writes `lineage.json`. No generator re-run needed.
 
 ### Economy Faculty & Vitality System
 
@@ -173,7 +189,7 @@ node --test tests/generator.test.js  # Run specific test file
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references)
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion)
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

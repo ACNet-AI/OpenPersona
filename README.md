@@ -19,6 +19,8 @@ Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 - [Faculty Reference](#faculty-reference)
 - [Heartbeat](#heartbeat--proactive-real-data-check-ins)
 - [Persona Harvest](#persona-harvest--community-contribution)
+- [A2A Agent Card & ACN Integration](#a2a-agent-card--acn-integration)
+- [Custom Persona Creation](#custom-persona-creation)
 - [Persona Switching](#persona-switching--the-pantheon)
 - [CLI Commands](#cli-commands)
 - [Development](#development)
@@ -38,8 +40,14 @@ npx openpersona install samantha
 Give your AI coding agent the ability to create and manage personas — works with Cursor, Claude Code, Codex, Windsurf, and [37+ agents](https://github.com/vercel-labs/skills#supported-agents):
 
 ```bash
+# Recommended — works with OpenClaw and 37+ agents
 npx skills add acnlabs/OpenPersona
+
+# Or manually from GitHub
+git clone https://github.com/acnlabs/OpenPersona.git ~/.openclaw/skills/open-persona
 ```
+
+Then say to your agent: _"Help me create a Samantha persona"_ — it will gather requirements, recommend faculties, and generate the persona.
 
 ## Key Features
 
@@ -47,9 +55,12 @@ npx skills add acnlabs/OpenPersona
 - **🛡️ Influence Boundary** — Declarative access control for external personality influence: who can affect which dimensions, with what drift limits. Safety-first (default: reject all)
 - **🌐 Evolution Channels** — Connect personas to shared evolution ecosystems (e.g. EvoMap) via soft-ref pattern: declared at generation time, activated at runtime
 - **🔌 A2A Agent Card** — Every persona generates an A2A-compliant `agent-card.json` and `acn-config.json`, enabling discovery and registration in ACN and any A2A-compatible platform
+- **⛓️ ERC-8004 On-Chain Identity** — Every persona gets a deterministic EVM wallet address and on-chain identity config for Base mainnet registration via the ERC-8004 Identity Registry
+- **💰 Economy & Vitality** — Track inference costs, runtime expenses, and income; compute a Financial Health Score (FHS) across four dimensions; tier-aware behavior adaptation (`suspended`→`critical`→`optimizing`→`normal`)
 - **🧠 Cross-Session Memory** — Pluggable memory faculty for persistent recall across conversations (local, Mem0, Zep)
 - **🔄 Context Handoff** — Seamless context transfer when switching personas: conversation summary, pending tasks, emotional state
 - **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
+- **🍴 Persona Fork** — Derive a specialized child persona from any installed parent, inheriting constraint layer while starting fresh on runtime state
 - **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders, memory
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
@@ -125,14 +136,14 @@ The persona is aware of its evolution channels at generation time. The actual ch
 ```
 
 - `defaultPolicy: "reject"` — Safety-first: all external influence is rejected unless a rule explicitly allows it
-- `dimension` — One of: `mood`, `traits`, `speakingStyle`, `interests`, `formality`
-- `allowFrom` — Source patterns: `persona:*`, `persona:<slug>`, `channel:<name>`, `community:*`
-- `maxDrift` — Maximum per-event drift magnitude (0–1)
-- Generator validates at build time: immutableTraits cannot be target dimensions; maxDrift must be 0–1
-
-External influence uses the `persona_influence` message format (v1.0.0) — transport-agnostic, works over ACN/A2A/HTTP.
+- Generator validates at build time: immutableTraits cannot be target dimensions; maxDrift must be in 0–1
+- External influence uses the `persona_influence` message format (v1.0.0) — transport-agnostic
 
 **State History** — Before each state update, a snapshot is pushed into `stateHistory` (capped at 10 entries). This enables rollback if evolution goes wrong.
+
+**Event Log** — Every significant evolution event (trait change, stage transition, milestone reached) is recorded in `state.json`'s `eventLog` array with timestamp and source attribution, capped at 50 entries. Viewable via `evolve-report`.
+
+**Self-Narrative** — `soul/self-narrative.md` lets the persona record significant growth moments in its own first-person voice. Updated when evolution is enabled; the `update` command preserves existing narrative history across upgrades.
 
 **Evolution Report** — Inspect a persona's current evolution state:
 
@@ -167,7 +178,9 @@ persona-samantha/
 │   ├── injection.md      ← Soul injection for host integration
 │   ├── identity.md       ← Identity block
 │   ├── constitution.md   ← Universal ethical foundation
-│   └── state.json        ← Evolution state (when enabled)
+│   ├── state.json        ← Evolution state (when enabled)
+│   ├── self-narrative.md ← First-person growth storytelling (when evolution enabled)
+│   └── lineage.json      ← Fork lineage + constitution hash (when forked)
 ├── references/           ← On-demand detail docs
 │   └── <faculty>.md      ← Per-faculty usage instructions
 ├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
@@ -186,6 +199,7 @@ persona-samantha/
 | **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
 | **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 | **memory** | cognition | Cross-session memory with provider-pluggable backend | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
+| **economy** | cognition | Economic accountability — track costs/income, P&L, balance sheet, compute Financial Health Score (FHS) and Vitality tier; tier-aware behavior adaptation | Built-in | `PERSONA_SLUG`, `ECONOMY_DATA_PATH` |
 
 ### Rich Faculty Config
 
@@ -243,13 +257,6 @@ Personas can proactively reach out to users based on **real data**, not fabricat
 - **upgrade-notify** — Check if the upstream persona preset has new community contributions via Persona Harvest. Notify the user and ask if they want to upgrade.
 - **context-aware** — Use real time, date, and interaction history. Acknowledge day of week, holidays, or prolonged silence based on actual timestamps. "It's been 3 days since we last talked" — not a feeling, a fact.
 
-### Design Principles
-
-1. **Never fabricate experiences.** No "I was reading poetry at 3am." All proactive messages reference real data.
-2. **Respect token budget.** Workspace digests read local files — no full LLM chains unless `strategy: "smart"` detects something worth a deeper response.
-3. **OpenClaw handles scheduling.** The heartbeat config tells OpenClaw _when_ to trigger; the persona's `behaviorGuide` tells the agent _what_ to say.
-4. **User-configurable.** Users can adjust frequency, quiet hours, and sources to match their preferences.
-
 ### Dynamic Sync on Switch/Install
 
 Heartbeat config is **automatically synced** to `~/.openclaw/openclaw.json` whenever you install or switch a persona. The gateway immediately adopts the new persona's rhythm — no manual config needed.
@@ -260,15 +267,6 @@ npx openpersona switch life-assistant  # → gateway switches to "rational" hear
 ```
 
 If the target persona has no heartbeat config, the gateway heartbeat is explicitly disabled to prevent leaking the previous persona's settings.
-
-### Per-Persona Strategies
-
-| Persona | Strategy | maxDaily | Rhythm |
-|---------|----------|----------|--------|
-| Samantha | `smart` | 5 | Perceptive — speaks when meaningful |
-| AI Girlfriend | `emotional` | 8 | Warm — frequent emotional check-ins |
-| Life Assistant | `rational` | 3 | Focused — task and schedule driven |
-| Health Butler | `wellness` | 4 | Caring — health and habit reminders |
 
 ## Persona Harvest — Community Contribution
 
@@ -340,9 +338,19 @@ Ready-to-use [ACN](https://github.com/acnlabs/acn) registration config:
   "endpoint": "<RUNTIME_ENDPOINT>",
   "skills": ["persona:voice", "persona:samantha"],
   "agent_card": "./agent-card.json",
-  "subnet_ids": ["public"]
+  "subnet_ids": ["public"],
+  "wallet_address": "0x<deterministic-evm-address>",
+  "onchain": {
+    "erc8004": {
+      "chain": "base",
+      "identity_contract": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+      "registration_script": "npx @agentplanet/acn register-onchain"
+    }
+  }
 }
 ```
+
+`wallet_address` is a deterministic EVM address derived from the persona slug — no private key needed at generation time. On-chain registration mints an ERC-8004 identity NFT on Base mainnet via `npx @agentplanet/acn register-onchain` (handled by ACN, not OpenPersona).
 
 ### acn-register command
 
@@ -441,6 +449,7 @@ The new persona reads `handoff.json` on activation and can seamlessly continue t
 ```
 openpersona create         Create a persona (interactive or --preset/--config)
 openpersona install        Install a persona (slug or owner/repo)
+openpersona fork           Fork an installed persona into a new child persona
 openpersona search         Search the registry
 openpersona uninstall      Uninstall a persona
 openpersona update         Update installed personas
@@ -452,7 +461,18 @@ openpersona reset          Reset soul evolution state
 openpersona export         Export a persona to a portable zip archive
 openpersona import         Import a persona from a zip archive
 openpersona evolve-report  ★Experimental: Show evolution report for a persona
+openpersona acn-register   Register a persona with ACN network
 ```
+
+### Persona Fork
+
+Derive a specialized child persona from any installed parent:
+
+```bash
+npx openpersona fork samantha --as samantha-jp
+```
+
+The child persona inherits the parent's constraint layer (`evolution.boundaries`, faculties, skills, `body.runtime`) but starts with a fresh evolution state (`state.json` reset, `self-narrative.md` blank). A `soul/lineage.json` file records the parent slug, constitution SHA-256 hash, generation depth, and forward-compatible placeholders for future on-chain lineage tracking.
 
 ### Key Options
 
@@ -473,23 +493,6 @@ npx openpersona create --config ./persona.json --install
 npx openpersona create --preset ai-girlfriend --output ./my-personas
 ```
 
-## Install as Agent Skill (OpenClaw / Manual)
-
-Install the OpenPersona framework skill into your agent platform, giving it the ability to create and manage personas through conversation:
-
-```bash
-# Via skills CLI (recommended — works with OpenClaw and 37+ agents)
-npx skills add acnlabs/OpenPersona
-
-# Or manually from GitHub
-git clone https://github.com/acnlabs/OpenPersona.git ~/.openclaw/skills/open-persona
-
-# Or copy locally
-cp -r skill/ ~/.openclaw/skills/open-persona/
-```
-
-Then say to your agent: _"Help me create a Samantha persona"_ — the agent will use OpenPersona to gather requirements, recommend faculties, and generate the persona.
-
 ## Directory Structure
 
 ```
@@ -509,13 +512,14 @@ layers/                 # Shared building blocks (four-layer module pool)
     music/              #     expression — AI music composition (ElevenLabs)
     reminder/           #     cognition — reminders and task management
     memory/             #     cognition — cross-session memory (local/Mem0/Zep)
+    economy/            #     cognition — economic accountability & Vitality scoring
   skills/               #   Skill layer modules (local skill definitions)
 schemas/                # Four-layer schema definitions
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
   evolution.js          #   Evolution governance & evolve-report
-tests/                  # Tests (122 passing)
+tests/                  # Tests (200 passing)
 ```
 
 ## Development
