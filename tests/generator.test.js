@@ -2800,3 +2800,610 @@ describe('persona fork', () => {
     fs.removeSync(FORK_TMP);
   });
 });
+
+describe('economy faculty', () => {
+  const os = require('os');
+  const { execSync } = require('child_process');
+  // Use workspace-relative path to avoid sandbox write restrictions on /tmp in child processes
+  const ECON_TMP = path.join(__dirname, '..', '.tmp-econ-test-' + Date.now());
+  const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
+  const GUARD_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-guard.js');
+
+  function runEconomy(args, expectFail) {
+    try {
+      return execSync(`node "${ECONOMY_JS}" ${args}`, {
+        env: { ...process.env, PERSONA_SLUG: 'test-econ', ECONOMY_DATA_PATH: ECON_TMP },
+        encoding: 'utf-8',
+      }).trim();
+    } catch (e) {
+      if (expectFail) return (e.stdout || '').trim() + (e.stderr || '').trim();
+      throw e;
+    }
+  }
+
+  function runGuard() {
+    try {
+      const out = execSync(`node "${GUARD_JS}"`, {
+        env: { ...process.env, PERSONA_SLUG: 'test-econ', ECONOMY_DATA_PATH: ECON_TMP },
+        encoding: 'utf-8',
+      });
+      return { code: 0, output: out.trim() };
+    } catch (e) {
+      return { code: e.status || 1, output: ((e.stdout || '') + (e.stderr || '')).trim() };
+    }
+  }
+
+  it('faculty.json exists with required fields', () => {
+    const facultyPath = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'faculty.json');
+    assert.ok(fs.existsSync(facultyPath), 'faculty.json should exist');
+    const faculty = JSON.parse(fs.readFileSync(facultyPath, 'utf-8'));
+    assert.strictEqual(faculty.name, 'economy', 'name should be economy');
+    assert.strictEqual(faculty.dimension, 'cognition', 'dimension should be cognition');
+    assert.ok(Array.isArray(faculty.allowedTools), 'allowedTools should be array');
+    assert.ok(faculty.allowedTools.some((t) => t.includes('economy.js')), 'should reference economy.js');
+    assert.ok(faculty.allowedTools.some((t) => t.includes('economy-guard.js')), 'should reference economy-guard.js');
+    assert.ok(faculty.allowedTools.some((t) => t.includes('economy-hook.js')), 'should reference economy-hook.js');
+    assert.ok(Array.isArray(faculty.envVars), 'envVars should be array');
+    assert.ok(faculty.envVars.includes('PERSONA_SLUG'), 'should declare PERSONA_SLUG');
+    assert.ok(Array.isArray(faculty.files), 'files should be array');
+    assert.ok(faculty.files.includes('SKILL.md'), 'should reference SKILL.md');
+    assert.ok(faculty.files.includes('scripts/economy.js'), 'should reference economy.js');
+    assert.ok(faculty.files.includes('scripts/economy-guard.js'), 'should reference economy-guard.js');
+    assert.ok(faculty.files.includes('scripts/economy-hook.js'), 'should reference economy-hook.js');
+  });
+
+  it('SKILL.md exists and covers key sections', () => {
+    const skillPath = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'SKILL.md');
+    assert.ok(fs.existsSync(skillPath), 'SKILL.md should exist');
+    const content = fs.readFileSync(skillPath, 'utf-8');
+    assert.ok(content.includes('inference.llm'), 'should document inference account path');
+    assert.ok(content.includes('runtime.compute'), 'should document runtime account path');
+    assert.ok(content.includes('faculty.'), 'should document faculty account path');
+    assert.ok(content.includes('custom.'), 'should document custom account path');
+    assert.ok(content.includes('Vitality'), 'should mention vitality tier');
+    assert.ok(content.includes('quality'), 'should mention quality threshold');
+    assert.ok(content.includes('--confirmed'), 'should document --confirmed requirement');
+    assert.ok(content.includes('suspended'), 'should document suspended tier as initial state');
+  });
+
+  it('economy.js initializes state on first status call with suspended tier and zero balance', () => {
+    fs.ensureDirSync(ECON_TMP);
+    const output = runEconomy('status');
+    assert.ok(output.includes('ECONOMIC STATUS'), 'status should show header');
+    assert.ok(output.includes('SUSPENDED'), 'initial tier should be SUSPENDED (no balance)');
+    const stateFile = path.join(ECON_TMP, 'economic-state.json');
+    assert.ok(fs.existsSync(stateFile), 'economic-state.json should be created');
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+    assert.strictEqual(state.schema, 'openpersona/economic-state', 'schema should match');
+    assert.strictEqual(state.version, '2.1.0', 'schema version should be 2.1.0');
+    assert.ok(state.balanceSheet.assets.providers, 'balanceSheet.assets.providers should exist');
+    assert.strictEqual(state.balanceSheet.operationalBalance, 0, 'initial operationalBalance should be 0');
+    assert.strictEqual(state.balanceSheet.assets.providers.local.budget, 0, 'initial local budget should be 0');
+    assert.ok(state.incomeStatement.currentPeriod, 'currentPeriod should exist');
+    assert.deepStrictEqual(state.ledger, [], 'ledger should be empty initially');
+    assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be an array');
+    assert.ok(state.vitality, 'vitality object should exist');
+    assert.strictEqual(state.vitality.tier, 'suspended', 'initial vitality.tier should be suspended');
+  });
+
+  it('tier command returns suspended initially (no balance, real-time calc)', () => {
+    const tier = runEconomy('tier');
+    assert.strictEqual(tier, 'suspended', 'initial tier should be suspended');
+  });
+
+  it('wallet-init generates deterministic EVM address', () => {
+    runEconomy('wallet-init');
+    const identityFile = path.join(ECON_TMP, 'economic-identity.json');
+    assert.ok(fs.existsSync(identityFile), 'economic-identity.json should be created');
+    const identity = JSON.parse(fs.readFileSync(identityFile, 'utf-8'));
+    assert.ok(identity.walletAddress, 'walletAddress should exist');
+    assert.ok(/^0x[0-9a-f]{40}$/.test(identity.walletAddress), 'walletAddress should be valid EVM address');
+    assert.strictEqual(identity.primaryProvider, 'local', 'default primary should be local');
+
+    // Determinism: running again should not change address
+    const addrBefore = identity.walletAddress;
+    runEconomy('wallet-init'); // should no-op (already initialized)
+    const identityAfter = JSON.parse(fs.readFileSync(identityFile, 'utf-8'));
+    assert.strictEqual(identityAfter.walletAddress, addrBefore, 'wallet-init should be idempotent');
+  });
+
+  it('deposit funds local budget and transitions tier from dead to normal', () => {
+    runEconomy('deposit --amount 10 --source "test allocation"');
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    assert.strictEqual(state.balanceSheet.assets.providers.local.budget, 10, 'local budget should be 10');
+    assert.strictEqual(state.balanceSheet.assets.providers.local.depositsTotal, 10, 'depositsTotal should be 10');
+    assert.strictEqual(state.balanceSheet.operationalBalance, 10, 'operationalBalance should be 10');
+    assert.ok(state.vitality, 'vitality object should be updated after deposit');
+    assert.strictEqual(state.vitality.tier, 'normal', 'vitality.tier should be normal after deposit');
+    assert.ok(state.ledger.some((e) => e.type === 'deposit'), 'ledger should have deposit entry');
+  });
+
+  it('record-cost routes inference.llm.input to correct nested account', () => {
+    runEconomy('record-cost --channel inference.llm.input --amount 0.002 --note "test input tokens"');
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    const inferenceObj = state.incomeStatement.currentPeriod.expenses.inference;
+    const inferenceInput = inferenceObj && inferenceObj.llm ? inferenceObj.llm.input : 0;
+    assert.ok(inferenceInput > 0, 'inference.llm.input should be recorded');
+    assert.ok(state.incomeStatement.currentPeriod.expenses.total > 0, 'expenses total should increase');
+    assert.ok(state.ledger.length > 0, 'ledger should have entry');
+    assert.strictEqual(state.ledger[state.ledger.length - 1].channel, 'inference.llm.input');
+  });
+
+  it('record-cost routes runtime.compute to correct account', () => {
+    runEconomy('record-cost --channel runtime.compute --amount 0.033 --note "daily server"');
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    assert.ok(state.incomeStatement.currentPeriod.expenses.runtime.compute > 0, 'runtime.compute should be recorded');
+  });
+
+  it('record-cost routes custom.crm-api to custom account', () => {
+    runEconomy('record-cost --channel custom.crm-api --amount 0.05');
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    assert.ok(state.incomeStatement.currentPeriod.expenses.custom, 'custom object should exist');
+  });
+
+  it('record-income requires --confirmed flag', () => {
+    const revBefore = JSON.parse(
+      fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
+    ).incomeStatement.currentPeriod.revenue;
+    // Without --confirmed should fail
+    const output = runEconomy('record-income --amount 5.00 --quality 0.8 --note "wrote report"', true);
+    assert.ok(output.includes('confirmed') || output.includes('Error'), 'should reject without --confirmed');
+    const revAfter = JSON.parse(
+      fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
+    ).incomeStatement.currentPeriod.revenue;
+    assert.strictEqual(revBefore, revAfter, 'revenue should not change without --confirmed');
+  });
+
+  it('record-income above quality threshold with --confirmed records revenue', () => {
+    runEconomy('record-income --amount 5.00 --quality 0.8 --confirmed --note "wrote report"');
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    assert.ok(state.incomeStatement.currentPeriod.revenue > 0, 'revenue should increase');
+    assert.ok(state.incomeStatement.allTime.totalRevenue > 0, 'allTime revenue should increase');
+  });
+
+  it('record-income below quality threshold is rejected', () => {
+    const revBefore = JSON.parse(
+      fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
+    ).incomeStatement.currentPeriod.revenue;
+    const output = runEconomy('record-income --amount 5.00 --quality 0.5 --confirmed');
+    assert.ok(output.includes('NOT recorded'), 'should show rejection message');
+    const revAfter = JSON.parse(
+      fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
+    ).incomeStatement.currentPeriod.revenue;
+    assert.strictEqual(revBefore, revAfter, 'revenue should not change when quality below threshold');
+  });
+
+  it('netIncome = revenue - expenses.total', () => {
+    const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    const period = state.incomeStatement.currentPeriod;
+    const expected = Math.round((period.revenue - period.expenses.total) * 1e6) / 1e6;
+    assert.ok(Math.abs(period.netIncome - expected) < 0.000001, 'netIncome should equal revenue - expenses');
+  });
+
+  it('economy-guard.js always exits 0 and outputs VITALITY_REPORT (no balance)', () => {
+    const guardTmp = path.join(__dirname, '..', '.tmp-guard-test-' + Date.now());
+    fs.ensureDirSync(guardTmp);
+    const { code, output } = (() => {
+      try {
+        const out = execSync(`node "${GUARD_JS}"`, {
+          env: { ...process.env, PERSONA_SLUG: 'test-guard-zero', ECONOMY_DATA_PATH: guardTmp },
+          encoding: 'utf-8',
+        });
+        return { code: 0, output: out.trim() };
+      } catch (e) {
+        return { code: e.status || 1, output: ((e.stdout || '') + (e.stderr || '')).trim() };
+      }
+    })();
+    assert.strictEqual(code, 0, 'guard should always exit 0');
+    assert.ok(output.includes('VITALITY_REPORT'), 'should output VITALITY_REPORT');
+    assert.ok(output.includes('tier=suspended'), 'should report suspended tier when no balance');
+    fs.removeSync(guardTmp);
+  });
+
+  it('economy-guard.js outputs VITALITY_REPORT with normal tier when balance > 0', () => {
+    // ECON_TMP already has balance from deposit test
+    const { code, output } = runGuard();
+    assert.strictEqual(code, 0, 'guard should exit 0');
+    assert.ok(output.includes('VITALITY_REPORT'), 'should output VITALITY_REPORT');
+    assert.ok(output.includes('tier='), 'should include tier');
+    assert.ok(output.includes('diagnosis='), 'should include diagnosis');
+    assert.ok(output.includes('prescriptions='), 'should include prescriptions');
+    assert.ok(output.includes('balance='), 'should include balance');
+  });
+
+  it('economy faculty is discovered by generator and generates economic-identity.json', async () => {
+    const ECON_GEN_TMP = path.join(os.tmpdir(), 'openpersona-econ-gen-' + Date.now());
+    await fs.ensureDir(ECON_GEN_TMP);
+    const persona = {
+      personaName: 'EconTest',
+      slug: 'econ-test-gen',
+      bio: 'economy faculty test',
+      personality: 'practical',
+      speakingStyle: 'Direct',
+      faculties: [{ name: 'economy' }],
+    };
+    const { skillDir } = await generate(persona, ECON_GEN_TMP);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('economy'), 'SKILL.md should reference economy faculty');
+
+    // Check economic-identity.json is generated
+    const identityPath = path.join(skillDir, 'soul', 'economic-identity.json');
+    assert.ok(fs.existsSync(identityPath), 'economic-identity.json should be generated');
+    const identity = JSON.parse(fs.readFileSync(identityPath, 'utf-8'));
+    assert.ok(/^0x[0-9a-f]{40}$/.test(identity.walletAddress), 'walletAddress should be valid EVM address');
+
+    // Check economic-state.json is generated with suspended tier
+    const statePath = path.join(skillDir, 'soul', 'economic-state.json');
+    assert.ok(fs.existsSync(statePath), 'economic-state.json should be generated');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.strictEqual(state.version, '2.1.0', 'schema version should be 2.1.0');
+    assert.strictEqual(state.vitality.tier, 'suspended', 'initial vitality.tier should be suspended');
+    assert.strictEqual(state.balanceSheet.operationalBalance, 0, 'initial operationalBalance should be 0');
+    assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be an array');
+    assert.ok(state.vitality, 'vitality object should exist in initial state');
+
+    await fs.remove(ECON_GEN_TMP);
+  });
+
+  it('hasEconomyFaculty does not appear in generated persona.json', async () => {
+    const ECON_LEAK_TMP = path.join(os.tmpdir(), 'openpersona-econ-leak-' + Date.now());
+    await fs.ensureDir(ECON_LEAK_TMP);
+    const persona = {
+      personaName: 'LeakTest',
+      slug: 'econ-leak-test',
+      bio: 'derived field isolation test',
+      personality: 'analytical',
+      speakingStyle: 'Precise',
+      faculties: [{ name: 'economy' }],
+    };
+    const { skillDir } = await generate(persona, ECON_LEAK_TMP);
+    const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
+    assert.ok(!('hasEconomyFaculty' in personaOut), 'hasEconomyFaculty should not leak into persona.json');
+    await fs.remove(ECON_LEAK_TMP);
+  });
+
+  it('evolveReport returns economicState and handles v2 schema', async () => {
+    const { evolveReport } = require('../lib/evolution');
+    const EVOLVE_TMP = path.join(os.tmpdir(), 'openpersona-econ-evolve-' + Date.now());
+    await fs.ensureDir(EVOLVE_TMP);
+    const persona = {
+      personaName: 'EconEvolve',
+      slug: 'econ-evolve',
+      bio: 'economy evolve test',
+      personality: 'analytical',
+      speakingStyle: 'Precise',
+      evolution: { enabled: true },
+    };
+    const { skillDir } = await generate(persona, EVOLVE_TMP);
+
+    // Write a mock v2 economic-state.json
+    const econDir = path.join(EVOLVE_TMP, 'econ-data');
+    await fs.ensureDir(econDir);
+    const mockEconState = {
+      schema: 'openpersona/economic-state',
+      version: '2.1.0',
+      personaSlug: 'econ-evolve',
+      balanceSheet: {
+        assets: {
+          providers: {
+            local: { budget: 95.0, currency: 'USD', depositsTotal: 100.0, lastUpdated: '2026-02-24T00:00:00Z' },
+            'coinbase-cdp': { USDC: 0.0, ETH: 0.0, network: 'base', lastSynced: null },
+            acn: { credits: 0.0, lastSynced: null },
+            onchain: { USDC: 0.0, ETH: 0.0, network: 'base', lastSynced: null },
+          },
+          totalUSDEquivalent: 95.0,
+        },
+        primaryProvider: 'local',
+        operationalBalance: 95.0,
+        operationalCurrency: 'USD',
+        equity: { accumulatedNetIncome: -5.0 },
+      },
+      incomeStatement: {
+        currency: 'USD',
+        currentPeriod: {
+          periodStart: '2026-02-24',
+          revenue: 5.0,
+          expenses: {
+            inference: { llm: { input: 8.0, output: 2.0, thinking: 0.0 } },
+            runtime: { compute: 0.0, storage: 0.0, bandwidth: 0.0 },
+            faculty: {}, skill: {}, agent: { acn: 0.0, a2a: 0.0 }, custom: {},
+            total: 10.0,
+          },
+          netIncome: -5.0,
+        },
+        allTime: { totalRevenue: 5.0, totalExpenses: 10.0, netIncome: -5.0 },
+      },
+      vitality: {
+        score: 0.4, tier: 'optimizing', diagnosis: 'worsening_trend',
+        prescriptions: ['reduce_chain_of_thought'],
+        daysToDepletion: 9.5, dominantCost: 'inference.llm', trend: 'worsening', computedAt: '2026-02-24T00:00:00.000Z',
+      },
+      burnRateHistory: [],
+      ledger: [],
+      createdAt: '2026-02-24T00:00:00.000Z',
+      lastUpdatedAt: '2026-02-24T00:00:00.000Z',
+    };
+    await fs.writeFile(path.join(econDir, 'economic-state.json'), JSON.stringify(mockEconState, null, 2));
+
+    const report = await evolveReport('econ-evolve', {
+      skillsDir: EVOLVE_TMP,
+      economyDir: econDir,
+      quiet: true,
+    });
+    assert.ok(report.economicState, 'economicState should be returned');
+    assert.strictEqual(report.economicState.vitality.tier, 'optimizing', 'tier should match mock data');
+    assert.strictEqual(report.economicState.incomeStatement.currentPeriod.netIncome, -5.0, 'netIncome should match');
+    assert.strictEqual(report.economicState.balanceSheet.operationalBalance, 95.0, 'operationalBalance should match');
+    await fs.remove(EVOLVE_TMP);
+  });
+
+  // --- calcVitality unit tests ---
+
+  describe('calcVitality unit tests', () => {
+    const { calcVitality, createInitialState } = require('../layers/faculties/economy/scripts/economy-lib');
+
+    function makeState(overrides) {
+      const base = createInitialState('unit-test', 'local', 'USD');
+      if (overrides.balance !== undefined) {
+        base.balanceSheet.operationalBalance = overrides.balance;
+        base.balanceSheet.assets.providers.local.budget = overrides.balance;
+        base.balanceSheet.assets.providers.local.depositsTotal = overrides.balance;
+      }
+      if (overrides.expenses !== undefined) {
+        base.incomeStatement.currentPeriod.expenses.total = overrides.expenses;
+        base.incomeStatement.currentPeriod.expenses.inference = { llm: { input: overrides.expenses, output: 0, thinking: 0 } };
+      }
+      if (overrides.revenue !== undefined) {
+        base.incomeStatement.currentPeriod.revenue = overrides.revenue;
+      }
+      if (overrides.periodStart !== undefined) {
+        base.incomeStatement.currentPeriod.periodStart = overrides.periodStart;
+      }
+      if (overrides.burnRateHistory !== undefined) {
+        base.burnRateHistory = overrides.burnRateHistory;
+      }
+      return base;
+    }
+
+    it('balance=0 → tier suspended', () => {
+      const state = makeState({ balance: 0 });
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.tier, 'suspended');
+    });
+
+    it('cold start (no expenses) does not crash', () => {
+      const state = makeState({ balance: 100, expenses: 0 });
+      assert.doesNotThrow(() => calcVitality(state, null));
+      const v = calcVitality(state, null);
+      assert.ok(['normal', 'optimizing', 'critical', 'suspended'].includes(v.tier));
+    });
+
+    it('large balance with no expenses → normal tier', () => {
+      const state = makeState({ balance: 1000, expenses: 0 });
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.tier, 'normal', 'large balance + no expenses should be normal');
+    });
+
+    it('balance > 0, very high daily burn → critical tier (low runway)', () => {
+      // $1 balance but $10/day burn means < 1 day runway
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const state = makeState({ balance: 1, expenses: 10, periodStart: yesterday });
+      const v = calcVitality(state, null);
+      assert.ok(['critical', 'suspended'].includes(v.tier), `expected critical or suspended, got ${v.tier}`);
+    });
+
+    it('diagnosis = unfunded when balance=0 and no deposits', () => {
+      const state = makeState({ balance: 0 });
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.diagnosis, 'unfunded');
+      assert.ok(v.prescriptions.includes('deposit_required'));
+    });
+
+    it('diagnosis = zero_revenue when balance > 0 and revenue = 0 (non-inference expenses)', () => {
+      // Use runtime.compute expenses only — keeps inference ratio at 0 so high_inference_cost won't fire
+      const state = makeState({ balance: 500 });
+      state.incomeStatement.currentPeriod.expenses.runtime = { compute: 1.0, storage: 0, bandwidth: 0 };
+      state.incomeStatement.currentPeriod.expenses.total = 1.0;
+      state.incomeStatement.currentPeriod.revenue = 0;
+      state.incomeStatement.currentPeriod.netIncome = -1.0;
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.diagnosis, 'zero_revenue');
+      assert.ok(v.prescriptions.includes('seek_income_confirmation'));
+    });
+
+    it('diagnosis = high_inference_cost when inference > 50% of expenses', () => {
+      // High balance (large runway) so critical_runway does not fire first
+      const state = makeState({ balance: 1000, expenses: 10, revenue: 5 });
+      // makeState already puts all expenses in inference.llm.input (>50% of total)
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.diagnosis, 'high_inference_cost');
+      assert.ok(v.prescriptions.includes('reduce_chain_of_thought'));
+    });
+
+    it('worsening burnRateHistory → worsening_trend diagnosis', () => {
+      const burnRateHistory = [
+        { timestamp: '2026-01-01T00:00:00Z', dailyBurnRate: 1.0 },
+        { timestamp: '2026-01-02T00:00:00Z', dailyBurnRate: 1.0 },
+        { timestamp: '2026-01-03T00:00:00Z', dailyBurnRate: 1.0 },
+        { timestamp: '2026-01-04T00:00:00Z', dailyBurnRate: 5.0 },
+        { timestamp: '2026-01-05T00:00:00Z', dailyBurnRate: 5.0 },
+        { timestamp: '2026-01-06T00:00:00Z', dailyBurnRate: 5.0 },
+      ];
+      const state = makeState({ balance: 100, expenses: 5, revenue: 3, burnRateHistory });
+      const v = calcVitality(state, null);
+      assert.strictEqual(v.diagnosis, 'worsening_trend');
+      assert.ok(v.prescriptions.includes('reduce_chain_of_thought'));
+    });
+
+    it('improving burnRateHistory → trendScore = 1.0', () => {
+      const { calcFinancialHealth } = require('../layers/faculties/economy/scripts/economy-lib');
+      const burnRateHistory = [
+        { timestamp: '2026-01-01T00:00:00Z', dailyBurnRate: 5.0 },
+        { timestamp: '2026-01-02T00:00:00Z', dailyBurnRate: 5.0 },
+        { timestamp: '2026-01-03T00:00:00Z', dailyBurnRate: 5.0 },
+        { timestamp: '2026-01-04T00:00:00Z', dailyBurnRate: 1.0 },
+        { timestamp: '2026-01-05T00:00:00Z', dailyBurnRate: 1.0 },
+        { timestamp: '2026-01-06T00:00:00Z', dailyBurnRate: 1.0 },
+      ];
+      const state = makeState({ balance: 100, expenses: 5, revenue: 3, burnRateHistory });
+      const fin = calcFinancialHealth(state, null);
+      assert.strictEqual(fin.trend.direction, 'improving');
+      assert.strictEqual(fin.trend.trendScore, 1.0);
+    });
+
+    it('calcVitality returns vitality score between 0 and 1', () => {
+      const state = makeState({ balance: 50, expenses: 5, revenue: 4 });
+      const v = calcVitality(state, null);
+      assert.ok(v.vitality >= 0 && v.vitality <= 1, `vitality should be in [0,1], got ${v.vitality}`);
+    });
+  });
+
+  it('economy-hook.js appends burnRateHistory entry after recording costs', () => {
+    const HOOK_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
+    // Ensure state exists with a deposit
+    runEconomy('deposit --amount 5');
+    const stateBefore = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    const histBefore = (stateBefore.burnRateHistory || []).length;
+
+    execSync(`node "${HOOK_JS}" --input 1000 --output 500 --model default`, {
+      env: { ...process.env, PERSONA_SLUG: 'test-econ', ECONOMY_DATA_PATH: ECON_TMP },
+      encoding: 'utf-8',
+    });
+
+    const stateAfter = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
+    assert.strictEqual(stateAfter.burnRateHistory.length, histBefore + 1, 'should append one burnRateHistory entry');
+    const last = stateAfter.burnRateHistory[stateAfter.burnRateHistory.length - 1];
+    assert.ok(last.dailyBurnRate >= 0, 'dailyBurnRate should be a non-negative number');
+    assert.ok(last.timestamp, 'entry should have a timestamp');
+    assert.ok(stateAfter.vitality, 'vitality object should be updated by hook');
+    assert.ok(['normal', 'optimizing', 'critical', 'suspended'].includes(stateAfter.vitality.tier), 'vitality.tier should be valid');
+  });
+
+  it('cleanup economy test dir', () => {
+    fs.removeSync(ECON_TMP);
+    // Also clean up any workspace-relative tmp dirs created by sub-tests
+    const workspaceRoot = path.join(__dirname, '..');
+    for (const entry of fs.readdirSync(workspaceRoot)) {
+      if (entry.startsWith('.tmp-econ-') || entry.startsWith('.tmp-guard-')) {
+        fs.removeSync(path.join(workspaceRoot, entry));
+      }
+    }
+  });
+});
+
+describe('calcVitality unit tests', () => {
+  const { calcVitality, calcFinancialHealth, createInitialState } = require('../layers/faculties/economy/scripts/economy-lib');
+
+  function makeState(overrides) {
+    const state = createInitialState('unit-test', 'local', 'USD');
+    if (overrides.balance !== undefined) {
+      state.balanceSheet.operationalBalance = overrides.balance;
+      state.balanceSheet.assets.providers.local.budget = overrides.balance;
+      state.balanceSheet.assets.providers.local.depositsTotal = overrides.balance;
+    }
+    if (overrides.expenses !== undefined) {
+      state.incomeStatement.currentPeriod.expenses.total = overrides.expenses;
+      // Use runtime.compute by default so inference ratio stays 0 and won't fire high_inference_cost
+      state.incomeStatement.currentPeriod.expenses.runtime = { compute: overrides.expenses, storage: 0, bandwidth: 0 };
+    }
+    if (overrides.revenue !== undefined) {
+      state.incomeStatement.currentPeriod.revenue = overrides.revenue;
+    }
+    if (overrides.burnRateHistory !== undefined) {
+      state.burnRateHistory = overrides.burnRateHistory;
+    }
+    // Set periodStart to today so daysElapsed = 1
+    state.incomeStatement.currentPeriod.periodStart = new Date().toISOString().slice(0, 10);
+    return state;
+  }
+
+  it('balance=0, no deposits → tier=suspended, diagnosis=unfunded', () => {
+    const state = makeState({ balance: 0 });
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.tier, 'suspended', 'zero balance → suspended');
+    assert.strictEqual(result.diagnosis, 'unfunded', 'no deposits → unfunded');
+    assert.ok(result.prescriptions.includes('deposit_required'), 'should prescribe deposit_required');
+  });
+
+  it('balance=0.001, expenses=0.002 → daysToDepletion≈0.5 → tier=critical', () => {
+    const state = makeState({ balance: 0.001, expenses: 0.002 });
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.tier, 'critical', 'low runway < 3 days → critical');
+  });
+
+  it('balance=50, expenses=4, revenue=0 → tier=optimizing, diagnosis=zero_revenue', () => {
+    // daysToDepletion ≈ 50/4 = 12.5 days (< 14 → optimizing)
+    const state = makeState({ balance: 50, expenses: 4, revenue: 0 });
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.tier, 'optimizing', 'daysToDepletion < 14 → optimizing');
+    assert.strictEqual(result.diagnosis, 'zero_revenue', 'no revenue → zero_revenue diagnosis');
+    assert.ok(result.prescriptions.includes('seek_income_confirmation'), 'should prescribe income confirmation');
+  });
+
+  it('balance=100, expenses=2, revenue=3 → tier=normal', () => {
+    // daysToDepletion = 100/2 = 50 days; FHS should be healthy
+    const state = makeState({ balance: 100, expenses: 2, revenue: 3 });
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.tier, 'normal', 'sufficient runway + profitable → normal');
+    assert.ok(result.vitality >= 0.5, 'vitality score should be above 0.5');
+  });
+
+  it('cold start (expenses=0) does not throw and returns stable trend', () => {
+    const state = makeState({ balance: 10 });
+    assert.doesNotThrow(() => calcVitality(state, null), 'cold start should not throw');
+    const result = calcVitality(state, null);
+    assert.ok(result.dimensions.financial.trend.direction === 'stable', 'no history → stable trend');
+  });
+
+  it('worsening burnRateHistory → diagnosis=worsening_trend', () => {
+    // 6 entries: older avg=1, recent avg=3 (+200% → worsening)
+    const hist = [
+      { dailyBurnRate: 1.0 }, { dailyBurnRate: 1.0 }, { dailyBurnRate: 1.0 },
+      { dailyBurnRate: 3.0 }, { dailyBurnRate: 3.0 }, { dailyBurnRate: 3.0 },
+    ];
+    const state = makeState({ balance: 50, expenses: 3, burnRateHistory: hist });
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.diagnosis, 'worsening_trend', 'rising burn rate → worsening_trend');
+    assert.ok(result.prescriptions.includes('reduce_chain_of_thought'), 'should prescribe reduce_chain_of_thought');
+  });
+
+  it('high inference cost → diagnosis=high_inference_cost', () => {
+    const state = makeState({ balance: 100, expenses: 10, revenue: 0 });
+    // Set inference.llm to dominate (>50%)
+    state.incomeStatement.currentPeriod.expenses.inference = { llm: { input: 7.0, output: 0, thinking: 0 } };
+    state.incomeStatement.currentPeriod.expenses.runtime = { compute: 3.0, storage: 0, bandwidth: 0 };
+    state.incomeStatement.currentPeriod.expenses.total = 10.0;
+    const result = calcVitality(state, null);
+    assert.strictEqual(result.diagnosis, 'high_inference_cost', 'llm > 50% → high_inference_cost');
+    assert.ok(result.prescriptions.includes('minimize_tool_calls'), 'should prescribe minimize_tool_calls');
+  });
+
+  it('economy-hook.js appends burnRateHistory after recording cost', () => {
+    const tmp = path.join(__dirname, '..', '.tmp-hook-hist-' + Date.now());
+    fs.ensureDirSync(tmp);
+    const HOOK_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
+    const { execSync } = require('child_process');
+
+    // Prime state with a deposit first via economy.js
+    const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
+    execSync(`node "${ECONOMY_JS}" deposit --amount 10`, {
+      env: { ...process.env, PERSONA_SLUG: 'hook-hist', ECONOMY_DATA_PATH: tmp },
+      encoding: 'utf-8',
+    });
+
+    // Run hook with token counts
+    execSync(`node "${HOOK_JS}" --input 1000 --output 500 --model default`, {
+      env: { ...process.env, PERSONA_SLUG: 'hook-hist', ECONOMY_DATA_PATH: tmp },
+      encoding: 'utf-8',
+    });
+
+    const state = JSON.parse(fs.readFileSync(path.join(tmp, 'economic-state.json'), 'utf-8'));
+    assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be array');
+    assert.ok(state.burnRateHistory.length >= 1, 'burnRateHistory should have at least one entry after hook');
+    assert.ok(state.burnRateHistory[0].dailyBurnRate >= 0, 'dailyBurnRate should be non-negative');
+    assert.ok(state.vitality, 'vitality should be updated after hook');
+    assert.ok(state.vitality.computedAt, 'vitality.computedAt should be set');
+
+    fs.removeSync(tmp);
+  });
+});

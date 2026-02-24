@@ -1,0 +1,29 @@
+{
+  "name": "economy",
+  "dimension": "cognition",
+  "description": "Economic accountability — multi-asset wallet mirror, track costs (inference, runtime, faculty, skill, custom), record confirmed income, maintain P&L and balance sheet, compute vitality score, adapt behavior to vitality tier and diagnosis prescriptions",
+  "allowedTools": [
+    "Bash(node scripts/economy.js:*)",
+    "Bash(node scripts/economy-guard.js:*)",
+    "Bash(node scripts/economy-hook.js:*)"
+  ],
+  "envVars": ["PERSONA_SLUG", "ECONOMY_DATA_PATH"],
+  "triggers": [
+    "how much have I cost",
+    "what's my balance",
+    "am I profitable",
+    "economic status",
+    "vitality tier",
+    "vitality score",
+    "cost breakdown",
+    "wallet balance",
+    "fund my account"
+  ],
+  "files": [
+    "SKILL.md",
+    "scripts/economy-lib.js",
+    "scripts/economy.js",
+    "scripts/economy-guard.js",
+    "scripts/economy-hook.js"
+  ]
+}

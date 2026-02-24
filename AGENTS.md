@@ -111,8 +111,31 @@ The generator outputs persona skill packs with this layout:
 
 Key implementation details:
 - Soft-ref detection: `lib/generator.js` checks each skill/faculty/body/channel for `install` field + missing local definition
-- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`
+- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
+
+### Economy Faculty & Vitality System
+
+The `economy` faculty (`layers/faculties/economy/`) implements **Vitality** — a multi-dimensional measure of persona operational health. Current implementation: financial dimension only, with architecture reserving space for future dimensions (reputation, memory, relationship health).
+
+**Shared library: `layers/faculties/economy/scripts/economy-lib.js`**
+All shared state management, provider, and vitality logic lives here. The three CLI scripts (`economy.js`, `economy-guard.js`, `economy-hook.js`) all `require('./economy-lib')` — no logic duplication.
+
+Key exports:
+- `getConfig(overrides)` — resolves slug + basePath from env vars; tests pass `ECONOMY_DATA_PATH` for isolation
+- `loadState(cfg)` / `saveState(state, cfg)` — handles v1→v2.1 migration automatically (`migrateV1`, `migrateV2`)
+- `calcFinancialHealth(state, identity)` — FHS four-dimension engine (liquidity 0.40 / profitability 0.30 / efficiency 0.15 / trend 0.15)
+- `calcVitality(state, identity)` — **public interface**; currently wraps `calcFinancialHealth`; designed for future parallel dimension integration
+
+**Extension point:** When reputation, memory, or relationship health dimensions are ready, `calcVitality` will aggregate them via weighted scoring. At that point, move `calcVitality` to `lib/vitality.js` and inject dimensions via dependency injection. Do not implement this now — path is reserved.
+
+**`economic-state.json` schema v2.1.0** adds two fields to v2.0.0:
+- `burnRateHistory` — array of `{timestamp, dailyBurnRate, periodExpenses}`, max 30 entries, appended by `economy-hook.js` after each conversation
+- `vitality` — the authoritative tier source: `{score, tier, diagnosis, prescriptions, daysToDepletion, dominantCost, trend, computedAt}`; `state.vitality.tier` is the sole tier accessor across all scripts
+
+**Vitality tiers:** `suspended` (balance≤0) → `critical` (FHS<0.20 or runway<3d) → `optimizing` (FHS<0.50 or runway<14d) → `normal`
+
+**Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `VITALITY_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence.
 
 ### Template System
 
