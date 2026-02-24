@@ -16,7 +16,7 @@
         "id": { "type": "string", "description": "Unique signal identifier (UUID recommended)" },
         "category": {
           "type": "string",
-          "enum": ["scheduling", "file_io", "tool_missing", "capability_gap", "resource_limit"],
+          "enum": ["scheduling", "file_io", "tool_missing", "capability_gap", "resource_limit", "agent_communication"],
           "description": "Signal category"
         },
         "need": { "type": "string", "description": "What the persona needs" },

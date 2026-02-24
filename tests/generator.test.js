@@ -833,6 +833,37 @@ describe('generated soul-injection quality', () => {
     await fs.remove(TMP);
   });
 
+  it('injects Resource Awareness with two-level degradation guidance', async () => {
+    const persona = {
+      personaName: 'ResourceTest',
+      slug: 'resource-test',
+      bio: 'resource awareness tester',
+      personality: 'resilient',
+      speakingStyle: 'Direct',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const soulMd = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+
+    assert.ok(soulMd.includes('Resource Awareness'), 'Must have Resource Awareness section');
+    assert.ok(soulMd.includes('resource pressure'), 'Must mention resource pressure detection');
+    assert.ok(soulMd.includes('resource_limit'), 'Must reference resource_limit signal category');
+    assert.ok(soulMd.includes('recommended_maxDaily'), 'Must include spec recommendation example');
+    assert.ok(soulMd.includes('degrade'), 'Must describe behavior degradation');
+    assert.ok(soulMd.includes('critical'), 'Must describe priority escalation to critical');
+
+    await fs.remove(TMP);
+  });
+
+  it('signal schema includes agent_communication category', () => {
+    const schemaPath = path.join(__dirname, '..', 'schemas', 'signal.schema.json');
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+    const categories = schema.definitions.request.properties.category.enum;
+    assert.ok(categories.includes('agent_communication'), 'signal schema must include agent_communication category');
+    assert.ok(categories.includes('resource_limit'), 'signal schema must include resource_limit category');
+  });
+
   it('injects Growth sub-section when evolution enabled', async () => {
     const persona = {
       personaName: 'GrowthTest',
