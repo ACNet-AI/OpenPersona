@@ -198,6 +198,11 @@ program
     const tmpDir = path.join(require('os').tmpdir(), 'openpersona-update-' + Date.now());
     await fs.ensureDir(tmpDir);
     const { skillDir: newDir } = await generate(persona, tmpDir);
+    const narrativeSrc = path.join(skillDir, 'soul', 'self-narrative.md');
+    const narrativeDst = path.join(newDir, 'soul', 'self-narrative.md');
+    if (fs.existsSync(narrativeSrc)) {
+      await fs.copy(narrativeSrc, narrativeDst);
+    }
     await fs.remove(skillDir);
     await fs.move(newDir, skillDir);
     await fs.remove(tmpDir);

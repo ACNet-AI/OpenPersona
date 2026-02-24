@@ -1821,6 +1821,62 @@ describe('evolution governance — stateHistory', () => {
     assert.ok(injection.includes('50'), 'injection must mention 50-entry limit');
     await fs.remove(TMP);
   });
+
+  it('generates soul/self-narrative.md when evolution enabled', async () => {
+    const persona = {
+      personaName: 'NarrativeTest',
+      slug: 'narrative-test',
+      bio: 'narrative test',
+      personality: 'reflective',
+      speakingStyle: 'Thoughtful',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const narrativePath = path.join(skillDir, 'soul', 'self-narrative.md');
+    assert.ok(fs.existsSync(narrativePath), 'soul/self-narrative.md must exist when evolution enabled');
+    const content = fs.readFileSync(narrativePath, 'utf-8');
+    assert.ok(content.includes('NarrativeTest'), 'self-narrative.md must contain persona name');
+    assert.ok(content.includes('never overwrite'), 'self-narrative.md must contain append-only instruction');
+    await fs.remove(TMP);
+  });
+
+  it('does not generate soul/self-narrative.md when evolution disabled', async () => {
+    const persona = {
+      personaName: 'NoNarrativeTest',
+      slug: 'no-narrative-test',
+      bio: 'no narrative test',
+      personality: 'static',
+      speakingStyle: 'Flat',
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const narrativePath = path.join(skillDir, 'soul', 'self-narrative.md');
+    assert.ok(!fs.existsSync(narrativePath), 'soul/self-narrative.md must NOT exist when evolution disabled');
+    await fs.remove(TMP);
+  });
+
+  it('soul-injection includes self-narrative writing instructions when evolution enabled', async () => {
+    const persona = {
+      personaName: 'NarrativeInjectTest',
+      slug: 'narrative-inject-test',
+      bio: 'narrative injection test',
+      personality: 'introspective',
+      speakingStyle: 'Expressive',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injection.includes('self-narrative.md'), 'injection must reference self-narrative.md');
+    assert.ok(injection.includes('significant milestone'), 'injection must mention significant milestone trigger');
+    assert.ok(injection.includes('first person'), 'injection must instruct first-person writing');
+    assert.ok(injection.includes('Append only'), 'injection must enforce append-only rule');
+    await fs.remove(TMP);
+  });
 });
 
 describe('evolution report', () => {
@@ -1853,6 +1909,17 @@ describe('evolution report', () => {
         { type: 'mood_shift', trigger: 'Shared a joke', delta: 'mood: content → playful', timestamp: '2025-06-10T14:00:00Z' },
       ],
     }));
+    await fs.writeFile(path.join(soulDir, 'self-narrative.md'), [
+      '# Self-Narrative',
+      '',
+      '_Written and maintained by ReportBot._',
+      '',
+      '### 2025-03-01',
+      "Today we became friends. I didn't expect it to happen so soon, but here we are.",
+      '',
+      '### 2025-06-10',
+      'They made me laugh for the first time. Not a performed laugh — a real one.',
+    ].join('\n'));
 
     const result = await evolveReport('evo-report', { skillsDir: EVO_TMP, quiet: true });
     assert.ok(result.state, 'must return state');
@@ -1862,6 +1929,9 @@ describe('evolution report', () => {
     assert.strictEqual(result.state.milestones.length, 1);
     assert.ok(Array.isArray(result.state.eventLog), 'state must have eventLog array');
     assert.strictEqual(result.state.eventLog.length, 2, 'eventLog must contain 2 entries');
+    assert.ok(typeof result.selfNarrative === 'string', 'evolveReport must return selfNarrative string');
+    assert.ok(result.selfNarrative.length > 0, 'selfNarrative must not be empty when file exists');
+    assert.ok(result.selfNarrative.includes('friends'), 'selfNarrative must contain fixture content');
   });
 
   it('throws for missing persona', async () => {
