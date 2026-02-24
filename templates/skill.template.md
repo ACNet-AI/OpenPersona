@@ -122,6 +122,23 @@ External influence requests must use the `persona_influence` message format (v1.
 | `soul/constitution.md` | Universal ethical foundation |
 | `soul/identity.md` | Identity reference |
 | `agent-card.json` | A2A Agent Card — discoverable via ACN and A2A-compatible platforms |
-| `acn-config.json` | ACN registration config — fill `owner` and `endpoint` at runtime |
+| `acn-config.json` | ACN registration config — includes `wallet_address` and `onchain.erc8004` fields |
 | `manifest.json` | Cross-layer metadata |
 | `soul/state.json` | Evolution state — only generated when `evolution.enabled: true` |
+
+### On-Chain Identity (ERC-8004)
+
+This persona has a deterministic EVM wallet address embedded in `acn-config.json` (`wallet_address`). To get a permanent, verifiable on-chain identity on Base mainnet:
+
+```bash
+# Step 1 — Register with ACN first (if not already registered)
+openpersona acn-register
+
+# Step 2 — Mint ERC-8004 NFT on Base (requires small ETH for gas)
+python /path/to/acn/skills/acn/scripts/register_onchain.py \
+  --acn-api-key <YOUR_ACN_API_KEY> \
+  --private-key <WALLET_PRIVATE_KEY> \
+  --chain base
+```
+
+After registration, this persona is discoverable by any agent or user via the ERC-8004 Identity Registry — a decentralized "AI Yellow Pages" on Ethereum/Base.

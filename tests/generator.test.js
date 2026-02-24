@@ -2620,6 +2620,23 @@ describe('agent card and acn config', () => {
     assert.ok(config.skills.every((s) => typeof s === 'string'), 'skill IDs should be strings');
     assert.strictEqual(config.agent_card, './agent-card.json', 'agent_card should be relative path');
     assert.deepStrictEqual(config.subnet_ids, ['public'], 'subnet_ids should default to public');
+    assert.ok(config.wallet_address, 'wallet_address should be present');
+    assert.ok(config.wallet_address.startsWith('0x'), 'wallet_address should be EVM hex address');
+    assert.strictEqual(config.wallet_address.length, 42, 'wallet_address should be 20-byte hex (42 chars)');
+    assert.ok(config.onchain, 'onchain section should be present');
+    assert.ok(config.onchain.erc8004, 'onchain.erc8004 should be present');
+    assert.strictEqual(config.onchain.erc8004.chain, 'base', 'default chain should be base');
+    assert.ok(config.onchain.erc8004.identity_contract.startsWith('0x'), 'identity_contract should be EVM address');
+  });
+
+  it('acn-config.json wallet_address is deterministic for same slug', async () => {
+    await fs.ensureDir(AC_TMP);
+    const { skillDir: dir1 } = await generate(basePersona, AC_TMP);
+    const config1 = JSON.parse(fs.readFileSync(path.join(dir1, 'acn-config.json'), 'utf-8'));
+    await fs.remove(path.join(AC_TMP, basePersona.slug));
+    const { skillDir: dir2 } = await generate(basePersona, AC_TMP);
+    const config2 = JSON.parse(fs.readFileSync(path.join(dir2, 'acn-config.json'), 'utf-8'));
+    assert.strictEqual(config1.wallet_address, config2.wallet_address, 'same slug should produce same wallet_address');
   });
 
   it('acn-config skills match agent-card skill ids', async () => {
