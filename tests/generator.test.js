@@ -852,7 +852,7 @@ describe('generated soul-injection quality', () => {
     assert.ok(soulMd.includes('Evolved traits'), 'Must mention evolved traits');
     assert.ok(soulMd.includes('Speaking style drift'), 'Must mention speaking style drift');
     assert.ok(soulMd.includes('How You Grow'), 'Must have How You Grow section');
-    assert.ok(soulMd.includes('evolution event'), 'Must describe evolution events');
+    assert.ok(soulMd.includes('eventLog'), 'Must reference eventLog for evolution events');
     assert.ok(soulMd.includes('emit a signal'), 'Must link growth to signals');
 
     await fs.remove(TMP);
@@ -1754,6 +1754,42 @@ describe('evolution governance — stateHistory', () => {
     assert.ok(injection.includes('Snapshot'), 'injection must mention snapshot step');
     await fs.remove(TMP);
   });
+
+  it('generated state.json includes eventLog field', async () => {
+    const persona = {
+      personaName: 'EventLogTest',
+      slug: 'event-log-test',
+      bio: 'event log test',
+      personality: 'observant',
+      speakingStyle: 'Precise',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const state = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'state.json'), 'utf-8'));
+    assert.ok(Array.isArray(state.eventLog), 'state.json must have eventLog array');
+    assert.strictEqual(state.eventLog.length, 0, 'eventLog must be empty initially');
+    await fs.remove(TMP);
+  });
+
+  it('soul-injection includes eventLog instruction when evolution enabled', async () => {
+    const persona = {
+      personaName: 'EventLogInjectTest',
+      slug: 'event-log-inject-test',
+      bio: 'event log injection test',
+      personality: 'meticulous',
+      speakingStyle: 'Detailed',
+      evolution: { enabled: true },
+      faculties: [],
+    };
+    await fs.ensureDir(TMP);
+    const { skillDir } = await generate(persona, TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injection.includes('eventLog'), 'injection must mention eventLog');
+    assert.ok(injection.includes('50'), 'injection must mention 50-entry limit');
+    await fs.remove(TMP);
+  });
 });
 
 describe('evolution report', () => {
@@ -1781,6 +1817,10 @@ describe('evolution report', () => {
         { type: 'relationship_stage', description: 'Reached friend stage', timestamp: '2025-03-01' },
       ],
       stateHistory: [],
+      eventLog: [
+        { type: 'trait_emergence', trigger: 'User taught sarcasm', delta: 'Added sarcastic_humor', timestamp: '2025-06-01T10:00:00Z' },
+        { type: 'mood_shift', trigger: 'Shared a joke', delta: 'mood: content → playful', timestamp: '2025-06-10T14:00:00Z' },
+      ],
     }));
 
     const result = await evolveReport('evo-report', { skillsDir: EVO_TMP, quiet: true });
@@ -1789,6 +1829,8 @@ describe('evolution report', () => {
     assert.strictEqual(result.personaName, 'ReportBot');
     assert.strictEqual(result.state.evolvedTraits.length, 2);
     assert.strictEqual(result.state.milestones.length, 1);
+    assert.ok(Array.isArray(result.state.eventLog), 'state must have eventLog array');
+    assert.strictEqual(result.state.eventLog.length, 2, 'eventLog must contain 2 entries');
   });
 
   it('throws for missing persona', async () => {
