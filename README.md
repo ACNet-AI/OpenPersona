@@ -31,7 +31,7 @@ Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 # Start from a blank-slate meta-persona (recommended)
 npx openpersona create --preset base --install
 
-# Or install a pre-built character
+# Or install a pre-built character (browse at https://openpersona-frontend.vercel.app)
 npx openpersona install samantha
 ```
 
@@ -84,14 +84,14 @@ flowchart TB
     E["cognition: reminder · memory"]
   end
   subgraph Skill ["Skill Layer"]
-    F["Local definitions + ClawHub / skills.sh"]
+    F["Local definitions + acnlabs/persona-skills / skills.sh"]
   end
 ```
 
 - **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
 - **Body** — Substrate of existence — three dimensions: `physical` (robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources), `appearance` (avatar/3D model). Body is never null; digital agents have a virtual body (runtime-only).
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
-- **Skill** — Professional skills: local definitions in `layers/skills/`, or external via ClawHub / skills.sh (`install` field)
+- **Skill** — Professional skills: local definitions in `layers/skills/`, or external via [acnlabs/persona-skills](https://github.com/acnlabs/persona-skills) / skills.sh (`install` field)
 
 ### Constitution — The Soul's Foundation
 
@@ -448,9 +448,9 @@ The new persona reads `handoff.json` on activation and can seamlessly continue t
 
 ```
 openpersona create         Create a persona (interactive or --preset/--config)
-openpersona install        Install a persona (slug or owner/repo)
+openpersona install        Install a persona (slug from acnlabs/persona-skills, or owner/repo)
 openpersona fork           Fork an installed persona into a new child persona
-openpersona search         Search the registry
+openpersona search         Search the persona registry
 openpersona uninstall      Uninstall a persona
 openpersona update         Update installed personas
 openpersona list           List installed personas
