@@ -145,9 +145,9 @@ program
     try {
       const result = await download(target, options.registry);
       if (result.skipCopy) {
-        await install(result.dir, { skipCopy: true });
+        await install(result.dir, { skipCopy: true, source: target });
       } else {
-        await install(result.dir);
+        await install(result.dir, { source: target });
       }
     } catch (e) {
       printError(e.message);

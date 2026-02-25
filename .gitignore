@@ -13,3 +13,6 @@ coverage/
 .npm/
 .cache/
 ROADMAP.md
+
+.pnpm-store/
+*.code-workspace
