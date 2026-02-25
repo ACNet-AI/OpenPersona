@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import | acn-register
+ * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import | acn-register | state
  */
 const path = require('path');
 const fs = require('fs-extra');
@@ -17,7 +17,7 @@ const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
 const { switchPersona, listPersonas } = require('../lib/switcher');
 const { registerWithAcn } = require('../lib/registrar');
-const { OP_SKILLS_DIR, resolveSoulFile, printError, printSuccess, printInfo } = require('../lib/utils');
+const { OP_SKILLS_DIR, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
@@ -140,7 +140,7 @@ program
 program
   .command('install <target>')
   .description('Install persona (slug or owner/repo)')
-  .option('--registry <name>', 'Registry (clawhub, skillssh)', 'clawhub')
+  .option('--registry <name>', 'Registry (acnlabs, skillssh)', 'acnlabs')
   .action(async (target, options) => {
     try {
       const result = await download(target, options.registry);
@@ -158,7 +158,7 @@ program
 program
   .command('search <query>')
   .description('Search personas in registry')
-  .option('--registry <name>', 'Registry', 'clawhub')
+  .option('--registry <name>', 'Registry', 'acnlabs')
   .action(async (query, options) => {
     try {
       await search(query, options.registry);
@@ -198,10 +198,16 @@ program
     const tmpDir = path.join(require('os').tmpdir(), 'openpersona-update-' + Date.now());
     await fs.ensureDir(tmpDir);
     const { skillDir: newDir } = await generate(persona, tmpDir);
+    // Preserve runtime evolution artifacts — these represent accumulated persona growth
     const narrativeSrc = path.join(skillDir, 'soul', 'self-narrative.md');
     const narrativeDst = path.join(newDir, 'soul', 'self-narrative.md');
     if (fs.existsSync(narrativeSrc)) {
       await fs.copy(narrativeSrc, narrativeDst);
+    }
+    const stateSrc = path.join(skillDir, 'soul', 'state.json');
+    const stateDst = path.join(newDir, 'soul', 'state.json');
+    if (fs.existsSync(stateSrc)) {
+      await fs.copy(stateSrc, stateDst);
     }
     await fs.remove(skillDir);
     await fs.move(newDir, skillDir);
@@ -493,6 +499,76 @@ program
       printError(e.message);
       process.exit(1);
     }
+  });
+
+// ── State management commands (runner integration protocol) ──────────────────
+//
+// These commands are the standard interface for any agent runner to manage
+// persona state. Runners call these before/after conversations regardless of
+// where the persona pack is installed on disk.
+//
+// Lookup priority: registry path → default OP_SKILLS_DIR/persona-<slug>
+// Delegates to scripts/state-sync.js inside the persona pack (no logic duplication).
+
+function resolvePersonaDir(slug) {
+  const reg = loadRegistry();
+  const entry = reg.personas && reg.personas[slug];
+  if (entry && entry.path && fs.existsSync(entry.path)) return entry.path;
+  const defaultDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+  if (fs.existsSync(defaultDir)) return defaultDir;
+  return null;
+}
+
+function runStateSyncCommand(slug, args) {
+  const personaDir = resolvePersonaDir(slug);
+  if (!personaDir) {
+    printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+    process.exit(1);
+  }
+  const syncScript = path.join(personaDir, 'scripts', 'state-sync.js');
+  if (!fs.existsSync(syncScript)) {
+    printError(`state-sync.js not found in persona-${slug}. Update the persona: openpersona update ${slug}`);
+    process.exit(1);
+  }
+  const { spawnSync } = require('child_process');
+  const result = spawnSync(process.execPath, [syncScript, ...args], {
+    cwd: personaDir,
+    encoding: 'utf-8',
+  });
+  if (result.error) {
+    printError(`Failed to run state-sync.js: ${result.error.message}`);
+    process.exit(1);
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.status !== 0) process.exit(result.status || 1);
+}
+
+const stateCmd = program
+  .command('state')
+  .description('Manage persona evolution state (runner integration — works from any directory)');
+
+stateCmd
+  .command('read <slug>')
+  .description('Print current evolution state summary for a persona')
+  .action((slug) => {
+    runStateSyncCommand(slug, ['read']);
+  });
+
+stateCmd
+  .command('write <slug> <patch>')
+  .description('Merge JSON patch into persona evolution state')
+  .action((slug, patch) => {
+    runStateSyncCommand(slug, ['write', patch]);
+  });
+
+stateCmd
+  .command('signal <slug> <type> [payload]')
+  .description('Emit a signal from a persona to its host runtime')
+  .action((slug, type, payload) => {
+    const args = ['signal', type];
+    if (payload) args.push(payload);
+    runStateSyncCommand(slug, args);
   });
 
 program.parse();
