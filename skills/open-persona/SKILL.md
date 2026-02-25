@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.14.1"
+version: "0.14.2"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]

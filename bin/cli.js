@@ -17,7 +17,7 @@ const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
 const { switchPersona, listPersonas } = require('../lib/switcher');
 const { registerWithAcn } = require('../lib/registrar');
-const { OP_SKILLS_DIR, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry } = require('../lib/utils');
+const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry } = require('../lib/utils');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
@@ -25,7 +25,7 @@ const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
 program
   .name('openpersona')
   .description('OpenPersona - Create, manage, and orchestrate agent personas')
-  .version('0.14.1');
+  .version('0.14.2');
 
 if (process.argv.length === 2) {
   process.argv.push('create');
@@ -184,10 +184,22 @@ program
   .command('update <slug>')
   .description('Update installed persona')
   .action(async (slug) => {
-    const skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+    // Resolve install path: new neutral → registry → legacy OpenClaw
+    let skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
     if (!fs.existsSync(skillDir)) {
-      printError(`Persona not found: persona-${slug}`);
-      process.exit(1);
+      const reg = loadRegistry();
+      const regEntry = reg.personas?.[slug];
+      if (regEntry?.path && fs.existsSync(regEntry.path)) {
+        skillDir = regEntry.path;
+      } else {
+        const legacyDir = path.join(OPENCLAW_HOME, 'skills', `persona-${slug}`);
+        if (fs.existsSync(legacyDir)) {
+          skillDir = legacyDir;
+        } else {
+          printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+          process.exit(1);
+        }
+      }
     }
     const personaPath = resolveSoulFile(skillDir, 'persona.json');
     if (!fs.existsSync(personaPath)) {

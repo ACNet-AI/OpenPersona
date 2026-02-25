@@ -34,7 +34,7 @@ describe('openpersona state commands', () => {
 
   before(async () => {
     TMP_DIR = path.join(os.tmpdir(), 'openpersona-cli-state-' + Date.now());
-    openclawHome = path.join(TMP_DIR, 'openclaw');
+    openclawHome = path.join(TMP_DIR, 'openpersona');
     registryPath = path.join(openclawHome, 'persona-registry.json');
     await fs.ensureDir(openclawHome);
 
@@ -58,9 +58,9 @@ describe('openpersona state commands', () => {
     await fs.remove(TMP_DIR);
   });
 
-  // Shared env that points CLI at our isolated registry and openclaw home
+  // Shared env that points CLI at our isolated persona home
   function env() {
-    return { OPENCLAW_HOME: openclawHome };
+    return { OPENPERSONA_HOME: openclawHome };
   }
 
   it('state read returns valid JSON with exists:true', () => {
@@ -184,8 +184,8 @@ describe('openpersona update command — state preservation', () => {
 
   before(async () => {
     TMP_DIR = path.join(os.tmpdir(), 'openpersona-update-test-' + Date.now());
-    fakeOpHome = path.join(TMP_DIR, 'openclaw');
-    const fakeSkillsDir = path.join(fakeOpHome, 'skills');
+    fakeOpHome = path.join(TMP_DIR, 'openpersona');
+    const fakeSkillsDir = path.join(fakeOpHome, 'personas');
     fakeInstallDir = path.join(fakeSkillsDir, `persona-${SLUG}`);
     await fs.ensureDir(fakeSkillsDir);
 
@@ -224,7 +224,7 @@ describe('openpersona update command — state preservation', () => {
   it('update preserves soul/state.json evolution data', async () => {
     const updateResult = spawnSync(process.execPath, [CLI, 'update', SLUG], {
       encoding: 'utf-8',
-      env: { ...process.env, OPENCLAW_HOME: fakeOpHome },
+      env: { ...process.env, OPENPERSONA_HOME: fakeOpHome },
     });
     assert.strictEqual(updateResult.status, 0, `update failed:\n${updateResult.stderr}`);
 
