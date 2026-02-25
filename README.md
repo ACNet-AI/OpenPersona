@@ -63,8 +63,9 @@ Then say to your agent: _"Help me create a Samantha persona"_ — it will gather
 - **🍴 Persona Fork** — Derive a specialized child persona from any installed parent, inheriting constraint layer while starting fresh on runtime state
 - **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders, memory
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
+- **🧠 Lifecycle Protocol** — `body.interface` nervous system: Signal Protocol (persona→host requests), Pending Commands queue (host→persona async instructions), and State Sync (cross-conversation persistence via `openpersona state` CLI + `scripts/state-sync.js`)
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
-- **📦 One-Command Install** — `npx openpersona install samantha` and you're live
+- **📦 One-Command Install** — `npx openpersona install samantha` and you're live — browse all personas at [openpersona-frontend.vercel.app](https://openpersona-frontend.vercel.app)
 
 ## Four-Layer Architecture
 
@@ -89,7 +90,7 @@ flowchart TB
 ```
 
 - **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
-- **Body** — Substrate of existence — three dimensions: `physical` (robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources), `appearance` (avatar/3D model). Body is never null; digital agents have a virtual body (runtime-only).
+- **Body** — Substrate of existence — four dimensions: `physical` (optional — robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources), `appearance` (optional — avatar/3D model), `interface` (optional — the runtime contract: Signal Protocol + Pending Commands + State Sync; the persona's **nervous system**). Body is never null; digital agents have a virtual body (runtime-only).
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills: local definitions in `layers/skills/`, or external via [acnlabs/persona-skills](https://github.com/acnlabs/persona-skills) / skills.sh (`install` field)
 
@@ -187,6 +188,7 @@ persona-samantha/
 ├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
 ├── manifest.json         ← Four-layer manifest (heartbeat, allowedTools, layers, acn, meta)
 ├── scripts/              ← Faculty scripts (TTS, music, selfie — varies by preset)
+│   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal)
 └── assets/               ← Static assets
 ```
 
@@ -462,6 +464,7 @@ openpersona export         Export a persona to a portable zip archive
 openpersona import         Import a persona from a zip archive
 openpersona evolve-report  ★Experimental: Show evolution report for a persona
 openpersona acn-register   Register a persona with ACN network
+openpersona state          Read/write persona state and emit signals (Lifecycle Protocol)
 ```
 
 ### Persona Fork
@@ -519,7 +522,9 @@ templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
   evolution.js          #   Evolution governance & evolve-report
-tests/                  # Tests (200 passing)
+  installer.js          #   Persona install + fire-and-forget telemetry
+  downloader.js         #   Direct download from acnlabs/persona-skills or GitHub
+tests/                  # Tests (231 passing)
 ```
 
 ## Development

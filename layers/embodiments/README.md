@@ -2,13 +2,16 @@
 
 The Body layer defines the complete environment that enables a persona to **exist and act**. Every agent has a body — digital agents have a virtual body (runtime-only), physical agents have both a physical and virtual body.
 
-## Three Dimensions
+## Four Dimensions
 
 ```
 Body
-├── physical    ← Physical substrate (robots, IoT, sensors)
-├── runtime     ← Digital runtime environment (platform, channels, credentials, resources)
-└── appearance  ← Visual representation (avatar, 3D model, style)
+├── physical    ← Physical substrate (robots, IoT, sensors) — optional
+├── runtime     ← Digital runtime environment (platform, channels, credentials, resources) — REQUIRED
+├── appearance  ← Visual representation (avatar, 3D model, style) — optional
+└── interface   ← Runtime contract / nervous system — optional
+                   (Signal Protocol + Pending Commands queue + State Sync)
+                   Auto-implemented by scripts/state-sync.js for all personas
 ```
 
 ### Physical (Optional)
@@ -62,6 +65,30 @@ Visual representation for UI, XR, and metaverse contexts.
   }
 }
 ```
+
+### Interface (Optional)
+
+The runtime contract between the persona and its host — the persona's **nervous system**. Declares signal policy and command handling rules. Auto-implemented by `scripts/state-sync.js` for all personas regardless of whether this field is declared.
+
+```json
+{
+  "interface": {
+    "signals": {
+      "policy": "emit-and-wait",
+      "categories": ["tool_missing", "capability_gap", "resource_limit"]
+    },
+    "pendingCommands": {
+      "policy": "process-at-start",
+      "maxQueueSize": 10
+    }
+  }
+}
+```
+
+Three sub-protocols:
+- **Signal Protocol** — persona→host capability/resource requests (`openpersona state signal`)
+- **Pending Commands** — host→persona async instruction queue (`state.json → pendingCommands`)
+- **State Sync** — cross-conversation state persistence (`openpersona state read/write`)
 
 ## Self-Awareness: Body
 

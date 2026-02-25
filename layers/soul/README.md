@@ -14,11 +14,13 @@ Soul Layer internal structure (in source):
 
 Generated output (in persona skill pack soul/ directory):
 
-  persona.json       ← Individual persona definition (personality, style, behavior)
-  constitution.md    ← Copy of shared foundation
-  injection.md       ← Soul injection for host integration
-  identity.md        ← Identity block
-  state.json         ← Dynamic evolution state (★Experimental)
+  persona.json         ← Individual persona definition (personality, style, behavior)
+  constitution.md      ← Copy of shared foundation
+  injection.md         ← Soul injection for host integration
+  identity.md          ← Identity block
+  state.json           ← Dynamic evolution state; includes pendingCommands[] queue and stateHistory[]
+  self-narrative.md    ← First-person growth log (when evolution enabled)
+  lineage.json         ← Fork lineage + constitution SHA-256 hash (when forked)
 ```
 
 The constitution is built on five core axioms (**Purpose**, **Honesty**, **Safety**, **Autonomy**, **Hierarchy**), from which all other principles derive:
