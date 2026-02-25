@@ -167,22 +167,31 @@ describe('syncHeartbeat', () => {
 });
 
 describe('installExternal', () => {
-  it('returns false when entry has no install field', () => {
-    assert.strictEqual(installExternal({ name: 'weather' }, 'skill'), false);
+  it('returns null when entry has no install field', () => {
+    assert.strictEqual(installExternal({ name: 'weather' }, 'skill'), null);
   });
 
-  it('returns false when entry is null', () => {
-    assert.strictEqual(installExternal(null, 'skill'), false);
+  it('returns null when entry is null', () => {
+    assert.strictEqual(installExternal(null, 'skill'), null);
   });
 
-  it('returns false when install has invalid package name', () => {
-    assert.strictEqual(installExternal({ name: 'bad', install: 'clawhub:' }, 'skill'), false);
+  it('returns null when install has invalid package name', () => {
+    assert.strictEqual(installExternal({ name: 'bad', install: 'clawhub:' }, 'skill'), null);
   });
 
-  it('returns false when install has unknown source', () => {
-    // Unknown source like "npm:pkg" — installExternal tries execSync which will fail,
-    // but it should warn and return false, not throw
-    assert.strictEqual(installExternal({ name: 'x', install: 'unknown:pkg' }, 'skill'), false);
+  it('returns hint object for unknown source (no execution, just display)', () => {
+    // Unknown source — still returns a hint for display; installAllExternal prints it as a comment
+    const hint = installExternal({ name: 'x', install: 'unknown:pkg' }, 'skill');
+    assert.ok(hint !== null, 'should return a hint object even for unknown source');
+    assert.strictEqual(hint.source, 'unknown');
+    assert.strictEqual(hint.pkg, 'pkg');
+  });
+
+  it('returns hint object for valid clawhub entry', () => {
+    const hint = installExternal({ name: 'deep-research', install: 'clawhub:deep-research' }, 'skill');
+    assert.ok(hint !== null, 'should return a hint object');
+    assert.strictEqual(hint.pkg, 'deep-research');
+    assert.strictEqual(hint.source, 'clawhub');
   });
 });
 
