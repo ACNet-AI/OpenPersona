@@ -184,22 +184,10 @@ program
   .command('update <slug>')
   .description('Update installed persona')
   .action(async (slug) => {
-    // Resolve install path: new neutral → registry → legacy OpenClaw
-    let skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
-    if (!fs.existsSync(skillDir)) {
-      const reg = loadRegistry();
-      const regEntry = reg.personas?.[slug];
-      if (regEntry?.path && fs.existsSync(regEntry.path)) {
-        skillDir = regEntry.path;
-      } else {
-        const legacyDir = path.join(OPENCLAW_HOME, 'skills', `persona-${slug}`);
-        if (fs.existsSync(legacyDir)) {
-          skillDir = legacyDir;
-        } else {
-          printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
-          process.exit(1);
-        }
-      }
+    const skillDir = resolvePersonaDir(slug);
+    if (!skillDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
     }
     const personaPath = resolveSoulFile(skillDir, 'persona.json');
     if (!fs.existsSync(personaPath)) {
@@ -240,10 +228,14 @@ program
   .option('--install', 'Install to OpenClaw after generation')
   .action(async (parentSlug, options) => {
     const { createHash } = require('crypto');
-    const parentDir = path.join(OP_SKILLS_DIR, `persona-${parentSlug}`);
+    const parentDir = resolvePersonaDir(parentSlug);
+    if (!parentDir) {
+      printError(`Persona not found: "${parentSlug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
     const parentPersonaPath = path.join(parentDir, 'soul', 'persona.json');
     if (!fs.existsSync(parentPersonaPath)) {
-      printError(`Persona not found: persona-${parentSlug}. Install it first.`);
+      printError(`Persona not found: "${parentSlug}". Install it first with: openpersona install <source>`);
       process.exit(1);
     }
 
@@ -360,7 +352,11 @@ program
   .command('reset <slug>')
   .description('★Experimental: Reset soul evolution state')
   .action(async (slug) => {
-    const skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+    const skillDir = resolvePersonaDir(slug);
+    if (!skillDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
     const personaPath = resolveSoulFile(skillDir, 'persona.json');
     const soulStatePath = resolveSoulFile(skillDir, 'state.json');
     if (!fs.existsSync(personaPath) || !fs.existsSync(soulStatePath)) {
@@ -421,7 +417,7 @@ program
     if (options.dir) {
       skillDir = path.resolve(options.dir);
     } else if (slug) {
-      skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
+      skillDir = resolvePersonaDir(slug);
     } else {
       // Try current directory
       skillDir = process.cwd();
@@ -458,9 +454,9 @@ program
   .description('Export persona pack (with soul state) as a zip archive')
   .option('-o, --output <path>', 'Output file path')
   .action(async (slug, options) => {
-    const skillDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
-    if (!fs.existsSync(skillDir)) {
-      printError(`Persona not found: persona-${slug}`);
+    const skillDir = resolvePersonaDir(slug);
+    if (!skillDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
       process.exit(1);
     }
     const AdmZip = require('adm-zip');
@@ -523,11 +519,16 @@ program
 // Delegates to scripts/state-sync.js inside the persona pack (no logic duplication).
 
 function resolvePersonaDir(slug) {
+  // 1. Registry-stored path (most reliable — survives path changes)
   const reg = loadRegistry();
   const entry = reg.personas && reg.personas[slug];
   if (entry && entry.path && fs.existsSync(entry.path)) return entry.path;
+  // 2. New neutral path ~/.openpersona/personas/
   const defaultDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
   if (fs.existsSync(defaultDir)) return defaultDir;
+  // 3. Legacy OpenClaw path ~/.openclaw/skills/ (backward compat)
+  const legacyDir = path.join(OPENCLAW_HOME, 'skills', `persona-${slug}`);
+  if (fs.existsSync(legacyDir)) return legacyDir;
   return null;
 }
 
