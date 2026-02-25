@@ -12,3 +12,4 @@ coverage/
 *.tgz
 .npm/
 .cache/
+ROADMAP.md

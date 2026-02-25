@@ -51,13 +51,14 @@ persona-<slug>/
 ├── agent-card.json         ← A2A Agent Card (protocol v0.3.0)
 ├── acn-config.json         ← ACN registration config (runtime fills owner/endpoint)
 ├── manifest.json           ← Four-layer manifest + ACN refs
-├── scripts/                ← Implementation scripts
+├── scripts/
+│   └── state-sync.js       ← Runtime state bridge (read / write / signal)
 └── assets/                 ← Static assets
 ```
 
 - **`manifest.json`** — Four-layer manifest declaring what the persona uses:
   - `layers.soul` — Path to persona.json (`./soul/persona.json`)
-  - `layers.body` — Substrate of existence: `runtime` (REQUIRED — platform/channels/credentials/resources), `physical` (optional — robots/IoT), `appearance` (optional — avatar/3D model)
+  - `layers.body` — Substrate of existence: `runtime` (REQUIRED — platform/channels/credentials/resources), `physical` (optional — robots/IoT), `appearance` (optional — avatar/3D model), `interface` (optional — runtime contract / nervous system; declares signal policy and command handling rules; schema field `body.interface` in `persona.json`; auto-implemented by `scripts/state-sync.js` for all personas)
   - `layers.faculties` — Array of faculty objects: `[{ "name": "voice", "provider": "elevenlabs", ... }]`
   - `layers.skills` — Array of skill objects: local definitions (resolved from `layers/skills/`), inline declarations, or external via `install` field
 
@@ -142,6 +143,29 @@ If the user needs a capability that doesn't exist in any ecosystem:
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 
 All install/uninstall/switch operations automatically maintain a local registry at `~/.openclaw/persona-registry.json`, tracking installed personas, active status, and timestamps. The `export` and `import` commands enable cross-device persona transfer — export a zip, move it to another machine, and import to restore the full persona including soul state.
+
+## Runner Integration Protocol
+
+This section describes the Runner Integration Protocol — the concrete implementation of the **Lifecycle Protocol** (`body.interface` runtime contract) via the `openpersona state` CLI. Any agent runner integrates with installed personas via three CLI commands. The runner calls these at conversation boundaries — no knowledge of file paths or persona internals needed:
+
+```bash
+# Before conversation starts — load state into agent context
+openpersona state read <slug>
+
+# After conversation ends — persist agent-generated patch
+openpersona state write <slug> '<json-patch>'
+
+# On-demand — emit capability or resource signal to host
+openpersona state signal <slug> <type> '[payload-json]'
+```
+
+**State read output** (JSON): `slug`, `mood` (full object), `relationship`, `evolvedTraits`, `speakingStyleDrift`, `interests`, `recentEvents` (last 5), `lastUpdatedAt`. Returns `{ exists: false }` for personas without evolution enabled.
+
+**State write patch**: JSON object; nested fields (`mood`, `relationship`, `speakingStyleDrift`, `interests`) are deep-merged — send only changed sub-fields. Immutable fields (`$schema`, `version`, `personaSlug`, `createdAt`) are protected. `eventLog` entries are appended (capped at 50); each entry: `type`, `trigger`, `delta`, `source`.
+
+**Signal types**: `capability_gap` | `tool_missing` | `scheduling` | `file_io` | `resource_limit` | `agent_communication`
+
+These commands resolve the persona directory automatically (registry lookup → fallback to `~/.openclaw/skills/persona-<slug>/`) and delegate to `scripts/state-sync.js` inside the persona pack. Works from any directory.
 
 ## Publishing to ClawHub
 

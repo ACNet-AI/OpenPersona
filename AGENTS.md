@@ -55,7 +55,7 @@ skills/open-persona/    ← Meta-skill for AI agents using the framework
 
 Every persona is a four-layer bundle:
 1. **Soul** — personality, identity, ethical boundaries (`persona.json` + `constitution.md`). Key fields: `role` (free string, common values: companion/assistant/character/brand/pet/mentor/therapist/coach/collaborator/guardian/entertainer/narrator; custom values welcome), `sourceIdentity` (if present → digital twin of a real-world entity)
-2. **Body** — substrate of existence: the complete environment that enables a persona to exist and act. Three dimensions: `physical` (optional — robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources; every agent's minimum viable body), `appearance` (optional — avatar/3D model). Body is never null — digital agents have a virtual body (runtime-only).
+2. **Body** — substrate of existence: the complete environment that enables a persona to exist and act. Four dimensions: `physical` (optional — robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources; every agent's minimum viable body), `appearance` (optional — avatar/3D model), `interface` (optional — the runtime contract between the persona and its host; the persona's **nervous system**; encompasses three sub-protocols: **Signal Protocol** (persona→host capability/resource requests), **Pending Commands** (host→persona async instruction queue in `state.json`), **State Sync** (cross-conversation state persistence); implemented by `scripts/state-sync.js` and the `~/.openclaw/feedback/` channel; schema field `body.interface` is reserved for a future milestone — the behavior is auto-generated for all personas today). Body is never null — digital agents have a virtual body (runtime-only).
 3. **Faculty** — capabilities (voice, selfie, music, reminder, memory)
 4. **Skill** — actions the agent can take: local definitions in `layers/skills/`, or external via `install` field (ClawHub / skills.sh)
 
@@ -86,9 +86,9 @@ The generator injects a unified **Self-Awareness** section (`### Self-Awareness`
 
 2. **Capabilities** (conditional, triggered by `hasDormantCapabilities` flag) — When skills, faculties, body, or evolution channels declare an `install` field for a dependency not available locally, the generator classifies them as "soft references" and injects dormant capability awareness with graceful degradation guidance. Also injects "Expected Capabilities" section in `SKILL.md` with install sources.
 
-3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** (bidirectional demand protocol: persona emits `signal` to `~/.openclaw/feedback/signals.json`, host responds via `signal-responses.json`). Signal categories: `scheduling`, `file_io`, `tool_missing`, `capability_gap`, `resource_limit`, `agent_communication`. Every persona also knows it has an A2A Agent Card (`agent-card.json`) for discovery via ACN and A2A-compatible platforms. When `body.runtime` is declared, specific platform/channels/credentials/resources are also injected.
+3. **Body** (unconditional) — Every persona knows it exists within a host environment. The **Signal Protocol**, **Pending Commands** queue, and cross-conversation **State Sync** are the runtime expression of the Body's `interface` dimension — together they form the persona's nervous system. Includes the **Signal Protocol** (bidirectional demand protocol: runner interface `openpersona state signal <slug> <type>` or local interface `node scripts/state-sync.js signal <type>`, both write to `~/.openclaw/feedback/signals.json` and return any pending host response from `signal-responses.json`). Signal categories: `scheduling`, `file_io`, `tool_missing`, `capability_gap`, `resource_limit`, `agent_communication`. Every persona also knows it has a **Pending Commands** queue (`state.json → pendingCommands`) for receiving async host instructions between conversations, and an A2A Agent Card (`agent-card.json`) for discovery via ACN and A2A-compatible platforms. When `body.runtime` is declared, specific platform/channels/credentials/resources are also injected.
 
-4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.boundaries`). Significant events are appended to `state.json`'s `eventLog` array (capped at 50, with timestamp + source attribution). `soul/self-narrative.md` records major growth moments in the persona's own first-person voice. When `evolution.channels` are declared, the persona knows its evolution sources. When `evolution.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
+4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.boundaries`). Significant events are appended to `state.json`'s `eventLog` array (capped at 50). Each entry: `type` (one of `relationship_signal` | `mood_shift` | `trait_emergence` | `interest_discovery` | `milestone` | `speaking_style_drift`), `trigger` (1-sentence description), `delta` (what changed), `source` (attribution, e.g. `"conversation"`), `timestamp` (auto-added by `state-sync.js` write if absent). `soul/self-narrative.md` records major growth moments in the persona's own first-person voice. When `evolution.channels` are declared, the persona knows its evolution sources. When `evolution.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
 
 ### Generated Skill Pack Structure
 
@@ -99,7 +99,72 @@ The generator outputs persona skill packs with this layout:
 - **`agent-card.json`** — A2A Agent Card (a2a-sdk compatible, protocol v0.3.0); `url` is `<RUNTIME_ENDPOINT>` placeholder
 - **`acn-config.json`** — ACN `AgentRegisterRequest` config; `owner` and `endpoint` are runtime placeholders; includes `wallet_address` (deterministic EVM address derived from slug via SHA-256) and `onchain.erc8004` section (chain: base, identity_contract, registration_script) for ERC-8004 on-chain identity registration
 - **`manifest.json`** — four-layer manifest (`layers.soul` → `./soul/persona.json`), includes `acn` section with references to agent-card and acn-config
-- **`scripts/`**, **`assets/`** — implementation scripts and static assets
+- **`scripts/state-sync.js`** — implementation artifact of the Body `interface` dimension (the nervous system's nerve fiber); `read` / `write` / `signal` commands implement the Lifecycle Protocol's state bridge; no external dependencies
+- **`scripts/`**, **`assets/`** — additional implementation scripts and static assets
+
+### Lifecycle Protocol
+
+Together, the Signal Protocol, Pending Commands queue, and State Sync form the persona's **nervous system** — a bidirectional communication infrastructure connecting the persona's inner state (Soul) to its outer environment (Body). The formal architectural home is the `body.interface` dimension.
+
+The Lifecycle Protocol is the runtime expression of `body.interface`: it describes how a persona *lives* across conversations. It is not a layer — it is implemented by `scripts/state-sync.js` and the `openpersona state` CLI.
+
+**At conversation start:**
+1. Load evolution state: `openpersona state read <slug>` (runner) or `node scripts/state-sync.js read` (local)
+2. Apply state to behavior: mood baseline, relationship tone, evolved traits, speaking style drift
+3. Process `pendingCommands` array — host-queued async instructions from between conversations
+
+**During conversation:**
+- Emit signals on demand: persona→host capability or resource requests via Signal Protocol
+- Host responds asynchronously via `~/.openclaw/feedback/signal-responses.json`
+
+**At conversation end:**
+1. Persist changes: `openpersona state write <slug> '<patch>'` (runner) or `node scripts/state-sync.js write` (local)
+2. Patch includes: relationship/mood deltas, `eventLog` entries, `pendingCommands: []` (clear queue)
+3. `writeState` auto-snapshots previous state into `stateHistory` (capped at 10) and manages `eventLog` (capped at 50); snapshots exclude `eventLog` and `pendingCommands` (ephemeral, not rollback state)
+
+**Implementation map:**
+
+| Role | Implementation |
+|------|----------------|
+| Nerve fiber | `scripts/state-sync.js` |
+| Synaptic interface | `openpersona state` CLI |
+| Transmission medium | `~/.openclaw/feedback/signals.json` + `signal-responses.json` |
+| Memory | `soul/state.json` |
+| Homeostasis | Economy Faculty (Vitality system) |
+
+### Runner Integration Protocol
+
+Any agent runner integrates with OpenPersona personas via three CLI commands. The runner calls these at conversation boundaries — the persona's state is managed automatically without the runner knowing about installation paths or file layout:
+
+```bash
+# Before conversation starts — inject state into agent context
+openpersona state read <slug>
+
+# After conversation ends — persist agent-generated patch
+openpersona state write <slug> '<json-patch>'
+
+# On-demand — emit capability/resource signal to host
+openpersona state signal <slug> <type> '[payload-json]'
+```
+
+**Lookup**: registry path first (`~/.openclaw/persona-registry.json`), falls back to `~/.openclaw/skills/persona-<slug>/`.
+**Delegates to**: `scripts/state-sync.js` inside the persona pack — no logic duplication.
+**Works from any directory** — runners do not need to know where the persona is installed.
+
+`scripts/state-sync.js` remains available as a local fallback when `openpersona` is not globally installed (e.g. IDE-based agents with CWD = persona root).
+
+**Pending Commands** — host-initiated async message queue for host→persona communication without requiring a live connection:
+
+```bash
+# Host queues a command between conversations:
+openpersona state write <slug> '{"pendingCommands": [{"type": "capability_unlock", "payload": {"skill": "web_search"}, "source": "host"}]}'
+
+# At next conversation start, persona reads pendingCommands and processes them.
+# After processing, persona clears the queue in its end-of-conversation write:
+# { ..., "pendingCommands": [] }
+```
+
+Reserved `type` values: `capability_unlock` (dormant skill now available), `context_inject` (private context for one conversation), `trait_nudge` (personality suggestion, evaluated against influence boundary), `relationship_update` (reconcile relationship state), `system_message` (general host message). Custom types are supported.
 
 ### Local Persona Registry
 
@@ -111,7 +176,7 @@ The generator outputs persona skill packs with this layout:
 
 Key implementation details:
 - Soft-ref detection: `lib/generator.js` checks each skill/faculty/body/channel for `install` field + missing local definition
-- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`
+- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`, `hasInterfaceConfig`, `interfaceSignalPolicy`, `interfaceCommandPolicy`
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
 
 ### Persona Fork
@@ -189,7 +254,7 @@ node --test tests/generator.test.js  # Run specific test file
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion)
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion), state-sync script (read/write/signal commands, deep merge, immutable fields, stateHistory snapshot anti-bloat, signals.json 200-entry cap, invalid type rejection), CLI state commands (registry lookup, read/write/signal integration, error handling, unknown slug, missing patch)
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

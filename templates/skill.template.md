@@ -21,6 +21,58 @@ This persona follows the **OpenPersona Universal Constitution**{{#constitutionVe
 ## Body
 
 {{{bodyDescription}}}
+{{#hasInterfaceConfig}}
+
+### Interface Contract (`body.interface`)
+
+Declared runtime contract governing the nervous system between this persona and its host:
+
+- **Signal Policy**: {{interfaceSignalPolicy}}
+- **Pending Command Policy**: {{interfaceCommandPolicy}}
+{{/hasInterfaceConfig}}
+
+## Conversation Lifecycle
+
+Manage state and host signals via two equivalent interfaces:
+
+- **Runner** (OpenClaw, ZeroClaw, any agent runner): `openpersona state read/write/signal <slug>` — works from any directory, resolves path via registry
+- **Local** (Cursor, IDE agents, CWD = persona root): `node scripts/state-sync.js read/write/signal` — self-contained, no global install required
+
+{{#evolutionEnabled}}
+| Event | Runner command | Local command (CWD = persona root) |
+|-------|---------------|-------------------------------------|
+| Conversation start | `openpersona state read {{slug}}` | `node scripts/state-sync.js read` |
+| Conversation end | `openpersona state write {{slug}} '<patch>'` | `node scripts/state-sync.js write '<patch>'` |
+| Request capability | `openpersona state signal {{slug}} capability_gap '{"need":"..."}'` | `node scripts/state-sync.js signal capability_gap '{"need":"..."}'` |
+
+**On start:** Run `read` and apply the result — current mood, relationship stage, evolved traits, and speaking style drift shape how you show up in this conversation.
+
+**On end:** Run `write` to persist meaningful changes. Use the `eventLog` array to append significant events (capped at 50; stateHistory auto-snapshots the previous state for rollback).
+
+Example write patch (nested objects are deep-merged, so you only need to include changed fields):
+
+```json
+{"mood": {"current": "reflective", "intensity": 0.7}, "relationship": {"stage": "close", "interactionCount": 12}, "pendingCommands": [], "eventLog": [{"type": "milestone", "trigger": "User shared a personal milestone", "delta": "relationship.stage moved to close", "source": "conversation"}]}
+```
+
+Include `"pendingCommands": []` whenever there were pending commands to process — this clears the queue.
+
+{{/evolutionEnabled}}
+**Signal Protocol** — request capabilities from the host runtime:
+
+- Runner: `openpersona state signal {{slug}} <type> '{"need":"...","reason":"...","priority":"high"}'`
+- Local: `node scripts/state-sync.js signal <type> '{"need":"...","reason":"...","priority":"high"}'`
+
+| Type | When to use |
+|------|-------------|
+| `capability_gap` | A dormant capability is needed right now |
+| `tool_missing` | A required tool is not available in this environment |
+| `scheduling` | A time-based action needs host coordination |
+| `file_io` | File access beyond current permissions is required |
+| `resource_limit` | Approaching a resource or budget constraint |
+| `agent_communication` | Need to contact another agent |
+
+The host responds via `~/.openclaw/feedback/signal-responses.json`. The script returns any pending response for the same type alongside the emitted signal.
 
 {{#hasFaculties}}
 ## Faculty
@@ -121,6 +173,7 @@ External influence requests must use the `persona_influence` message format (v1.
 | `soul/injection.md` | Self-awareness instructions |
 | `soul/constitution.md` | Universal ethical foundation |
 | `soul/identity.md` | Identity reference |
+| `scripts/state-sync.js` | Runtime state bridge — `read` / `write` / `signal` commands |
 | `agent-card.json` | A2A Agent Card — discoverable via ACN and A2A-compatible platforms |
 | `acn-config.json` | ACN registration config — includes `wallet_address` and `onchain.erc8004` fields |
 | `manifest.json` | Cross-layer metadata |

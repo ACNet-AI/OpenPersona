@@ -129,7 +129,7 @@
     },
     "body": {
       "type": "object",
-      "description": "Body layer — substrate of existence. Three dimensions: runtime (REQUIRED), physical (optional), appearance (optional).",
+      "description": "Body layer — substrate of existence. Four dimensions: runtime (REQUIRED), physical (optional), appearance (optional), interface (optional — runtime contract / nervous system).",
       "properties": {
         "runtime": {
           "type": "object",
@@ -173,6 +173,35 @@
             "avatar": { "type": "string", "description": "Avatar URL or path" },
             "model3d": { "type": "string", "description": "3D model reference" },
             "voiceId": { "type": "string", "description": "TTS voice identifier" }
+          }
+        },
+        "interface": {
+          "type": "object",
+          "description": "Optional — runtime contract (nervous system) between persona and host. Declares signal policy and command handling rules.",
+          "additionalProperties": false,
+          "properties": {
+            "signals": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Allowed signal categories; if omitted all types are permitted. Valid values: scheduling, file_io, tool_missing, capability_gap, resource_limit, agent_communication"
+                }
+              }
+            },
+            "pendingCommands": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Allowed command types from host; if omitted all types are permitted"
+                }
+              }
+            }
           }
         }
       }

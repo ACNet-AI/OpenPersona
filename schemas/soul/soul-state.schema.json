@@ -2,9 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "openpersona/soul/soul-state",
   "title": "Soul State",
-  "description": "Soul layer - Dynamic persona evolution state ★Experimental",
+  "description": "Soul layer - Dynamic persona evolution state. Tracks relationship, mood, traits, interests, style drift, event log, command queue, and state history.",
   "type": "object",
   "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string" },
     "personaSlug": { "type": "string" },
     "createdAt": { "type": "string", "format": "date-time" },
     "lastUpdatedAt": { "type": "string", "format": "date-time" },
@@ -12,7 +14,10 @@
       "type": "object",
       "properties": {
         "stage": { "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"] },
-        "interactionCount": { "type": "integer" }
+        "stageHistory": { "type": "array", "items": { "type": "string" } },
+        "interactionCount": { "type": "integer" },
+        "firstInteraction": { "type": ["string", "null"], "format": "date-time" },
+        "lastInteraction": { "type": ["string", "null"], "format": "date-time" }
       }
     },
     "mood": {
@@ -24,7 +29,55 @@
       }
     },
     "evolvedTraits": { "type": "array", "items": { "type": "string" } },
+    "speakingStyleDrift": {
+      "type": "object",
+      "description": "Cumulative drift from baseline speaking style.",
+      "properties": {
+        "formality":       { "type": "number", "description": "Signed delta from baseline (negative = more casual, positive = more formal)" },
+        "emoji_frequency": { "type": "number", "description": "Signed delta from baseline emoji usage" },
+        "verbosity":       { "type": "number", "description": "Signed delta from baseline response length" }
+      }
+    },
     "interests": { "type": "object" },
-    "milestones": { "type": "array" }
+    "milestones": { "type": "array" },
+    "pendingCommands": {
+      "type": "array",
+      "description": "Host-to-persona async command queue. Processed at conversation start; cleared in end-of-conversation write patch.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type":     { "type": "string" },
+          "payload":  { "type": "object" },
+          "source":   { "type": "string" },
+          "queuedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "stateHistory": {
+      "type": "array",
+      "description": "Snapshots of previous state before each write (capped at 10). Excludes eventLog, pendingCommands, and stateHistory itself.",
+      "maxItems": 10
+    },
+    "eventLog": {
+      "type": "array",
+      "description": "Evolution event log (capped at 50). Each entry records a significant persona growth event.",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["relationship_signal", "mood_shift", "trait_emergence", "interest_discovery", "milestone", "speaking_style_drift"]
+          },
+          "trigger":   { "type": "string" },
+          "delta":     { "type": "string" },
+          "source":    { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
   }
 }

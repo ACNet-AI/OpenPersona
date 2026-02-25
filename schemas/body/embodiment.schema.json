@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "openpersona/body/embodiment",
   "title": "Body Layer",
-  "description": "Three-dimensional Body definition: physical substrate, runtime environment, and appearance",
+  "description": "Four-dimensional Body definition: physical substrate, runtime environment, appearance, and interface (runtime contract / nervous system)",
   "type": "object",
   "properties": {
     "physical": {
@@ -70,6 +70,35 @@
         "avatar": { "type": "string", "description": "URL or path to avatar image" },
         "model3d": { "type": ["string", "null"], "description": "URL or path to 3D model (for XR/metaverse)" },
         "style": { "type": "string", "description": "Visual style description (e.g., anime, photorealistic, pixel-art)" }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "description": "Runtime contract (nervous system) between persona and host. Declares signal policy and command handling rules.",
+      "additionalProperties": false,
+      "properties": {
+        "signals": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "allowedTypes": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Allowed signal categories; if omitted all types are permitted. Valid values: scheduling, file_io, tool_missing, capability_gap, resource_limit, agent_communication"
+            }
+          }
+        },
+        "pendingCommands": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "allowedTypes": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Allowed command types from host; if omitted all types are permitted"
+            }
+          }
+        }
       }
     },
     "install": {

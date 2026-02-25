@@ -827,7 +827,7 @@ describe('generated soul-injection quality', () => {
     assert.ok(soulMd.includes('Signal Protocol'), 'Must always have Signal Protocol');
     assert.ok(soulMd.includes('signals.json'), 'Must reference signals file');
     assert.ok(soulMd.includes('signal-responses.json'), 'Must reference responses file');
-    assert.ok(soulMd.includes('"type": "signal"'), 'Must describe signal format');
+    assert.ok(soulMd.includes('state-sync.js'), 'Must reference state-sync.js for signal emission');
     assert.ok(!soulMd.includes('Your Current Body'), 'No current body when no runtime');
 
     await fs.remove(TMP);
@@ -3422,5 +3422,522 @@ describe('calcVitality unit tests', () => {
     assert.ok(state.vitality.computedAt, 'vitality.computedAt should be set');
 
     fs.removeSync(tmp);
+  });
+});
+
+describe('state-sync script generation', () => {
+  const TMP_SS = path.join(require('os').tmpdir(), 'openpersona-statesync-test-' + Date.now());
+
+  it('generates scripts/state-sync.js for all personas', async () => {
+    const persona = {
+      personaName: 'SyncTest',
+      slug: 'sync-test',
+      bio: 'state sync tester',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    assert.ok(fs.existsSync(syncScript), 'scripts/state-sync.js must be generated');
+
+    const content = fs.readFileSync(syncScript, 'utf-8');
+    assert.ok(content.includes('readState'), 'script must contain readState function');
+    assert.ok(content.includes('writeState'), 'script must contain writeState function');
+    assert.ok(content.includes('emitSignal'), 'script must contain emitSignal function');
+    assert.ok(content.includes('capability_gap'), 'script must list valid signal types');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js read returns exists:false when no state.json', async () => {
+    const persona = {
+      personaName: 'NoState',
+      slug: 'no-state',
+      bio: 'persona without evolution',
+      personality: 'calm',
+      speakingStyle: 'Simple',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const out = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.exists, false, 'read on persona without evolution should return exists:false');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js read returns evolution state for evolution-enabled persona', async () => {
+    const persona = {
+      personaName: 'EvoSync',
+      slug: 'evo-sync',
+      bio: 'evolution sync tester',
+      personality: 'curious',
+      speakingStyle: 'Warm',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const out = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.exists, true, 'read on evolution persona should return exists:true');
+    assert.strictEqual(result.slug, 'evo-sync', 'state slug should match persona slug');
+    assert.ok(result.mood !== undefined, 'state should include mood');
+    assert.ok('relationship' in result, 'state should include relationship');
+    assert.ok('evolvedTraits' in result, 'read output must use evolvedTraits (not traits) to match write patch field names');
+    assert.ok(!('traits' in result), 'read output must not expose deprecated traits key');
+    assert.ok(Array.isArray(result.pendingCommands), 'read output must include pendingCommands array');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js pendingCommands: host enqueues, agent reads, agent clears', async () => {
+    const persona = {
+      personaName: 'PendingCmdTest',
+      slug: 'pending-cmd-test',
+      bio: 'pending commands tester',
+      personality: 'responsive',
+      speakingStyle: 'Direct',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // Step 1: host enqueues a capability_unlock command
+    const cmd = { type: 'capability_unlock', payload: { skill: 'web_search' }, source: 'host' };
+    const enqueuePatch = JSON.stringify({ pendingCommands: [cmd] });
+    execSync(`node "${syncScript}" write '${enqueuePatch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    // Step 2: agent reads state — pendingCommands must contain the queued command
+    const readOut = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const readResult = JSON.parse(readOut);
+    assert.ok(Array.isArray(readResult.pendingCommands), 'pendingCommands must be an array in read output');
+    assert.strictEqual(readResult.pendingCommands.length, 1, 'one pending command must be present');
+    assert.strictEqual(readResult.pendingCommands[0].type, 'capability_unlock', 'command type must match');
+    assert.deepStrictEqual(readResult.pendingCommands[0].payload, { skill: 'web_search' }, 'payload must be preserved');
+    assert.strictEqual(readResult.pendingCommands[0].source, 'host', 'source must be preserved');
+
+    // Step 3: agent clears pendingCommands after processing
+    const clearPatch = JSON.stringify({ pendingCommands: [] });
+    execSync(`node "${syncScript}" write '${clearPatch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    // Step 4: next read must show empty queue
+    const afterReadOut = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const afterResult = JSON.parse(afterReadOut);
+    assert.strictEqual(afterResult.pendingCommands.length, 0, 'pendingCommands must be empty after agent clears');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js pendingCommands: multiple commands queue correctly', async () => {
+    const persona = {
+      personaName: 'MultiCmdTest',
+      slug: 'multi-cmd-test',
+      bio: 'multi command tester',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const cmds = [
+      { type: 'capability_unlock', payload: { skill: 'web_search' }, source: 'host' },
+      { type: 'context_inject', payload: { message: 'User is in a hurry today' }, source: 'runner' },
+      { type: 'system_message', payload: { message: 'Scheduled maintenance tonight' }, source: 'host' },
+    ];
+    execSync(`node "${syncScript}" write '${JSON.stringify({ pendingCommands: cmds })}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const readOut = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const result = JSON.parse(readOut);
+    assert.strictEqual(result.pendingCommands.length, 3, 'all three commands must be present');
+    assert.strictEqual(result.pendingCommands[1].type, 'context_inject', 'second command type must match');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js write persists changes and rolls back via stateHistory', async () => {
+    const persona = {
+      personaName: 'WriteTest',
+      slug: 'write-test',
+      bio: 'write sync tester',
+      personality: 'stable',
+      speakingStyle: 'Direct',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({ mood: { current: 'joyful' }, eventLog: [{ source: 'test', description: 'test event' }] });
+    const writeOut = execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+    const writeResult = JSON.parse(writeOut);
+    assert.strictEqual(writeResult.success, true, 'write should succeed');
+
+    const readOut = execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir });
+    const readResult = JSON.parse(readOut);
+    // mood must be an object (deep-merged), not a string
+    assert.ok(readResult.mood && typeof readResult.mood === 'object', 'mood must remain an object after write (deep-merge)');
+    assert.strictEqual(readResult.mood.current, 'joyful', 'mood.current should be updated');
+    // deep-merge must preserve other mood fields
+    assert.ok('intensity' in readResult.mood, 'mood.intensity must be preserved by deep-merge');
+    assert.ok('baseline' in readResult.mood, 'mood.baseline must be preserved by deep-merge');
+    assert.ok(readResult.recentEvents.some((e) => e.description === 'test event'), 'event should appear in recentEvents');
+
+    // Verify stateHistory snapshot was created
+    const statePath = path.join(skillDir, 'soul', 'state.json');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.ok(Array.isArray(state.stateHistory) && state.stateHistory.length >= 1, 'stateHistory should have a snapshot');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js write rejects non-object patch', async () => {
+    const persona = {
+      personaName: 'ValidationTest',
+      slug: 'validation-test',
+      bio: 'validation tester',
+      personality: 'precise',
+      speakingStyle: 'Direct',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // null patch should fail with exit code 1
+    assert.throws(
+      () => execSync(`node "${syncScript}" write 'null'`, { encoding: 'utf-8', cwd: skillDir }),
+      (err) => err.stderr.includes('must be a JSON object'),
+      'null patch must be rejected'
+    );
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js write protects immutable fields', async () => {
+    const persona = {
+      personaName: 'ImmutableTest',
+      slug: 'immutable-test',
+      bio: 'immutable fields tester',
+      personality: 'stable',
+      speakingStyle: 'Direct',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({ personaSlug: 'hacked', version: '99.0', mood: { current: 'happy' } });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const statePath = path.join(skillDir, 'soul', 'state.json');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.strictEqual(state.personaSlug, 'immutable-test', 'personaSlug must not be overwritten');
+    assert.strictEqual(state.version, '1.0.0', 'version must not be overwritten');
+    assert.strictEqual(state.mood.current, 'happy', 'non-immutable fields should still be patched');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js write snapshot does not include eventLog', async () => {
+    const persona = {
+      personaName: 'SnapshotTest',
+      slug: 'snapshot-test',
+      bio: 'snapshot tester',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // Write with an eventLog entry
+    const patch = JSON.stringify({ mood: { current: 'curious' }, eventLog: [{ source: 'test', description: 'event one' }] });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const statePath = path.join(skillDir, 'soul', 'state.json');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.ok(Array.isArray(state.stateHistory) && state.stateHistory.length >= 1, 'stateHistory should have a snapshot');
+    // Snapshot must not include eventLog (anti-bloat)
+    assert.ok(!('eventLog' in state.stateHistory[0]), 'snapshot must not include eventLog');
+    // Snapshot must not include stateHistory (no recursion)
+    assert.ok(!('stateHistory' in state.stateHistory[0]), 'snapshot must not include stateHistory');
+    // Snapshot must not include pendingCommands (ephemeral, not rollback state)
+    assert.ok(!('pendingCommands' in state.stateHistory[0]), 'snapshot must not include pendingCommands');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('SKILL.md includes Conversation Lifecycle section', async () => {
+    const persona = {
+      personaName: 'LifecycleTest',
+      slug: 'lifecycle-test',
+      bio: 'lifecycle tester',
+      personality: 'curious',
+      speakingStyle: 'Casual',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('## Conversation Lifecycle'), 'SKILL.md must include Conversation Lifecycle section');
+    assert.ok(skillMd.includes('state-sync.js'), 'Conversation Lifecycle must reference state-sync.js');
+    assert.ok(skillMd.includes('Signal Protocol'), 'Conversation Lifecycle must include Signal Protocol guidance');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('SKILL.md Lifecycle section includes read/write commands when evolution enabled', async () => {
+    const persona = {
+      personaName: 'EvoLifecycle',
+      slug: 'evo-lifecycle',
+      bio: 'evolution lifecycle tester',
+      personality: 'curious',
+      speakingStyle: 'Warm',
+      evolution: { enabled: true },
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('state-sync.js read'), 'evolution persona SKILL.md must include read command');
+    assert.ok(skillMd.includes('state-sync.js write'), 'evolution persona SKILL.md must include write command');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('SKILL.md Generated Files table includes state-sync.js', async () => {
+    const persona = {
+      personaName: 'FilesTableTest',
+      slug: 'files-table-test',
+      bio: 'generated files table tester',
+      personality: 'organized',
+      speakingStyle: 'Precise',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('scripts/state-sync.js'), 'Generated Files table must include scripts/state-sync.js');
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js signal emits to signals.json and caps at 200 entries', async () => {
+    const persona = {
+      personaName: 'SignalTest',
+      slug: 'signal-test',
+      bio: 'signal emitter tester',
+      personality: 'assertive',
+      speakingStyle: 'Direct',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const payload = JSON.stringify({ need: 'web_search', reason: 'user asked for news', priority: 'high' });
+
+    // Use OPENCLAW_HOME to isolate signals.json to temp dir (OPENCLAW_HOME is the explicit override)
+    const openclawHome = path.join(TMP_SS, 'signal-test-openclaw');
+    const signalEnv = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    // Emit a capability_gap signal
+    const out = execSync(`node "${syncScript}" signal capability_gap '${payload}'`, {
+      encoding: 'utf-8',
+      cwd: skillDir,
+      env: signalEnv,
+    });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.success, true, 'signal emit should succeed');
+    assert.strictEqual(result.signal.type, 'capability_gap', 'signal type must be capability_gap');
+    assert.strictEqual(result.signal.slug, 'signal-test', 'signal slug must match persona slug');
+    assert.deepStrictEqual(result.signal.payload, { need: 'web_search', reason: 'user asked for news', priority: 'high' }, 'payload must be preserved');
+    assert.strictEqual(result.response, null, 'response must be null when no host has responded');
+
+    // Verify signals.json was written to OPENCLAW_HOME
+    const signalsPath = path.join(openclawHome, 'feedback', 'signals.json');
+    assert.ok(fs.existsSync(signalsPath), 'signals.json must be created under OPENCLAW_HOME');
+    const signals = JSON.parse(fs.readFileSync(signalsPath, 'utf-8'));
+    assert.ok(Array.isArray(signals) && signals.length === 1, 'signals.json must contain the emitted signal');
+    assert.strictEqual(signals[0].type, 'capability_gap', 'stored signal type must match');
+
+    // Verify 200-entry cap: emit 205 more signals and confirm array stays at 200
+    for (let i = 0; i < 205; i++) {
+      execSync(`node "${syncScript}" signal tool_missing '{"tool":"t${i}"}'`, {
+        encoding: 'utf-8',
+        cwd: skillDir,
+        env: signalEnv,
+      });
+    }
+    const capped = JSON.parse(fs.readFileSync(signalsPath, 'utf-8'));
+    assert.ok(capped.length <= 200, `signals.json must be capped at 200 entries, got ${capped.length}`);
+
+    await fs.remove(TMP_SS);
+  });
+
+  it('state-sync.js signal rejects invalid type', async () => {
+    const persona = {
+      personaName: 'BadSignalTest',
+      slug: 'bad-signal-test',
+      bio: 'invalid signal tester',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+    };
+    await fs.ensureDir(TMP_SS);
+    const { skillDir } = await generate(persona, TMP_SS);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    assert.throws(
+      () => execSync(`node "${syncScript}" signal invalid_type '{}'`, { encoding: 'utf-8', cwd: skillDir }),
+      (err) => err.stderr.includes('Invalid signal type'),
+      'invalid signal type must be rejected with an error message'
+    );
+
+    await fs.remove(TMP_SS);
+  });
+});
+
+describe('body.interface schema and generation', () => {
+  const TMP_BI = path.join(require('os').tmpdir(), 'op-test-body-interface');
+
+  it('soul-state.schema.json contains pendingCommands and eventLog fields', () => {
+    const schema = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schemas', 'soul', 'soul-state.schema.json'), 'utf-8'));
+    assert.ok('pendingCommands' in schema.properties, 'soul-state.schema.json must declare pendingCommands property');
+    assert.ok('eventLog' in schema.properties, 'soul-state.schema.json must declare eventLog property');
+    assert.ok('speakingStyleDrift' in schema.properties, 'soul-state.schema.json must declare speakingStyleDrift property');
+    assert.ok('stateHistory' in schema.properties, 'soul-state.schema.json must declare stateHistory property');
+    assert.ok('version' in schema.properties, 'soul-state.schema.json must declare version property');
+    assert.strictEqual(schema.properties.pendingCommands.type, 'array', 'pendingCommands must be an array');
+    assert.strictEqual(schema.properties.eventLog.type, 'array', 'eventLog must be an array');
+    assert.strictEqual(schema.properties.eventLog.maxItems, 50, 'eventLog must have maxItems 50');
+  });
+
+  it('body.interface declared → hasInterfaceConfig true + Interface Contract block in SKILL.md', async () => {
+    const persona = {
+      personaName: 'InterfaceTest',
+      slug: 'interface-test',
+      bio: 'tests body.interface config rendering',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      body: {
+        runtime: { platform: 'openclaw', channels: ['chat'] },
+        interface: {
+          signals: { enabled: true, allowedTypes: ['capability_gap', 'tool_missing'] },
+          pendingCommands: { enabled: false },
+        },
+      },
+    };
+    await fs.ensureDir(TMP_BI);
+    const { skillDir } = await generate(persona, TMP_BI);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(skillMd.includes('Interface Contract'), 'SKILL.md must contain Interface Contract section when body.interface is declared');
+    assert.ok(skillMd.includes('capability_gap, tool_missing'), 'SKILL.md must include signal allowedTypes');
+    assert.ok(skillMd.includes('disabled'), 'SKILL.md must show disabled for pendingCommands.enabled=false');
+
+    await fs.remove(TMP_BI);
+  });
+
+  it('body.interface not declared → no Interface Contract block in SKILL.md', async () => {
+    const persona = {
+      personaName: 'NoInterfaceTest',
+      slug: 'no-interface-test',
+      bio: 'tests absence of body.interface config',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+    };
+    await fs.ensureDir(TMP_BI);
+    const { skillDir } = await generate(persona, TMP_BI);
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+
+    assert.ok(!skillMd.includes('Interface Contract'), 'SKILL.md must NOT contain Interface Contract section when body.interface is absent');
+
+    await fs.remove(TMP_BI);
+  });
+
+  it('state-sync.js signal blocked when body.interface.signals.enabled is false', async () => {
+    const persona = {
+      personaName: 'SignalBlockTest',
+      slug: 'signal-block-test',
+      bio: 'tests signal enforcement via interface policy',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      body: {
+        runtime: { platform: 'openclaw', channels: ['chat'] },
+        interface: { signals: { enabled: false } },
+      },
+    };
+    await fs.ensureDir(TMP_BI);
+    const { skillDir } = await generate(persona, TMP_BI);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    assert.throws(
+      () => execSync(`node "${syncScript}" signal capability_gap '{"need":"test"}'`, { encoding: 'utf-8', cwd: skillDir }),
+      (err) => err.stderr.includes('Signal blocked') && err.stderr.includes('enabled is false'),
+      'signal must be blocked when body.interface.signals.enabled is false'
+    );
+
+    await fs.remove(TMP_BI);
+  });
+
+  it('state-sync.js signal blocked when type not in body.interface.signals.allowedTypes', async () => {
+    const persona = {
+      personaName: 'AllowedTypesTest',
+      slug: 'allowed-types-test',
+      bio: 'tests allowedTypes enforcement',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+      body: {
+        runtime: { platform: 'openclaw', channels: ['chat'] },
+        interface: { signals: { enabled: true, allowedTypes: ['capability_gap'] } },
+      },
+    };
+    await fs.ensureDir(TMP_BI);
+    const { skillDir } = await generate(persona, TMP_BI);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // Blocked: tool_missing is not in allowedTypes
+    assert.throws(
+      () => execSync(`node "${syncScript}" signal tool_missing '{"tool":"email"}'`, { encoding: 'utf-8', cwd: skillDir }),
+      (err) => err.stderr.includes('Signal blocked') && err.stderr.includes('allowedTypes'),
+      'signal must be blocked when type is not in allowedTypes'
+    );
+
+    // Allowed: capability_gap is in allowedTypes — should succeed
+    const openclawHome = path.join(TMP_BI, 'allowed-types-openclaw');
+    const out = execSync(
+      `node "${syncScript}" signal capability_gap '{"need":"test"}'`,
+      { encoding: 'utf-8', cwd: skillDir, env: { ...process.env, OPENCLAW_HOME: openclawHome } }
+    );
+    const result = JSON.parse(out);
+    assert.strictEqual(result.success, true, 'permitted signal type must succeed');
+
+    await fs.remove(TMP_BI);
   });
 });
