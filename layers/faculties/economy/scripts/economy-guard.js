@@ -20,4 +20,4 @@ process.env.AGENTBOOKS_DATA_PATH = process.env.AGENTBOOKS_DATA_PATH
   || path.join(os.homedir(), '.openclaw', 'economy',
        `persona-${process.env.AGENTBOOKS_AGENT_ID}`);
 
-require('../../../../packages/agentbooks/cli/economy-guard');
+require('agentbooks/cli/economy-guard');
