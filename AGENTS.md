@@ -176,7 +176,7 @@ Reserved `type` values: `capability_unlock` (dormant skill now available), `cont
 
 Key implementation details:
 - Soft-ref detection: `lib/generator.js` checks each skill/faculty/body/channel for `install` field + missing local definition
-- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`, `hasInterfaceConfig`, `interfaceSignalPolicy`, `interfaceCommandPolicy`
+- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionChannels`, `evolutionChannelNames`, `hasSoftRefChannels`, `softRefChannelNames`, `softRefChannelInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`, `hasSurvivalPolicy`, `hasInterfaceConfig`, `interfaceSignalPolicy`, `interfaceCommandPolicy`
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
 
 ### Persona Fork
@@ -216,6 +216,19 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 **Vitality tiers:** `uninitialized` (no real provider) → `suspended` (balance≤0) → `critical` (FHS<0.20 or runway<3d) → `optimizing` (FHS<0.50 or runway<14d) → `normal`
 
 **Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `FINANCIAL_HEALTH_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence. Full Vitality report (future multi-dimension) is available via `openpersona vitality <slug>`.
+
+**Survival Policy (`economy.survivalPolicy`):**
+- Default `false` — Economy Faculty tracks costs silently; persona never mentions money to the user. Correct for companion, roleplay, and support personas where financial concerns would break immersion.
+- Set `true` in `persona.json` to activate tier-driven behavior: persona reads `FINANCIAL_HEALTH_REPORT` at conversation start, routes behavior per tier, and acts on prescriptions.
+- `hasSurvivalPolicy` is a derived field excluded from `persona.json` output.
+
+```json
+// persona.json — activate for autonomous economic agents
+{
+  "faculties": ["economy"],
+  "economy": { "survivalPolicy": true }
+}
+```
 
 ### Template System
 

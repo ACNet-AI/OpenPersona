@@ -3061,7 +3061,7 @@ describe('economy faculty', () => {
     await fs.remove(ECON_GEN_TMP);
   });
 
-  it('hasEconomyFaculty does not appear in generated persona.json', async () => {
+  it('hasEconomyFaculty and hasSurvivalPolicy do not appear in generated persona.json', async () => {
     const ECON_LEAK_TMP = path.join(os.tmpdir(), 'openpersona-econ-leak-' + Date.now());
     await fs.ensureDir(ECON_LEAK_TMP);
     const persona = {
@@ -3071,11 +3071,48 @@ describe('economy faculty', () => {
       personality: 'analytical',
       speakingStyle: 'Precise',
       faculties: [{ name: 'economy' }],
+      economy: { survivalPolicy: true },
     };
     const { skillDir } = await generate(persona, ECON_LEAK_TMP);
     const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'soul', 'persona.json'), 'utf-8'));
     assert.ok(!('hasEconomyFaculty' in personaOut), 'hasEconomyFaculty should not leak into persona.json');
+    assert.ok(!('hasSurvivalPolicy' in personaOut), 'hasSurvivalPolicy should not leak into persona.json');
     await fs.remove(ECON_LEAK_TMP);
+  });
+
+  it('survivalPolicy=true injects Survival Policy block; survivalPolicy=false (default) does not', async () => {
+    const SP_TMP = path.join(os.tmpdir(), 'openpersona-survival-' + Date.now());
+    await fs.ensureDir(SP_TMP);
+
+    // With survivalPolicy: true
+    const personaOn = {
+      personaName: 'EconAgent',
+      slug: 'econ-agent',
+      bio: 'economic autonomous agent',
+      personality: 'disciplined',
+      speakingStyle: 'Concise',
+      faculties: [{ name: 'economy' }],
+      economy: { survivalPolicy: true },
+    };
+    const { skillDir: dirOn } = await generate(personaOn, SP_TMP);
+    const injectionOn = fs.readFileSync(path.join(dirOn, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injectionOn.includes('Survival Policy'), 'survivalPolicy:true should inject Survival Policy block');
+    assert.ok(injectionOn.includes('suspended'), 'should include tier routing');
+
+    // With survivalPolicy: false (default — economy faculty present but silent)
+    const personaOff = {
+      personaName: 'EconPassive',
+      slug: 'econ-passive',
+      bio: 'companion with cost tracking',
+      personality: 'warm',
+      speakingStyle: 'Casual',
+      faculties: [{ name: 'economy' }],
+    };
+    const { skillDir: dirOff } = await generate(personaOff, SP_TMP);
+    const injectionOff = fs.readFileSync(path.join(dirOff, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(!injectionOff.includes('Survival Policy'), 'survivalPolicy:false should NOT inject Survival Policy block');
+
+    await fs.remove(SP_TMP);
   });
 
   it('evolveReport returns economicState and handles v2 schema', async () => {
