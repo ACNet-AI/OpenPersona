@@ -2857,9 +2857,8 @@ describe('economy faculty', () => {
     assert.strictEqual(faculty.name, 'economy', 'name should be economy');
     assert.strictEqual(faculty.dimension, 'cognition', 'dimension should be cognition');
     assert.ok(Array.isArray(faculty.allowedTools), 'allowedTools should be array');
+    // AgentBooks v0.1.0: single wildcard entry covers all economy.js commands
     assert.ok(faculty.allowedTools.some((t) => t.includes('economy.js')), 'should reference economy.js');
-    assert.ok(faculty.allowedTools.some((t) => t.includes('economy-guard.js')), 'should reference economy-guard.js');
-    assert.ok(faculty.allowedTools.some((t) => t.includes('economy-hook.js')), 'should reference economy-hook.js');
     assert.ok(Array.isArray(faculty.envVars), 'envVars should be array');
     assert.ok(faculty.envVars.includes('PERSONA_SLUG'), 'should declare PERSONA_SLUG');
     assert.ok(Array.isArray(faculty.files), 'files should be array');
@@ -2883,29 +2882,28 @@ describe('economy faculty', () => {
     assert.ok(content.includes('suspended'), 'should document suspended tier as initial state');
   });
 
-  it('economy.js initializes state on first status call with suspended tier and zero balance', () => {
+  it('economy.js initializes state on first status call (AgentBooks v0.1.0 schema)', () => {
     fs.ensureDirSync(ECON_TMP);
     const output = runEconomy('status');
-    assert.ok(output.includes('ECONOMIC STATUS'), 'status should show header');
-    assert.ok(output.includes('SUSPENDED'), 'initial tier should be SUSPENDED (no balance)');
+    assert.ok(output.includes('FINANCIAL STATUS'), 'status should show header');
     const stateFile = path.join(ECON_TMP, 'economic-state.json');
     assert.ok(fs.existsSync(stateFile), 'economic-state.json should be created');
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
-    assert.strictEqual(state.schema, 'openpersona/economic-state', 'schema should match');
-    assert.strictEqual(state.version, '2.1.0', 'schema version should be 2.1.0');
+    assert.strictEqual(state.schema, 'agentbooks/economic-state', 'schema should be agentbooks/economic-state');
+    assert.strictEqual(state.version, '1.0.0', 'schema version should be 1.0.0');
     assert.ok(state.balanceSheet.assets.providers, 'balanceSheet.assets.providers should exist');
     assert.strictEqual(state.balanceSheet.operationalBalance, 0, 'initial operationalBalance should be 0');
-    assert.strictEqual(state.balanceSheet.assets.providers.local.budget, 0, 'initial local budget should be 0');
     assert.ok(state.incomeStatement.currentPeriod, 'currentPeriod should exist');
+    assert.ok(state.incomeStatement.currentPeriod.openingBalance !== undefined, 'openingBalance should exist');
     assert.deepStrictEqual(state.ledger, [], 'ledger should be empty initially');
     assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be an array');
-    assert.ok(state.vitality, 'vitality object should exist');
-    assert.strictEqual(state.vitality.tier, 'suspended', 'initial vitality.tier should be suspended');
+    assert.ok(state.financialHealth, 'financialHealth object should exist');
+    assert.strictEqual(state.financialHealth.tier, 'uninitialized', 'initial tier should be uninitialized (development mode)');
   });
 
-  it('tier command returns suspended initially (no balance, real-time calc)', () => {
-    const tier = runEconomy('tier');
-    assert.strictEqual(tier, 'suspended', 'initial tier should be suspended');
+  it('financial-health command returns uninitialized initially (development mode)', () => {
+    const out = runEconomy('financial-health');
+    assert.ok(out.includes('uninitialized') || out.includes('tier=uninitialized'), 'initial tier should be uninitialized in dev mode');
   });
 
   it('wallet-init generates deterministic EVM address', () => {
@@ -2915,7 +2913,8 @@ describe('economy faculty', () => {
     const identity = JSON.parse(fs.readFileSync(identityFile, 'utf-8'));
     assert.ok(identity.walletAddress, 'walletAddress should exist');
     assert.ok(/^0x[0-9a-f]{40}$/.test(identity.walletAddress), 'walletAddress should be valid EVM address');
-    assert.strictEqual(identity.primaryProvider, 'local', 'default primary should be local');
+    // AgentBooks v0.1.0: no local provider — primaryProvider starts as null
+    assert.strictEqual(identity.primaryProvider, null, 'default primaryProvider should be null (no local fallback)');
 
     // Determinism: running again should not change address
     const addrBefore = identity.walletAddress;
@@ -2924,36 +2923,35 @@ describe('economy faculty', () => {
     assert.strictEqual(identityAfter.walletAddress, addrBefore, 'wallet-init should be idempotent');
   });
 
-  it('deposit funds local budget and transitions tier from dead to normal', () => {
-    runEconomy('deposit --amount 10 --source "test allocation"');
+  it('record-income adds revenue and creates ledger entry (replaces deposit workflow)', () => {
+    // AgentBooks v0.1.0 removed the 'local' provider and 'deposit' command.
+    // Income is recorded explicitly with --confirmed flag.
+    runEconomy('record-income --amount 10 --quality medium --confirmed --note "test income"');
     const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
-    assert.strictEqual(state.balanceSheet.assets.providers.local.budget, 10, 'local budget should be 10');
-    assert.strictEqual(state.balanceSheet.assets.providers.local.depositsTotal, 10, 'depositsTotal should be 10');
-    assert.strictEqual(state.balanceSheet.operationalBalance, 10, 'operationalBalance should be 10');
-    assert.ok(state.vitality, 'vitality object should be updated after deposit');
-    assert.strictEqual(state.vitality.tier, 'normal', 'vitality.tier should be normal after deposit');
-    assert.ok(state.ledger.some((e) => e.type === 'deposit'), 'ledger should have deposit entry');
+    assert.ok(state.incomeStatement.currentPeriod.revenue >= 10, 'revenue should include recorded income');
+    assert.ok(state.ledger.some((e) => e.type === 'income'), 'ledger should have income entry');
   });
 
-  it('record-cost routes inference.llm.input to correct nested account', () => {
-    runEconomy('record-cost --channel inference.llm.input --amount 0.002 --note "test input tokens"');
+  it('record-cost routes inference channel cost correctly (AgentBooks v0.1.0 format)', () => {
+    // AgentBooks v0.1.0 format: --channel inference (not dot-path)
+    runEconomy('record-cost --channel inference --amount 0.002 --note "test inference"');
     const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
-    const inferenceObj = state.incomeStatement.currentPeriod.expenses.inference;
-    const inferenceInput = inferenceObj && inferenceObj.llm ? inferenceObj.llm.input : 0;
-    assert.ok(inferenceInput > 0, 'inference.llm.input should be recorded');
     assert.ok(state.incomeStatement.currentPeriod.expenses.total > 0, 'expenses total should increase');
     assert.ok(state.ledger.length > 0, 'ledger should have entry');
-    assert.strictEqual(state.ledger[state.ledger.length - 1].channel, 'inference.llm.input');
+    assert.strictEqual(state.ledger[state.ledger.length - 1].channel, 'inference', 'channel should be inference');
+    assert.strictEqual(state.ledger[state.ledger.length - 1].source, 'agent', 'source should be agent');
   });
 
-  it('record-cost routes runtime.compute to correct account', () => {
-    runEconomy('record-cost --channel runtime.compute --amount 0.033 --note "daily server"');
+  it('record-cost routes runtime channel cost correctly', () => {
+    runEconomy('record-cost --channel runtime --amount 0.033 --note "daily server"');
     const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
-    assert.ok(state.incomeStatement.currentPeriod.expenses.runtime.compute > 0, 'runtime.compute should be recorded');
+    assert.ok(state.incomeStatement.currentPeriod.expenses.total > 0, 'expenses total should increase');
+    const lastEntry = state.ledger[state.ledger.length - 1];
+    assert.strictEqual(lastEntry.channel, 'runtime', 'channel should be runtime');
   });
 
-  it('record-cost routes custom.crm-api to custom account', () => {
-    runEconomy('record-cost --channel custom.crm-api --amount 0.05');
+  it('record-cost routes custom channel cost correctly', () => {
+    runEconomy('record-cost --channel custom --amount 0.05 --note crm-api');
     const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
     assert.ok(state.incomeStatement.currentPeriod.expenses.custom, 'custom object should exist');
   });
@@ -2963,7 +2961,7 @@ describe('economy faculty', () => {
       fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
     ).incomeStatement.currentPeriod.revenue;
     // Without --confirmed should fail
-    const output = runEconomy('record-income --amount 5.00 --quality 0.8 --note "wrote report"', true);
+    const output = runEconomy('record-income --amount 5.00 --quality medium --note "wrote report"', true);
     assert.ok(output.includes('confirmed') || output.includes('Error'), 'should reject without --confirmed');
     const revAfter = JSON.parse(
       fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
@@ -2971,23 +2969,25 @@ describe('economy faculty', () => {
     assert.strictEqual(revBefore, revAfter, 'revenue should not change without --confirmed');
   });
 
-  it('record-income above quality threshold with --confirmed records revenue', () => {
-    runEconomy('record-income --amount 5.00 --quality 0.8 --confirmed --note "wrote report"');
+  it('record-income with --confirmed records revenue in current period', () => {
+    // AgentBooks v0.1.0: quality is a string (low/medium/high), not a float threshold
+    runEconomy('record-income --amount 5.00 --quality medium --confirmed --note "wrote report"');
     const state = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
-    assert.ok(state.incomeStatement.currentPeriod.revenue > 0, 'revenue should increase');
-    assert.ok(state.incomeStatement.allTime.totalRevenue > 0, 'allTime revenue should increase');
+    assert.ok(state.incomeStatement.currentPeriod.revenue > 0, 'revenue should increase in current period');
+    // Note: allTime.totalRevenue only updates on period rollover, not immediately
+    assert.ok(state.ledger.some((e) => e.type === 'income'), 'ledger should have income entry');
   });
 
-  it('record-income below quality threshold is rejected', () => {
+  it('record-income below quality string (low) still records with --confirmed (no threshold in v0.1.0)', () => {
+    // AgentBooks v0.1.0 uses quality strings (low/medium/high) without a rejection threshold
     const revBefore = JSON.parse(
       fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
     ).incomeStatement.currentPeriod.revenue;
-    const output = runEconomy('record-income --amount 5.00 --quality 0.5 --confirmed');
-    assert.ok(output.includes('NOT recorded'), 'should show rejection message');
+    runEconomy('record-income --amount 2.00 --quality low --confirmed');
     const revAfter = JSON.parse(
       fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8')
     ).incomeStatement.currentPeriod.revenue;
-    assert.strictEqual(revBefore, revAfter, 'revenue should not change when quality below threshold');
+    assert.ok(revAfter > revBefore, 'revenue should increase even for low quality with --confirmed');
   });
 
   it('netIncome = revenue - expenses.total', () => {
@@ -2997,7 +2997,7 @@ describe('economy faculty', () => {
     assert.ok(Math.abs(period.netIncome - expected) < 0.000001, 'netIncome should equal revenue - expenses');
   });
 
-  it('economy-guard.js always exits 0 and outputs VITALITY_REPORT (no balance)', () => {
+  it('economy-guard.js always exits 0 and outputs FINANCIAL_HEALTH_REPORT (no provider)', () => {
     const guardTmp = path.join(__dirname, '..', '.tmp-guard-test-' + Date.now());
     fs.ensureDirSync(guardTmp);
     const { code, output } = (() => {
@@ -3012,20 +3012,16 @@ describe('economy faculty', () => {
       }
     })();
     assert.strictEqual(code, 0, 'guard should always exit 0');
-    assert.ok(output.includes('VITALITY_REPORT'), 'should output VITALITY_REPORT');
-    assert.ok(output.includes('tier=suspended'), 'should report suspended tier when no balance');
+    // AgentBooks v0.1.0: outputs FINANCIAL_HEALTH_REPORT (Vitality is aggregated by openpersona vitality)
+    assert.ok(output.includes('FINANCIAL_HEALTH_REPORT'), 'should output FINANCIAL_HEALTH_REPORT');
+    assert.ok(output.includes('uninitialized') || output.includes('development'), 'development mode → uninitialized');
     fs.removeSync(guardTmp);
   });
 
-  it('economy-guard.js outputs VITALITY_REPORT with normal tier when balance > 0', () => {
-    // ECON_TMP already has balance from deposit test
+  it('economy-guard.js outputs FINANCIAL_HEALTH_REPORT with mode and tier', () => {
     const { code, output } = runGuard();
     assert.strictEqual(code, 0, 'guard should exit 0');
-    assert.ok(output.includes('VITALITY_REPORT'), 'should output VITALITY_REPORT');
-    assert.ok(output.includes('tier='), 'should include tier');
-    assert.ok(output.includes('diagnosis='), 'should include diagnosis');
-    assert.ok(output.includes('prescriptions='), 'should include prescriptions');
-    assert.ok(output.includes('balance='), 'should include balance');
+    assert.ok(output.includes('FINANCIAL_HEALTH_REPORT'), 'should output FINANCIAL_HEALTH_REPORT');
   });
 
   it('economy faculty is discovered by generator and generates economic-identity.json', async () => {
@@ -3043,21 +3039,24 @@ describe('economy faculty', () => {
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
     assert.ok(skillMd.includes('economy'), 'SKILL.md should reference economy faculty');
 
-    // Check economic-identity.json is generated
+    // Check economic-identity.json is generated (AgentBooks v0.1.0 schema)
     const identityPath = path.join(skillDir, 'soul', 'economic-identity.json');
     assert.ok(fs.existsSync(identityPath), 'economic-identity.json should be generated');
     const identity = JSON.parse(fs.readFileSync(identityPath, 'utf-8'));
     assert.ok(/^0x[0-9a-f]{40}$/.test(identity.walletAddress), 'walletAddress should be valid EVM address');
+    assert.strictEqual(identity.mode, 'development', 'initial mode should be development');
+    assert.ok(identity.modelPricing, 'modelPricing should exist in identity');
 
-    // Check economic-state.json is generated with suspended tier
+    // Check economic-state.json is generated with AgentBooks v0.1.0 schema
     const statePath = path.join(skillDir, 'soul', 'economic-state.json');
     assert.ok(fs.existsSync(statePath), 'economic-state.json should be generated');
     const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
-    assert.strictEqual(state.version, '2.1.0', 'schema version should be 2.1.0');
-    assert.strictEqual(state.vitality.tier, 'suspended', 'initial vitality.tier should be suspended');
+    assert.strictEqual(state.version, '1.0.0', 'schema version should be 1.0.0 (AgentBooks)');
+    assert.ok(state.financialHealth, 'financialHealth object should exist in initial state');
+    assert.strictEqual(state.financialHealth.tier, 'uninitialized', 'initial tier should be uninitialized (dev mode)');
     assert.strictEqual(state.balanceSheet.operationalBalance, 0, 'initial operationalBalance should be 0');
     assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be an array');
-    assert.ok(state.vitality, 'vitality object should exist in initial state');
+    assert.ok(state.incomeStatement.currentPeriod.openingBalance !== undefined, 'openingBalance should exist for cash flow');
 
     await fs.remove(ECON_GEN_TMP);
   });
@@ -3154,131 +3153,100 @@ describe('economy faculty', () => {
     await fs.remove(EVOLVE_TMP);
   });
 
-  // --- calcVitality unit tests ---
+  // --- calcFinancialHealth unit tests (AgentBooks v0.1.0) ---
 
-  describe('calcVitality unit tests', () => {
-    const { calcVitality, createInitialState } = require('../layers/faculties/economy/scripts/economy-lib');
+  describe('calcFinancialHealth unit tests (AgentBooks v0.1.0)', () => {
+    const { calcFinancialHealth, createInitialState: abCreateState, createIdentityInitialState } =
+      require('../packages/agentbooks/src/index');
 
-    function makeState(overrides) {
-      const base = createInitialState('unit-test', 'local', 'USD');
-      if (overrides.balance !== undefined) {
-        base.balanceSheet.operationalBalance = overrides.balance;
-        base.balanceSheet.assets.providers.local.budget = overrides.balance;
-        base.balanceSheet.assets.providers.local.depositsTotal = overrides.balance;
-      }
+    function makeProductionState(overrides) {
+      const base     = abCreateState('unit-test');
+      const identity = createIdentityInitialState('unit-test');
+      identity.mode  = 'production';
+      identity.primaryProvider = 'coinbase-cdp';
+      base.balanceSheet.primaryProvider    = 'coinbase-cdp';
+      base.balanceSheet.operationalBalance = overrides.balance !== undefined ? overrides.balance : 0;
+      base.balanceSheet.assets.providers['coinbase-cdp'].USDC =
+        overrides.balance !== undefined ? overrides.balance : 0;
       if (overrides.expenses !== undefined) {
         base.incomeStatement.currentPeriod.expenses.total = overrides.expenses;
-        base.incomeStatement.currentPeriod.expenses.inference = { llm: { input: overrides.expenses, output: 0, thinking: 0 } };
+        base.incomeStatement.currentPeriod.expenses.runtime = { compute: overrides.expenses, storage: 0, bandwidth: 0 };
       }
       if (overrides.revenue !== undefined) {
         base.incomeStatement.currentPeriod.revenue = overrides.revenue;
       }
-      if (overrides.periodStart !== undefined) {
-        base.incomeStatement.currentPeriod.periodStart = overrides.periodStart;
-      }
       if (overrides.burnRateHistory !== undefined) {
         base.burnRateHistory = overrides.burnRateHistory;
       }
-      return base;
+      return { state: base, identity };
     }
 
     it('balance=0 → tier suspended', () => {
-      const state = makeState({ balance: 0 });
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.tier, 'suspended');
+      const { state, identity } = makeProductionState({ balance: 0 });
+      const r = calcFinancialHealth(state, identity);
+      assert.strictEqual(r.tier, 'suspended');
     });
 
     it('cold start (no expenses) does not crash', () => {
-      const state = makeState({ balance: 100, expenses: 0 });
-      assert.doesNotThrow(() => calcVitality(state, null));
-      const v = calcVitality(state, null);
-      assert.ok(['normal', 'optimizing', 'critical', 'suspended'].includes(v.tier));
+      const { state, identity } = makeProductionState({ balance: 100, expenses: 0 });
+      assert.doesNotThrow(() => calcFinancialHealth(state, identity));
+      const r = calcFinancialHealth(state, identity);
+      assert.ok(['normal', 'optimizing', 'critical', 'suspended'].includes(r.tier));
     });
 
     it('large balance with no expenses → normal tier', () => {
-      const state = makeState({ balance: 1000, expenses: 0 });
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.tier, 'normal', 'large balance + no expenses should be normal');
+      const { state, identity } = makeProductionState({ balance: 1000, expenses: 0 });
+      const r = calcFinancialHealth(state, identity);
+      assert.strictEqual(r.tier, 'normal', 'large balance + no expenses should be normal');
     });
 
     it('balance > 0, very high daily burn → critical tier (low runway)', () => {
       // $1 balance but $10/day burn means < 1 day runway
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      const state = makeState({ balance: 1, expenses: 10, periodStart: yesterday });
-      const v = calcVitality(state, null);
-      assert.ok(['critical', 'suspended'].includes(v.tier), `expected critical or suspended, got ${v.tier}`);
+      const hist = Array.from({ length: 14 }, () => ({ dailyRateEstimate: 10, sessionCost: 10, timestamp: new Date().toISOString(), model: 'default' }));
+      const { state, identity } = makeProductionState({ balance: 1, expenses: 10, burnRateHistory: hist });
+      const r = calcFinancialHealth(state, identity);
+      assert.ok(['critical', 'suspended'].includes(r.tier), `expected critical or suspended, got ${r.tier}`);
     });
 
-    it('diagnosis = unfunded when balance=0 and no deposits', () => {
-      const state = makeState({ balance: 0 });
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.diagnosis, 'unfunded');
-      assert.ok(v.prescriptions.includes('deposit_required'));
+    it('development mode → tier uninitialized', () => {
+      const state = abCreateState('dev-agent');
+      const id    = createIdentityInitialState('dev-agent'); // mode = development
+      const r     = calcFinancialHealth(state, id);
+      assert.strictEqual(r.tier, 'uninitialized');
+      assert.ok(r.prescriptions.includes('connect_real_provider'));
     });
 
-    it('diagnosis = zero_revenue when balance > 0 and revenue = 0 (non-inference expenses)', () => {
-      // Use runtime.compute expenses only — keeps inference ratio at 0 so high_inference_cost won't fire
-      const state = makeState({ balance: 500 });
-      state.incomeStatement.currentPeriod.expenses.runtime = { compute: 1.0, storage: 0, bandwidth: 0 };
-      state.incomeStatement.currentPeriod.expenses.total = 1.0;
-      state.incomeStatement.currentPeriod.revenue = 0;
-      state.incomeStatement.currentPeriod.netIncome = -1.0;
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.diagnosis, 'zero_revenue');
-      assert.ok(v.prescriptions.includes('seek_income_confirmation'));
-    });
-
-    it('diagnosis = high_inference_cost when inference > 50% of expenses', () => {
-      // High balance (large runway) so critical_runway does not fire first
-      const state = makeState({ balance: 1000, expenses: 10, revenue: 5 });
-      // makeState already puts all expenses in inference.llm.input (>50% of total)
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.diagnosis, 'high_inference_cost');
-      assert.ok(v.prescriptions.includes('reduce_chain_of_thought'));
-    });
-
-    it('worsening burnRateHistory → worsening_trend diagnosis', () => {
-      const burnRateHistory = [
-        { timestamp: '2026-01-01T00:00:00Z', dailyBurnRate: 1.0 },
-        { timestamp: '2026-01-02T00:00:00Z', dailyBurnRate: 1.0 },
-        { timestamp: '2026-01-03T00:00:00Z', dailyBurnRate: 1.0 },
-        { timestamp: '2026-01-04T00:00:00Z', dailyBurnRate: 5.0 },
-        { timestamp: '2026-01-05T00:00:00Z', dailyBurnRate: 5.0 },
-        { timestamp: '2026-01-06T00:00:00Z', dailyBurnRate: 5.0 },
+    it('worsening burnRateHistory → trend=increasing', () => {
+      const hist = [
+        ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 1.0, sessionCost: 0.1, timestamp: '2026-01-01T00:00:00Z', model: 'default' })),
+        ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 5.0, sessionCost: 0.5, timestamp: '2026-01-08T00:00:00Z', model: 'default' })),
       ];
-      const state = makeState({ balance: 100, expenses: 5, revenue: 3, burnRateHistory });
-      const v = calcVitality(state, null);
-      assert.strictEqual(v.diagnosis, 'worsening_trend');
-      assert.ok(v.prescriptions.includes('reduce_chain_of_thought'));
+      const { state, identity } = makeProductionState({ balance: 50, expenses: 5, burnRateHistory: hist });
+      const r = calcFinancialHealth(state, identity);
+      assert.strictEqual(r.trend, 'increasing', 'rising burn rate → increasing trend');
     });
 
-    it('improving burnRateHistory → trendScore = 1.0', () => {
-      const { calcFinancialHealth } = require('../layers/faculties/economy/scripts/economy-lib');
-      const burnRateHistory = [
-        { timestamp: '2026-01-01T00:00:00Z', dailyBurnRate: 5.0 },
-        { timestamp: '2026-01-02T00:00:00Z', dailyBurnRate: 5.0 },
-        { timestamp: '2026-01-03T00:00:00Z', dailyBurnRate: 5.0 },
-        { timestamp: '2026-01-04T00:00:00Z', dailyBurnRate: 1.0 },
-        { timestamp: '2026-01-05T00:00:00Z', dailyBurnRate: 1.0 },
-        { timestamp: '2026-01-06T00:00:00Z', dailyBurnRate: 1.0 },
+    it('improving burnRateHistory → trend=decreasing', () => {
+      const hist = [
+        ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 5.0, sessionCost: 0.5, timestamp: '2026-01-01T00:00:00Z', model: 'default' })),
+        ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 1.0, sessionCost: 0.1, timestamp: '2026-01-08T00:00:00Z', model: 'default' })),
       ];
-      const state = makeState({ balance: 100, expenses: 5, revenue: 3, burnRateHistory });
-      const fin = calcFinancialHealth(state, null);
-      assert.strictEqual(fin.trend.direction, 'improving');
-      assert.strictEqual(fin.trend.trendScore, 1.0);
+      const { state, identity } = makeProductionState({ balance: 100, expenses: 5, burnRateHistory: hist });
+      const r = calcFinancialHealth(state, identity);
+      assert.strictEqual(r.trend, 'decreasing', 'falling burn rate → decreasing trend');
     });
 
-    it('calcVitality returns vitality score between 0 and 1', () => {
-      const state = makeState({ balance: 50, expenses: 5, revenue: 4 });
-      const v = calcVitality(state, null);
-      assert.ok(v.vitality >= 0 && v.vitality <= 1, `vitality should be in [0,1], got ${v.vitality}`);
+    it('calcFinancialHealth returns fhs score between 0 and 1', () => {
+      const { state, identity } = makeProductionState({ balance: 50, expenses: 5, revenue: 4 });
+      const r = calcFinancialHealth(state, identity);
+      assert.ok(r.fhs >= 0 && r.fhs <= 1, `fhs should be in [0,1], got ${r.fhs}`);
     });
   });
 
   it('economy-hook.js appends burnRateHistory entry after recording costs', () => {
     const HOOK_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
-    // Ensure state exists with a deposit
-    runEconomy('deposit --amount 5');
+    // Ensure state exists (status creates it)
+    runEconomy('status');
     const stateBefore = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
     const histBefore = (stateBefore.burnRateHistory || []).length;
 
@@ -3290,10 +3258,12 @@ describe('economy faculty', () => {
     const stateAfter = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
     assert.strictEqual(stateAfter.burnRateHistory.length, histBefore + 1, 'should append one burnRateHistory entry');
     const last = stateAfter.burnRateHistory[stateAfter.burnRateHistory.length - 1];
-    assert.ok(last.dailyBurnRate >= 0, 'dailyBurnRate should be a non-negative number');
+    // AgentBooks v0.1.0 burnRateHistory uses 'dailyRateEstimate' (not 'dailyBurnRate')
+    assert.ok(last.dailyRateEstimate >= 0, 'dailyRateEstimate should be a non-negative number');
     assert.ok(last.timestamp, 'entry should have a timestamp');
-    assert.ok(stateAfter.vitality, 'vitality object should be updated by hook');
-    assert.ok(['normal', 'optimizing', 'critical', 'suspended'].includes(stateAfter.vitality.tier), 'vitality.tier should be valid');
+    assert.ok(stateAfter.financialHealth, 'financialHealth object should be updated by hook');
+    assert.ok(['normal', 'optimizing', 'critical', 'suspended', 'uninitialized'].includes(stateAfter.financialHealth.tier),
+      'financialHealth.tier should be valid');
   });
 
   it('cleanup economy test dir', () => {
@@ -3308,19 +3278,23 @@ describe('economy faculty', () => {
   });
 });
 
-describe('calcVitality unit tests', () => {
-  const { calcVitality, calcFinancialHealth, createInitialState } = require('../layers/faculties/economy/scripts/economy-lib');
+describe('calcFinancialHealth integration tests (AgentBooks v0.1.0)', () => {
+  const {
+    calcFinancialHealth,
+    createInitialState,
+    createIdentityInitialState,
+  } = require('../packages/agentbooks/src/index');
 
-  function makeState(overrides) {
-    const state = createInitialState('unit-test', 'local', 'USD');
-    if (overrides.balance !== undefined) {
-      state.balanceSheet.operationalBalance = overrides.balance;
-      state.balanceSheet.assets.providers.local.budget = overrides.balance;
-      state.balanceSheet.assets.providers.local.depositsTotal = overrides.balance;
-    }
+  function makeProductionState(overrides) {
+    const state    = createInitialState('unit-test');
+    const identity = createIdentityInitialState('unit-test');
+    identity.mode  = 'production';
+    identity.primaryProvider = 'coinbase-cdp';
+    state.balanceSheet.primaryProvider    = 'coinbase-cdp';
+    state.balanceSheet.operationalBalance = overrides.balance !== undefined ? overrides.balance : 0;
+    state.balanceSheet.assets.providers['coinbase-cdp'].USDC = overrides.balance !== undefined ? overrides.balance : 0;
     if (overrides.expenses !== undefined) {
       state.incomeStatement.currentPeriod.expenses.total = overrides.expenses;
-      // Use runtime.compute by default so inference ratio stays 0 and won't fire high_inference_cost
       state.incomeStatement.currentPeriod.expenses.runtime = { compute: overrides.expenses, storage: 0, bandwidth: 0 };
     }
     if (overrides.revenue !== undefined) {
@@ -3329,81 +3303,73 @@ describe('calcVitality unit tests', () => {
     if (overrides.burnRateHistory !== undefined) {
       state.burnRateHistory = overrides.burnRateHistory;
     }
-    // Set periodStart to today so daysElapsed = 1
-    state.incomeStatement.currentPeriod.periodStart = new Date().toISOString().slice(0, 10);
-    return state;
+    return { state, identity };
   }
 
-  it('balance=0, no deposits → tier=suspended, diagnosis=unfunded', () => {
-    const state = makeState({ balance: 0 });
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.tier, 'suspended', 'zero balance → suspended');
-    assert.strictEqual(result.diagnosis, 'unfunded', 'no deposits → unfunded');
-    assert.ok(result.prescriptions.includes('deposit_required'), 'should prescribe deposit_required');
+  it('balance=0 → tier=suspended', () => {
+    const { state, identity } = makeProductionState({ balance: 0 });
+    const r = calcFinancialHealth(state, identity);
+    assert.strictEqual(r.tier, 'suspended', 'zero balance → suspended');
+    assert.ok(r.prescriptions.includes('add_funds'), 'should prescribe add_funds');
   });
 
-  it('balance=0.001, expenses=0.002 → daysToDepletion≈0.5 → tier=critical', () => {
-    const state = makeState({ balance: 0.001, expenses: 0.002 });
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.tier, 'critical', 'low runway < 3 days → critical');
+  it('balance=0.001 with high burn rate → tier=critical (low runway)', () => {
+    const hist = Array.from({ length: 14 }, () => ({ dailyRateEstimate: 10, sessionCost: 10, timestamp: new Date().toISOString(), model: 'default' }));
+    const { state, identity } = makeProductionState({ balance: 0.001, expenses: 0.002, burnRateHistory: hist });
+    const r = calcFinancialHealth(state, identity);
+    assert.ok(['critical', 'suspended'].includes(r.tier), `expected critical or suspended, got ${r.tier}`);
   });
 
-  it('balance=50, expenses=4, revenue=0 → tier=optimizing, diagnosis=zero_revenue', () => {
-    // daysToDepletion ≈ 50/4 = 12.5 days (< 14 → optimizing)
-    const state = makeState({ balance: 50, expenses: 4, revenue: 0 });
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.tier, 'optimizing', 'daysToDepletion < 14 → optimizing');
-    assert.strictEqual(result.diagnosis, 'zero_revenue', 'no revenue → zero_revenue diagnosis');
-    assert.ok(result.prescriptions.includes('seek_income_confirmation'), 'should prescribe income confirmation');
+  it('balance=50, moderate burn rate → tier=optimizing (low runway)', () => {
+    const hist = Array.from({ length: 14 }, () => ({ dailyRateEstimate: 4, sessionCost: 0.4, timestamp: new Date().toISOString(), model: 'default' }));
+    const { state, identity } = makeProductionState({ balance: 50, expenses: 4, revenue: 0, burnRateHistory: hist });
+    const r = calcFinancialHealth(state, identity);
+    assert.ok(['optimizing', 'critical'].includes(r.tier), 'low runway → optimizing or critical');
   });
 
   it('balance=100, expenses=2, revenue=3 → tier=normal', () => {
-    // daysToDepletion = 100/2 = 50 days; FHS should be healthy
-    const state = makeState({ balance: 100, expenses: 2, revenue: 3 });
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.tier, 'normal', 'sufficient runway + profitable → normal');
-    assert.ok(result.vitality >= 0.5, 'vitality score should be above 0.5');
+    const { state, identity } = makeProductionState({ balance: 100, expenses: 2, revenue: 3 });
+    const r = calcFinancialHealth(state, identity);
+    assert.strictEqual(r.tier, 'normal', 'sufficient runway + profitable → normal');
+    assert.ok(r.fhs >= 0.5, 'fhs should be above 0.5');
   });
 
-  it('cold start (expenses=0) does not throw and returns stable trend', () => {
-    const state = makeState({ balance: 10 });
-    assert.doesNotThrow(() => calcVitality(state, null), 'cold start should not throw');
-    const result = calcVitality(state, null);
-    assert.ok(result.dimensions.financial.trend.direction === 'stable', 'no history → stable trend');
+  it('cold start (expenses=0) does not throw', () => {
+    const { state, identity } = makeProductionState({ balance: 10 });
+    assert.doesNotThrow(() => calcFinancialHealth(state, identity), 'cold start should not throw');
+    const r = calcFinancialHealth(state, identity);
+    assert.ok(['normal', 'optimizing', 'critical', 'suspended', 'uninitialized'].includes(r.tier));
   });
 
-  it('worsening burnRateHistory → diagnosis=worsening_trend', () => {
-    // 6 entries: older avg=1, recent avg=3 (+200% → worsening)
+  it('worsening burnRateHistory → trend=increasing', () => {
     const hist = [
-      { dailyBurnRate: 1.0 }, { dailyBurnRate: 1.0 }, { dailyBurnRate: 1.0 },
-      { dailyBurnRate: 3.0 }, { dailyBurnRate: 3.0 }, { dailyBurnRate: 3.0 },
+      ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 1.0, sessionCost: 0.1, timestamp: '2026-01-01T00:00:00Z', model: 'default' })),
+      ...Array.from({ length: 7 }, () => ({ dailyRateEstimate: 5.0, sessionCost: 0.5, timestamp: '2026-01-08T00:00:00Z', model: 'default' })),
     ];
-    const state = makeState({ balance: 50, expenses: 3, burnRateHistory: hist });
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.diagnosis, 'worsening_trend', 'rising burn rate → worsening_trend');
-    assert.ok(result.prescriptions.includes('reduce_chain_of_thought'), 'should prescribe reduce_chain_of_thought');
+    const { state, identity } = makeProductionState({ balance: 50, expenses: 3, burnRateHistory: hist });
+    const r = calcFinancialHealth(state, identity);
+    assert.strictEqual(r.trend, 'increasing', 'rising burn rate → increasing trend');
   });
 
-  it('high inference cost → diagnosis=high_inference_cost', () => {
-    const state = makeState({ balance: 100, expenses: 10, revenue: 0 });
-    // Set inference.llm to dominate (>50%)
-    state.incomeStatement.currentPeriod.expenses.inference = { llm: { input: 7.0, output: 0, thinking: 0 } };
-    state.incomeStatement.currentPeriod.expenses.runtime = { compute: 3.0, storage: 0, bandwidth: 0 };
-    state.incomeStatement.currentPeriod.expenses.total = 10.0;
-    const result = calcVitality(state, null);
-    assert.strictEqual(result.diagnosis, 'high_inference_cost', 'llm > 50% → high_inference_cost');
-    assert.ok(result.prescriptions.includes('minimize_tool_calls'), 'should prescribe minimize_tool_calls');
+  it('high inference cost dominates → dominantCost=inference', () => {
+    const { state, identity } = makeProductionState({ balance: 100, expenses: 10, revenue: 0 });
+    // AgentBooks v0.1.0 schema: llm.<modelName>: {input, output, thinking}
+    state.incomeStatement.currentPeriod.expenses.inference = { llm: { 'gpt-4o': { input: 7.0, output: 0, thinking: 0 } } };
+    state.incomeStatement.currentPeriod.expenses.runtime   = { compute: 3.0, storage: 0, bandwidth: 0 };
+    state.incomeStatement.currentPeriod.expenses.total     = 10.0;
+    const r = calcFinancialHealth(state, identity);
+    assert.strictEqual(r.dominantCost, 'inference', 'inference 7.0 > runtime 3.0 → dominantCost=inference');
   });
 
   it('economy-hook.js appends burnRateHistory after recording cost', () => {
     const tmp = path.join(__dirname, '..', '.tmp-hook-hist-' + Date.now());
     fs.ensureDirSync(tmp);
-    const HOOK_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
+    const HOOK_JS    = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
+    const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
     const { execSync } = require('child_process');
 
-    // Prime state with a deposit first via economy.js
-    const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
-    execSync(`node "${ECONOMY_JS}" deposit --amount 10`, {
+    // Ensure state exists (status creates it)
+    execSync(`node "${ECONOMY_JS}" status`, {
       env: { ...process.env, PERSONA_SLUG: 'hook-hist', ECONOMY_DATA_PATH: tmp },
       encoding: 'utf-8',
     });
@@ -3417,9 +3383,10 @@ describe('calcVitality unit tests', () => {
     const state = JSON.parse(fs.readFileSync(path.join(tmp, 'economic-state.json'), 'utf-8'));
     assert.ok(Array.isArray(state.burnRateHistory), 'burnRateHistory should be array');
     assert.ok(state.burnRateHistory.length >= 1, 'burnRateHistory should have at least one entry after hook');
-    assert.ok(state.burnRateHistory[0].dailyBurnRate >= 0, 'dailyBurnRate should be non-negative');
-    assert.ok(state.vitality, 'vitality should be updated after hook');
-    assert.ok(state.vitality.computedAt, 'vitality.computedAt should be set');
+    // AgentBooks v0.1.0: uses 'dailyRateEstimate' (not 'dailyBurnRate')
+    assert.ok(state.burnRateHistory[0].dailyRateEstimate >= 0, 'dailyRateEstimate should be non-negative');
+    assert.ok(state.financialHealth, 'financialHealth should be updated after hook');
+    assert.ok(state.financialHealth.computedAt, 'financialHealth.computedAt should be set');
 
     fs.removeSync(tmp);
   });

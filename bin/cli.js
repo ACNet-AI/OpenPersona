@@ -4,6 +4,7 @@
  * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import | acn-register | state
  */
 const path = require('path');
+const os   = require('os');
 const fs = require('fs-extra');
 const { program } = require('commander');
 const inquirer = require('inquirer');
@@ -582,6 +583,43 @@ stateCmd
     const args = ['signal', type];
     if (payload) args.push(payload);
     runStateSyncCommand(slug, args);
+  });
+
+// ─── Vitality ─────────────────────────────────────────────────────────────────
+
+program
+  .command('vitality <slug>')
+  .description('Show Vitality report for a persona (aggregates financial + future dimensions)')
+  .action((slug) => {
+    const { calcVitality }    = require('../lib/vitality');
+    const { JsonFileAdapter } = require('../packages/agentbooks/adapters/json-file');
+    const OPENCLAW_HOME_DIR   = process.env.OPENCLAW_HOME || path.join(os.homedir(), '.openclaw');
+
+    const dataPath = process.env.AGENTBOOKS_DATA_PATH
+      || path.join(OPENCLAW_HOME_DIR, 'economy', `persona-${slug}`);
+
+    const adapter = new JsonFileAdapter(dataPath);
+    let report;
+    try {
+      report = calcVitality(slug, adapter);
+    } catch (err) {
+      printError(`vitality: failed to compute for ${slug}: ${err.message}`);
+      process.exit(1);
+    }
+
+    const fin = report.dimensions.financial;
+    const lines = [
+      'VITALITY_REPORT',
+      `tier=${report.tier}  score=${(report.score * 100).toFixed(1)}%`,
+      `diagnosis=${fin.diagnosis}`,
+      `prescriptions=${(fin.prescriptions || []).join(',')}`,
+    ];
+    if (fin.daysToDepletion !== null && fin.daysToDepletion !== undefined) {
+      lines.push(`daysToDepletion=${fin.daysToDepletion}`);
+    }
+    if (fin.dominantCost) lines.push(`dominantCost=${fin.dominantCost}`);
+    lines.push(`trend=${fin.trend}`);
+    console.log(lines.join('\n'));
   });
 
 program.parse();
