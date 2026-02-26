@@ -197,26 +197,25 @@ The fork command reads the parent's installed directory, copies the persona pack
 
 ### Economy Faculty & Vitality System
 
-The `economy` faculty (`layers/faculties/economy/`) implements **Vitality** — a multi-dimensional measure of persona operational health. Current implementation: financial dimension only, with architecture reserving space for future dimensions (reputation, memory, relationship health).
+The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrapper around the **[AgentBooks](https://github.com/acnlabs/agentbooks)** npm package (`agentbooks@^0.1.0`). Financial logic lives entirely in AgentBooks; the wrapper only maps OpenPersona env vars (`PERSONA_SLUG` → `AGENTBOOKS_AGENT_ID`).
 
-**Shared library: `layers/faculties/economy/scripts/economy-lib.js`**
-All shared state management, provider, and vitality logic lives here. The three CLI scripts (`economy.js`, `economy-guard.js`, `economy-hook.js`) all `require('./economy-lib')` — no logic duplication.
+**Wrapper scripts (delegates to AgentBooks):**
+- `scripts/economy.js` → `require('agentbooks/cli/economy')` — all management commands
+- `scripts/economy-guard.js` → `require('agentbooks/cli/economy-guard')` — outputs `FINANCIAL_HEALTH_REPORT`
+- `scripts/economy-hook.js` → `require('agentbooks/cli/economy-hook')` — post-conversation cost recorder
 
-Key exports:
-- `getConfig(overrides)` — resolves slug + basePath from env vars; tests pass `ECONOMY_DATA_PATH` for isolation
-- `loadState(cfg)` / `saveState(state, cfg)` — handles v1→v2.1 migration automatically (`migrateV1`, `migrateV2`)
-- `calcFinancialHealth(state, identity)` — FHS four-dimension engine (liquidity 0.40 / profitability 0.30 / efficiency 0.15 / trend 0.15)
-- `calcVitality(state, identity)` — **public interface**; currently wraps `calcFinancialHealth`; designed for future parallel dimension integration
+**Vitality aggregation (`lib/vitality.js`):**
+- `calcVitality(agentId, adapter)` — OpenPersona-level aggregator; currently single financial dimension (transparent pass-through to AgentBooks `calcFinancialHealth`)
+- Extension point: when memory/social/reputation dimensions are ready, add them here via weighted averaging — do not modify AgentBooks
+- Exposed via `openpersona vitality <slug>` CLI command
 
-**Extension point:** When reputation, memory, or relationship health dimensions are ready, `calcVitality` will aggregate them via weighted scoring. At that point, move `calcVitality` to `lib/vitality.js` and inject dimensions via dependency injection. Do not implement this now — path is reserved.
+**AgentBooks schema (`agentbooks/economic-state` v1.0.0):**
+- `burnRateHistory` — array of `{timestamp, dailyRateEstimate, periodExpenses}`, max 30 entries
+- `financialHealth` — cached FHS result: `{fhs, tier, diagnosis, prescriptions, daysToDepletion, dominantCost, trend, computedAt}`
 
-**`economic-state.json` schema v2.1.0** adds two fields to v2.0.0:
-- `burnRateHistory` — array of `{timestamp, dailyBurnRate, periodExpenses}`, max 30 entries, appended by `economy-hook.js` after each conversation
-- `vitality` — the authoritative tier source: `{score, tier, diagnosis, prescriptions, daysToDepletion, dominantCost, trend, computedAt}`; `state.vitality.tier` is the sole tier accessor across all scripts
+**Vitality tiers:** `uninitialized` (no real provider) → `suspended` (balance≤0) → `critical` (FHS<0.20 or runway<3d) → `optimizing` (FHS<0.50 or runway<14d) → `normal`
 
-**Vitality tiers:** `suspended` (balance≤0) → `critical` (FHS<0.20 or runway<3d) → `optimizing` (FHS<0.50 or runway<14d) → `normal`
-
-**Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `VITALITY_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence.
+**Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `FINANCIAL_HEALTH_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence. Full Vitality report (future multi-dimension) is available via `openpersona vitality <slug>`.
 
 ### Template System
 
