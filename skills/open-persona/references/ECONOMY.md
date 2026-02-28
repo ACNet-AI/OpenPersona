@@ -114,3 +114,9 @@ node scripts/economy-guard.js
 TOKEN_INPUT_COUNT=1500 TOKEN_OUTPUT_COUNT=800 LLM_MODEL=claude-sonnet-4 \
   node scripts/economy-hook.js
 ```
+
+---
+
+## See Also
+
+- **[AgentBooks SKILL.md](https://github.com/acnlabs/agentbooks/blob/main/skill/agentbooks/SKILL.md)** — Full AgentBooks CLI reference: `record-cost`, `record-income`, `wallet-connect`, `agentbooks report`, tier routing behavior, and more.
