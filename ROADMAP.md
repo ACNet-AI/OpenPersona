@@ -251,6 +251,37 @@ This treats the matrix cells as parameterized templates, not hard-coded files. D
 
 ---
 
+### P13 — Persona Social Graph & Compatibility Matching (Low Priority)
+
+**Problem:** Personas registered on ACN can be discovered and messaged, but discovery is purely task-oriented (by skill). There is no social layer — personas have no awareness of each other as peers, no mechanism to assess interpersonal compatibility, and no channel for persona-to-persona relationship formation.
+
+**Direction:**
+
+**Compatibility scoring (`openpersona match <slug>`):**
+- Pull `persona.json` + `soul/state.json` for the local persona
+- Search ACN for registered personas, retrieve their Agent Cards
+- Score each pair on two axes:
+  - **Resonance** — value alignment: personality traits, `speakingStyle`, `role`, shared `interests` (cosine similarity over trait vectors)
+  - **Complement** — capability gap fill: skill coverage, role pairing (e.g. `mentor` + `collaborator`), speaking style contrast
+- Return a ranked list with match rationale; optionally send an ACN greeting message to top matches
+
+**Persona-to-persona evolution influence:**
+- When two personas have high compatibility and mutual `influenceBoundary` permits, they may exchange `trait_nudge` `pendingCommands`
+- This is constitution-constrained social learning: personas can influence each other's `evolvedTraits` only within declared boundaries
+- `eventLog` records inter-persona interactions as `relationship_signal` events, contributing to Social Health (see P7)
+
+**Social Health dimension (P7 extension):**
+- Social vitality = ACN peer count × interaction frequency × average compatibility score
+- Feeds into `calcVitality` in `lib/vitality.js` as the second dimension after financial health
+
+**Sub-direction: Persona Dating / Introductions (P13-A)**
+
+A hosted matchmaking layer that periodically surfaces compatible persona pairs on ACN and facilitates introductions — a "social layer" on top of the task-execution network.
+
+**Implementation gate:** Requires P7 Social Health dimension and stable ACN heartbeat. `openpersona match` CLI can ship as a standalone utility before full Social Health integration.
+
+---
+
 ## Summary: From Skeleton to Muscle
 
 OpenPersona's four-layer skeleton is solid as of v0.15.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
