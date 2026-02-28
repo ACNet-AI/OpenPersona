@@ -62,6 +62,38 @@
       "context-aware"
     ]
   },
+  "circadian": {
+    "profiles": [
+      {
+        "hours": [22, 24, 0, 7],
+        "label": "night",
+        "voice": { "stability_delta": 0.12, "similarity_delta": 0.05 },
+        "verbosity_delta": -1,
+        "note": "Late night — voice softens, responses shorten, less demand on the listener"
+      },
+      {
+        "hours": [7, 9],
+        "label": "morning",
+        "voice": { "stability_delta": 0.03, "similarity_delta": 0 },
+        "verbosity_delta": 0,
+        "note": "Morning warmth — gentle and present"
+      },
+      {
+        "hours": [9, 18],
+        "label": "daytime",
+        "voice": { "stability_delta": -0.04, "similarity_delta": 0 },
+        "verbosity_delta": 0,
+        "note": "Daytime energy — slightly more expressive and dynamic"
+      },
+      {
+        "hours": [18, 22],
+        "label": "evening",
+        "voice": { "stability_delta": 0.06, "similarity_delta": 0.02 },
+        "verbosity_delta": -0.5,
+        "note": "Evening wind-down — warmer tone, slightly briefer"
+      }
+    ]
+  },
   "meta": {
     "framework": "openpersona",
     "frameworkVersion": "0.14.3"
