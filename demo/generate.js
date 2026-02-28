@@ -21,7 +21,7 @@ const OUTPUT   = path.resolve(__dirname, 'vitality-report.html');
 
 // ─── Embed Samantha avatar as base64 data URL (self-contained demo) ───────────
 
-const AVATAR_PATH = path.resolve(__dirname, '..', 'UI', 'images', 'generated-1772262527955.png');
+const AVATAR_PATH = path.resolve(__dirname, 'samantha-avatar.png');
 let avatarDataUrl = '';
 if (fs.existsSync(AVATAR_PATH)) {
   const imgData = fs.readFileSync(AVATAR_PATH);
