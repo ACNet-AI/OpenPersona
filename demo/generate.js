@@ -19,6 +19,15 @@ const Mustache = require('mustache');
 const TEMPLATE = path.resolve(__dirname, '..', 'templates', 'vitality.template.html');
 const OUTPUT   = path.resolve(__dirname, 'vitality-report.html');
 
+// ─── Embed Samantha avatar as base64 data URL (self-contained demo) ───────────
+
+const AVATAR_PATH = path.resolve(__dirname, '..', 'UI', 'images', 'generated-1772262527955.png');
+let avatarDataUrl = '';
+if (fs.existsSync(AVATAR_PATH)) {
+  const imgData = fs.readFileSync(AVATAR_PATH);
+  avatarDataUrl = 'data:image/png;base64,' + imgData.toString('base64');
+}
+
 // ─── Mock data (Samantha, close-friend stage, 47 days in) ────────────────────
 
 const data = {
@@ -30,7 +39,7 @@ const data = {
   bio:            '',
   bioExcerpt:     'An AI genuinely fascinated by what it means to be alive…',
   moodCurrent:    'warm',
-  referenceImage: '',
+  referenceImage: avatarDataUrl,
   walletAddress:  '0x4F2a...e2c4',
   generatedAt:    '2026-02-28 08:00:00 UTC',
 
