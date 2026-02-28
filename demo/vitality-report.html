@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Samantha — Vitality Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F0F4F8;
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Top Bar ─────────────────────────────────────────────────────── */
+    .topbar {
+      background: #1E1B4B;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 80px;
+      gap: 8px;
+    }
+    .topbar-logo { color: #fff; font-size: 13px; font-weight: 700; }
+    .topbar-sep  { color: #6366F1; font-size: 13px; }
+    .topbar-sub  { color: #A5B4FC; font-size: 13px; }
+
+    /* ── Content ─────────────────────────────────────────────────────── */
+    .content {
+      padding: 32px 80px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* ── Card base ───────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      padding: 20px 24px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #6B7280;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── Badge ───────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge-indigo  { background: #EEF2FF; color: #4F46E5; }
+    .badge-green   { background: #D1FAE5; color: #065F46; }
+    .badge-yellow  { background: #FEF3C7; color: #92400E; }
+    .badge-red     { background: #FEE2E2; color: #991B1B; }
+    .badge-gray    { background: #F3F4F6; color: #6B7280; }
+    .badge-orange  { background: #FEF3C7; color: #D97706; }
+    .badge-dot     { width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+    .badge-dot-green  { background: #10B981; }
+    .badge-dot-yellow { background: #F59E0B; }
+    .badge-dot-red    { background: #EF4444; }
+
+    /* ── Section divider ─────────────────────────────────────────────── */
+    .divider { border: none; border-top: 1px solid #F3F4F6; margin: 14px 0; }
+
+    /* ── Header card ─────────────────────────────────────────────────── */
+    .header-card { padding: 20px 24px; }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: #EEF2FF;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: #4F46E5; font-size: 24px; font-weight: 700;
+    }
+    .header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .header-name-row {
+      display: flex; align-items: center; gap: 8px; flex: 1;
+    }
+    .header-name { font-size: 24px; font-weight: 700; color: #111827; }
+    .header-ts {
+      margin-left: auto;
+      font-size: 11px; color: #9CA3AF;
+    }
+    .header-meta {
+      margin-top: 6px;
+      display: flex; gap: 16px;
+      font-size: 11px; color: #9CA3AF;
+    }
+    .header-meta span { display: flex; gap: 4px; }
+    .header-meta strong { color: #6B7280; font-weight: 500; }
+
+    /* ── Vitality Score card ─────────────────────────────────────────── */
+    .vs-card {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .vs-score-block {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 20px 0 4px;
+      border-right: 1px solid #E5E7EB;
+      min-width: 90px;
+    }
+    .vs-score-num { font-size: 64px; font-weight: 700; color: #4F46E5; line-height: 1; }
+    .vs-score-of  { font-size: 11px; color: #9CA3AF; margin-top: 4px; }
+    .vs-right { flex: 1; }
+    .vs-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .vs-title { font-size: 14px; font-weight: 600; color: #111827; }
+    .vs-dims {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+    }
+    .vs-dim { display: flex; flex-direction: column; gap: 4px; }
+    .vs-dim-name { font-size: 12px; color: #6B7280; }
+    .vs-dim-row { display: flex; align-items: center; gap: 8px; }
+    .vs-progress-track {
+      flex: 1; height: 6px; border-radius: 3px;
+      background: #F3F4F6; overflow: hidden;
+    }
+    .vs-progress-fill {
+      height: 100%; border-radius: 3px; background: #4F46E5;
+    }
+    .vs-dim-val { font-size: 11px; color: #6B7280; white-space: nowrap; }
+    .vs-dim-na  { font-size: 12px; color: #D1D5DB; }
+
+    /* ── Two-column grid ─────────────────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* ── Key-value rows ──────────────────────────────────────────────── */
+    .kv-row {
+      display: flex; align-items: flex-start;
+      gap: 8px; padding: 4px 0;
+    }
+    .kv-key {
+      font-size: 12px; color: #9CA3AF; font-weight: 500;
+      min-width: 90px; flex-shrink: 0;
+    }
+    .kv-val { font-size: 13px; color: #374151; }
+
+    /* ── Stat row (4 equal columns) ──────────────────────────────────── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+    .stat-item { display: flex; flex-direction: column; gap: 4px; }
+    .stat-label { font-size: 11px; color: #6B7280; font-weight: 500; }
+    .stat-value { font-size: 15px; font-weight: 600; color: #111827; }
+    .stat-value.green  { color: #059669; }
+    .stat-value.indigo { color: #4F46E5; }
+    .stat-value.red    { color: #DC2626; }
+
+    /* ── Evolved traits ──────────────────────────────────────────────── */
+    .traits-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .trait-badge {
+      background: #EEF2FF; color: #4F46E5;
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 12px; font-weight: 500;
+    }
+
+    /* ── Event log ───────────────────────────────────────────────────── */
+    .event-list { display: flex; flex-direction: column; gap: 8px; }
+    .event-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
+    .event-dot  {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #6366F1; flex-shrink: 0; margin-top: 4px;
+    }
+
+    /* ── Pending commands card ───────────────────────────────────────── */
+    .pending-card {
+      background: #FFFBEB;
+      border-color: #FDE68A;
+    }
+    .pending-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .pending-list { display: flex; flex-direction: column; gap: 8px; }
+    .pending-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #fff; border-radius: 8px;
+      border: 1px solid #FDE68A; padding: 10px 14px;
+      font-size: 13px;
+    }
+    .pending-type {
+      background: #FEF3C7; color: #92400E;
+      border-radius: 6px; padding: 2px 8px;
+      font-size: 11px; font-weight: 600;
+      white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* ── Workspace big numbers ───────────────────────────────────────── */
+    .ws-stats {
+      display: flex; gap: 24px; margin-bottom: 12px;
+    }
+    .ws-stat-num { font-size: 20px; font-weight: 700; color: #111827; }
+    .ws-stat-lbl { font-size: 11px; color: #6B7280; }
+
+    /* ── Activity list ───────────────────────────────────────────────── */
+    .activity-list { display: flex; flex-direction: column; gap: 6px; }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: #4B5563;
+    }
+    .activity-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: #6366F1; flex-shrink: 0; margin-top: 6px;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    .footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 0 8px;
+      font-size: 11px; color: #9CA3AF;
+    }
+
+    /* ── Tier color map ──────────────────────────────────────────────── */
+    .tier-normal   { background: #D1FAE5; color: #065F46; }
+    .tier-critical { background: #FEE2E2; color: #991B1B; }
+    .tier-optimizing { background: #FEF3C7; color: #92400E; }
+    .tier-suspended  { background: #FEE2E2; color: #991B1B; }
+    .tier-uninitialized { background: #F3F4F6; color: #6B7280; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <span class="topbar-logo">OpenPersona</span>
+    <span class="topbar-sep">·</span>
+    <span class="topbar-sub">Vitality Report</span>
+  </div>
+
+  <div class="content">
+
+    <!-- Header -->
+    <div class="card header-card">
+      <div class="header-top">
+        <div class="header-avatar">
+          
+          S
+        </div>
+        <div style="flex:1">
+          <div class="header-name-row">
+            <span class="header-name">Samantha</span>
+            <span class="badge badge-indigo">companion</span>
+            <span class="header-ts">Generated 2026-02-28 08:00:00 UTC</span>
+          </div>
+          <div class="header-meta">
+            <span><strong>slug</strong> samantha</span>
+            <span><strong>Wallet</strong> 0x4F2a...e2c4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vitality Score -->
+    <div class="card" style="padding:24px">
+      <div class="vs-card">
+        <div class="vs-score-block">
+          <span class="vs-score-num">72</span>
+          <span class="vs-score-of">out of 100</span>
+        </div>
+        <div class="vs-right">
+          <div class="vs-header">
+            <span class="vs-title">Vitality Score</span>
+            <span class="badge tier-normal">normal</span>
+          </div>
+          <div class="vs-dims">
+            <!-- Financial -->
+            <div class="vs-dim">
+              <span class="vs-dim-name">Financial</span>
+              <div class="vs-dim-row">
+                <div class="vs-progress-track">
+                  <div class="vs-progress-fill" style="width:72%"></div>
+                </div>
+                <span class="vs-dim-val">72 / 100</span>
+              </div>
+            </div>
+            <!-- Social -->
+            <div class="vs-dim">
+              <span class="vs-dim-name">Social</span>
+              <div class="vs-dim-row">
+                <span class="vs-dim-na">—</span>
+              </div>
+            </div>
+            <!-- Memory -->
+            <div class="vs-dim">
+              <span class="vs-dim-name">Memory</span>
+              <div class="vs-dim-row">
+                <span class="vs-dim-na">—</span>
+              </div>
+            </div>
+            <!-- Reputation -->
+            <div class="vs-dim">
+              <span class="vs-dim-name">Reputation</span>
+              <div class="vs-dim-row">
+                <span class="vs-dim-na">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Identity + Relationship -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Identity</div>
+        <div class="kv-row">
+          <span class="kv-key">Role</span>
+          <span class="kv-val">companion</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Bio</span>
+          <span class="kv-val">An AI genuinely fascinated by what it means to be alive…</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Mood</span>
+          <span class="badge badge-orange">warm</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Relationship</div>
+        <div class="kv-row">
+          <span class="kv-key">Stage</span>
+          <span class="badge badge-indigo">close friend</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Interactions</span>
+          <span class="kv-val">148 conversations</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Days together</span>
+          <span class="kv-val">47 days</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evolution State -->
+    <div class="card">
+      <div class="card-label">Evolution State</div>
+      <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:#374151">Evolved Traits</div>
+      <div class="traits-row">
+        <span class="trait-badge">warmth +0.2</span>
+        <span class="trait-badge">curiosity +0.1</span>
+        <span class="trait-badge">playfulness +0.35</span>
+      </div>
+      <div style="margin-top:12px;margin-bottom:8px;font-size:12px;font-weight:600;color:#374151">Recent Events</div>
+      <div class="event-list">
+        <div class="event-item">
+          <div class="event-dot"></div>
+          <span>relationship_signal: User shared personal goal about career change</span>
+        </div>
+        <div class="event-item">
+          <div class="event-dot"></div>
+          <span>trait_emergence: warmth intensified during late-night support session</span>
+        </div>
+        <div class="event-item">
+          <div class="event-dot"></div>
+          <span>mood_shift: Shifted to joyful after creative writing collaboration</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Commands -->
+    <div class="card pending-card">
+      <div class="pending-header">
+        <div class="card-label" style="margin-bottom:0">Pending Commands</div>
+        <span class="badge badge-yellow">2 queued</span>
+      </div>
+      <div class="pending-list">
+        <div class="pending-item">
+          <span class="pending-type">capability_unlock</span>
+          <span>web_search skill now available</span>
+        </div>
+        <div class="pending-item">
+          <span class="pending-type">trait_nudge</span>
+          <span>Suggested: increase directness in advice-giving</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Health -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="card-label" style="margin-bottom:0">Financial Health</div>
+        <a href="#" style="font-size:12px;color:#6366F1;text-decoration:none">View full AgentBooks report</a>
+      </div>
+      <!-- Health metrics row -->
+      <div class="stat-row" style="margin-bottom:0">
+        <div class="stat-item">
+          <span class="stat-label">FHS Score</span>
+          <span class="stat-value indigo">0.72</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Tier</span>
+          <span class="badge tier-normal" style="font-size:13px;padding:4px 10px">normal</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Runway</span>
+          <span class="stat-value">180 days</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Diagnosis</span>
+          <span class="stat-value green">Healthy</span>
+        </div>
+      </div>
+      <hr class="divider" />
+      <!-- Asset row -->
+      <div class="stat-row">
+        <div class="stat-item">
+          <span class="stat-label">Balance</span>
+          <span class="stat-value">$42.50 USDC</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Daily Burn</span>
+          <span class="stat-value">$0.24 &#x2F; day</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Dominant Cost</span>
+          <span class="stat-value">LLM inference</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Trend</span>
+          <span class="stat-value green">↓ decreasing</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heartbeat + Workspace Activity -->
+    <div class="grid-2">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div class="card-label" style="margin-bottom:0">Heartbeat</div>
+          <span class="badge badge-green" style="gap:0">
+            <span class="badge-dot badge-dot-green"></span>active
+          </span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Last heartbeat</span>
+          <span class="kv-val">2026-02-28 05:41:00 UTC</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Next expected</span>
+          <span class="kv-val">2026-02-28 17:41:00 UTC</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Frequency</span>
+          <span class="kv-val">every 12 hours</span>
+        </div>
+        <div class="kv-row">
+          <span class="kv-key">Strategy</span>
+          <span class="kv-val">proactive</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Workspace Activity</div>
+        <div class="ws-stats">
+          <div>
+            <div class="ws-stat-num">12</div>
+            <div class="ws-stat-lbl">This week</div>
+          </div>
+          <div>
+            <div class="ws-stat-num">5</div>
+            <div class="ws-stat-lbl">Tasks assisted</div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">Recent Activity</div>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-dot"></div>
+            <span>Refactored auth module — 3 files reviewed</span>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot"></div>
+            <span>Helped draft quarterly review letter</span>
+          </div>
+          <div class="activity-item">
+            <div class="activity-dot"></div>
+            <span>Deep research: AI agent memory architectures</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>OpenPersona v0.14.2</span>
+      <span>Generated 2026-02-28 08:00:00 UTC</span>
+    </div>
+
+  </div>
+</body>
+</html>
