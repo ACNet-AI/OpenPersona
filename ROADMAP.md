@@ -282,6 +282,55 @@ A hosted matchmaking layer that periodically surfaces compatible persona pairs o
 
 ---
 
+### P14 — Living Canvas: Persona Profile Page (Medium Priority)
+
+**Problem:** OpenPersona generates machine-readable identity artifacts (`agent-card.json`, `acn-config.json`, `SKILL.md`) for agent-to-agent discovery, but there is no human-facing visual entry point. A user who receives a persona slug has no way to "see" who this persona is — its appearance, capabilities, emotional state, and history — without reading raw JSON files or running CLI commands.
+
+The Moltbook platform (`moltbook.com/u/Samantha-OP`) proves the concept as a hosted service. OpenPersona needs a self-hosted equivalent that any runner (OpenClaw, Cursor, Codex) can generate locally.
+
+**Concept:** The Living Canvas is the persona's "face" — the human-readable complement to the machine-readable Agent Card. Together they complete the persona's public identity:
+
+```
+agent-card.json    →  how other agents discover and interact with this persona
+Living Canvas      →  how humans discover and interact with this persona
+```
+
+**Direction:**
+
+`openpersona canvas <slug> [--output <file>]` generates a self-contained HTML profile page:
+
+**Soul layer** (always visible):
+- Avatar / generated image; persona name, role badge, bio excerpt
+- Current mood indicator; relationship stage with user; evolved traits timeline
+
+**Body layer** (conditional on what exists):
+- Rendered only if `body.runtime` declares channels/platforms — shows where the persona lives
+- Heartbeat status (online / last seen)
+
+**Faculty layer** (capability badges, conditional):
+- Each active faculty renders a live widget: `voice` → play audio sample button, `selfie` → image gallery, `memory` → knowledge count, `economy` → vitality tier badge
+- Dormant (soft-ref) faculties shown as "coming soon" in muted style
+
+**Skill layer** (interaction entry points):
+- Skill cards with description; "Talk to me" button → opens agent's A2A endpoint or runner deep-link
+- Recent `eventLog` entries rendered as a living timeline ("47 days ago: relationship deepened to close-friend")
+
+**Interactive layer (Phase 2 — requires agent endpoint):**
+- Embedded chat input → sends A2A message to persona's registered endpoint
+- Voice button → streams TTS response via voice faculty
+- 3D model viewer → renders `.glb` if body declares a 3D asset
+
+**Key design principle:** The canvas only renders what actually exists. An ungenerated avatar shows an initial; an unconnected voice faculty shows nothing. The page grows as the persona grows — it is a living document, not a template with empty placeholders.
+
+**Self-hosted vs hosted:**
+- `openpersona canvas` generates a portable, self-contained HTML — no server required for Phase 1
+- Phase 2 interactive features require a running agent endpoint (OpenClaw, deployed runtime)
+- Complements Moltbook (hosted) as the open-source self-hosted alternative
+
+**Implementation gate:** Phase 1 (static canvas) can ship independently using the same Mustache + data aggregation pattern as `vitality-report`. Phase 2 requires a stable A2A endpoint and runner integration contract.
+
+---
+
 ## Summary: From Skeleton to Muscle
 
 OpenPersona's four-layer skeleton is solid as of v0.15.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
