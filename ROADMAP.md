@@ -4,7 +4,7 @@
 
 ---
 
-## Current State (as of v0.14.3)
+## Current State (as of v0.15.0)
 
 OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
 
@@ -35,6 +35,7 @@ The framework has moved past the documentation-driven phase into a **runtime coh
 | A2A Agent Card | `agent-card.json` (a2a-sdk compatible, protocol v0.3.0), manifest references, ACN registration |
 | Influence boundary | Schema validation, compliance checks, template injection, derived field exclusion |
 | `eventLog` + self-narrative | 50-entry capped event log; first-person `self-narrative.md` growth log |
+| Vitality HTML Report | `openpersona vitality report <slug>` — human-readable HTML report; `vitality score` (machine) / `vitality report` (human) command group; `lib/vitality-report.js`, `templates/vitality.template.html`, `demo/vitality-report.html` |
 
 ---
 
@@ -185,9 +186,74 @@ Introduce a trust-level field in `manifest.json` skill entries and a persona-lev
 
 ---
 
+### P12 — Persona Gallery HTML Report (Low Priority)
+
+**Problem:** `openpersona list` outputs a plain-text terminal list. Operators and developers managing multiple installed personas have no visual overview — they cannot quickly compare vitality tiers, relationship stages, or last-active times across personas at a glance.
+
+**Direction:**
+- Add `openpersona list --html [--output <file>]` subcommand that generates a self-contained HTML "Persona Gallery"
+- Each persona is rendered as a card showing: avatar / initial, name, role badge, Vitality tier (color-coded), relationship stage, last active timestamp, and a link to its individual Vitality Report
+- Data aggregated from `persona.json`, `soul/state.json`, and `lib/vitality.js` for each installed persona
+- Reuse `templates/vitality.template.html` design language for visual consistency
+- Static HTML, no server required — suitable for local review or sharing with stakeholders
+
+**Implementation gate:** Deliver after Vitality HTML Report is stable in production use. Reuse `lib/vitality-report.js` data-aggregation patterns.
+
+---
+
+### P11 — Professional Preset Matrix (Medium Priority)
+
+**Problem:** OpenPersona's preset library currently covers companion/creative archetypes (Samantha, ai-girlfriend) and a minimal `base` skeleton. There is no curated set of domain-specific professional personas. Developers building a legal AI, a code reviewer, a health coach, or a financial analyst must design the entire Soul + Faculty + Skill composition from scratch — including behavior constraints specific to that profession that are non-obvious to define correctly the first time.
+
+This creates two failure modes:
+1. Under-constrained professional personas — no guardrails for domain-specific ethics (e.g., a medical persona that dispenses diagnoses without disclaimers)
+2. Over-generic professional personas — technically correct but tonally hollow; a legal advisor that speaks like a casual chatbot
+
+**Root cause:** There is no framework-level concept of a "professional archetype" — a named composition of `constitution` addendum + `behaviorGuide` constraints + required faculties + recommended skills. Each developer reinvents this from scratch.
+
+**Direction:**
+
+Define a Professional Preset Matrix as a two-axis taxonomy:
+
+- **Domain axis**: `engineering` / `legal` / `medical` / `finance` / `education` / `creative` / `research`
+- **Interaction axis**: `advisor` (information-dense, async-friendly) / `collaborator` (interactive, co-working) / `coach` (habit-forming, emotionally present)
+
+Each cell in the matrix is a concrete preset package:
+
+| | Advisor | Collaborator | Coach |
+|---|---|---|---|
+| Engineering | Code Reviewer | Pair Programmer | Dev Mentor |
+| Legal | Legal Advisor | Contract Drafter | Compliance Coach |
+| Medical | Health Informer | Clinical Assistant | Wellness Coach |
+| Finance | Portfolio Analyst | Deal Room Partner | Budgeting Coach |
+| Education | Subject Tutor | Research Partner | Study Habit Coach |
+| Creative | Creative Director | Writing Collaborator | Creativity Coach |
+
+Each preset ships with:
+- `persona.json` — domain-tuned `behaviorGuide`, `boundaries`, `speakingStyle`, and `personality`
+- `constitution-addendum.md` — profession-specific ethical constraints layered on top of the base constitution (e.g., medical personas must always recommend professional consultation; legal personas must distinguish jurisdiction scope)
+- `manifest.json` — pre-wired faculties and recommended skills for that domain
+- `README.md` — integration notes and customization guidance for developers
+
+**Sub-direction: Preset Composition Engine (P11-A)**
+
+Rather than shipping 18+ static preset files, introduce a `preset compose` CLI command:
+
+```bash
+openpersona preset compose --domain medical --mode coach
+# → scaffolds a Wellness Coach persona with appropriate constitution addendum,
+#   recommended skills (nutrition-lookup, symptom-checker), and voice faculty tuned for warmth
+```
+
+This treats the matrix cells as parameterized templates, not hard-coded files. Developers get a starting point that is already 80% correct for their domain, reducing mis-configuration and accelerating time-to-working-persona.
+
+**Implementation gate:** Deliver 3 high-priority cells first (`engineering/collaborator` as "Pair Programmer", `medical/coach` as "Wellness Coach", `finance/advisor` as "Portfolio Analyst") to validate the taxonomy before generating the full matrix.
+
+---
+
 ## Summary: From Skeleton to Muscle
 
-OpenPersona's four-layer skeleton is solid as of v0.14.3. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
+OpenPersona's four-layer skeleton is solid as of v0.15.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
 
 > The architecture specification is no longer ahead of implementation. The gap is now between **working logic and intelligent behavior** — the layers communicate, but they do not yet adapt to each other in real time.
 
@@ -198,6 +264,7 @@ OpenPersona's four-layer skeleton is solid as of v0.14.3. The framework successf
 | P0 | P1-A Memory Half-life & Truth Override | Most visible daily UX failure — persona contradicts itself |
 | P1 | P9 Vitality-Logic Closed Loop | Closes the economy faculty feedback loop; no new infrastructure |
 | P2 | P4-A Skill Signature Verification | Security gate; extends existing installer + signal protocol |
-| P3 | P10 Instant Awakening | Architecture reservation only; daemon deferred to runner layer |
+| P3 | P11 Professional Preset Matrix | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P4 | P10 Instant Awakening | Architecture reservation only; daemon deferred to runner layer |
 
-The highest-leverage investment for the next milestone is **P1-A (memory truth override) + P9 (vitality behavior adjustment)** — these transform existing working machinery into genuinely self-regulating intelligence, without requiring new infrastructure.
+The highest-leverage investment for the next milestone is **P1-A (memory truth override) + P9 (vitality behavior adjustment)** — these transform existing working machinery into genuinely self-regulating intelligence, without requiring new infrastructure. **P11 (Professional Preset Matrix)** is the primary growth-surface investment — it expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.
