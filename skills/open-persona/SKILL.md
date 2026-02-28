@@ -300,5 +300,5 @@ For detailed reference material, see the `references/` directory:
 - **`references/FACULTIES.md`** — Faculty catalog, environment variables, and configuration details
 - **`references/HEARTBEAT.md`** — Proactive real-data check-in system
 - **`references/ECONOMY.md`** — Economy Faculty, FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
-- **`references/ACN.md`** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity
+- **[ACN SKILL.md](https://github.com/acnlabs/ACN/blob/main/skills/acn/SKILL.md)** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity (official, always up-to-date)
 - **`references/CONTRIBUTE.md`** — Persona Harvest community contribution workflow
