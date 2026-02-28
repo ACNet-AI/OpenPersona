@@ -207,7 +207,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 **Vitality aggregation (`lib/vitality.js`):**
 - `calcVitality(agentId, adapter)` — OpenPersona-level aggregator; currently single financial dimension (transparent pass-through to AgentBooks `calcFinancialHealth`)
 - Extension point: when memory/social/reputation dimensions are ready, add them here via weighted averaging — do not modify AgentBooks
-- Exposed via `openpersona vitality <slug>` CLI command
+- Exposed via `openpersona vitality score <slug>` CLI command (machine-readable, used by Survival Policy)
 
 **AgentBooks schema (`agentbooks/economic-state` v1.0.0):**
 - `burnRateHistory` — array of `{timestamp, dailyRateEstimate, periodExpenses}`, max 30 entries
@@ -215,7 +215,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 
 **Vitality tiers:** `uninitialized` (no real provider) → `suspended` (balance≤0) → `critical` (FHS<0.20 or runway<3d) → `optimizing` (FHS<0.50 or runway<14d) → `normal`
 
-**Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `FINANCIAL_HEALTH_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence. Full Vitality report (future multi-dimension) is available via `openpersona vitality <slug>`.
+**Guard philosophy:** `economy-guard.js` always exits 0 and outputs a `FINANCIAL_HEALTH_REPORT`. The persona reads it and makes autonomous decisions — the system never forces silence. Full Vitality report (future multi-dimension) is available via `openpersona vitality score <slug>`. Human-readable HTML report: `openpersona vitality report <slug> [--output <file>]`.
 
 **Survival Policy (`economy.survivalPolicy`):**
 - Default `false` — Economy Faculty tracks costs silently; persona never mentions money to the user. Correct for companion, roleplay, and support personas where financial concerns would break immersion.
@@ -266,7 +266,7 @@ node --test tests/generator.test.js  # Run specific test file
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion), state-sync script (read/write/signal commands, deep merge, immutable fields, stateHistory snapshot anti-bloat, signals.json 200-entry cap, invalid type rejection), CLI state commands (registry lookup, read/write/signal integration, error handling, unknown slug, missing patch)
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution channels (soft-ref detection, dormant awareness, SKILL.md rendering), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion), state-sync script (read/write/signal commands, deep merge, immutable fields, stateHistory snapshot anti-bloat, signals.json 200-entry cap, invalid type rejection), CLI state commands (registry lookup, read/write/signal integration, error handling, unknown slug, missing patch), vitality report (buildReportData safe defaults, wallet address format, state.json mapping, heartbeat config, weeklyConversations zero value, financialTier fallback, renderVitalityHtml HTML output, pending commands conditional rendering)
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

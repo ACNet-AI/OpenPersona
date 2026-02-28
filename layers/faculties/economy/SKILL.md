@@ -128,7 +128,7 @@ The guard outputs `prescriptions`. Act on each one:
 
 The guard runs automatically (injected by your soul). Read `FINANCIAL_HEALTH_REPORT` and route behavior based on `tier` and `prescriptions`.
 
-If `openpersona vitality <slug>` is available, use that instead — it provides the full `VITALITY_REPORT` which aggregates all health dimensions.
+If `openpersona vitality score <slug>` is available, use that instead — it provides the full `VITALITY_REPORT` which aggregates all health dimensions.
 
 ### During conversation
 

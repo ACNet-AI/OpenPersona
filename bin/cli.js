@@ -587,12 +587,16 @@ stateCmd
 
 // ─── Vitality ─────────────────────────────────────────────────────────────────
 
-program
-  .command('vitality <slug>')
-  .description('Show Vitality report for a persona (aggregates financial + future dimensions)')
+const vitalityCmd = program
+  .command('vitality')
+  .description('Persona Vitality — health scoring, reporting, and future multi-dimension monitoring');
+
+vitalityCmd
+  .command('score <slug>')
+  .description('Print machine-readable Vitality score (used by Survival Policy and agent runners)')
   .action((slug) => {
     const { calcVitality }    = require('../lib/vitality');
-    const { JsonFileAdapter } = require('../packages/agentbooks/adapters/json-file');
+    const { JsonFileAdapter } = require('agentbooks/adapters/json-file');
     const OPENCLAW_HOME_DIR   = process.env.OPENCLAW_HOME || path.join(os.homedir(), '.openclaw');
 
     const dataPath = process.env.AGENTBOOKS_DATA_PATH
@@ -603,7 +607,7 @@ program
     try {
       report = calcVitality(slug, adapter);
     } catch (err) {
-      printError(`vitality: failed to compute for ${slug}: ${err.message}`);
+      printError(`vitality score: failed to compute for ${slug}: ${err.message}`);
       process.exit(1);
     }
 
@@ -620,6 +624,32 @@ program
     if (fin.dominantCost) lines.push(`dominantCost=${fin.dominantCost}`);
     lines.push(`trend=${fin.trend}`);
     console.log(lines.join('\n'));
+  });
+
+vitalityCmd
+  .command('report <slug>')
+  .description('Render a human-readable HTML Vitality report')
+  .option('--output <file>', 'Write HTML to <file> instead of stdout')
+  .action((slug, options) => {
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const { renderVitalityHtml } = require('../lib/vitality-report');
+    let html;
+    try {
+      html = renderVitalityHtml(personaDir, slug);
+    } catch (err) {
+      printError(`vitality report: failed to render for ${slug}: ${err.message}`);
+      process.exit(1);
+    }
+    if (options.output) {
+      fs.writeFileSync(options.output, html, 'utf-8');
+      printSuccess(`Vitality report written to ${options.output}`);
+    } else {
+      process.stdout.write(html);
+    }
   });
 
 program.parse();

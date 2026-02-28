@@ -5,7 +5,7 @@
  * OpenPersona thin wrapper for agentbooks economy-guard.
  *
  * Outputs FINANCIAL_HEALTH_REPORT (not VITALITY_REPORT).
- * Vitality is aggregated by `openpersona vitality <slug>` command.
+ * Vitality is aggregated by `openpersona vitality score <slug>` command.
  */
 
 const path = require('path');
