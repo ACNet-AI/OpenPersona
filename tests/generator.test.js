@@ -3012,7 +3012,7 @@ describe('economy faculty', () => {
       }
     })();
     assert.strictEqual(code, 0, 'guard should always exit 0');
-    // AgentBooks v0.1.0: outputs FINANCIAL_HEALTH_REPORT (Vitality is aggregated by openpersona vitality)
+    // AgentBooks v0.1.0: outputs FINANCIAL_HEALTH_REPORT (Vitality is aggregated by openpersona vitality score)
     assert.ok(output.includes('FINANCIAL_HEALTH_REPORT'), 'should output FINANCIAL_HEALTH_REPORT');
     assert.ok(output.includes('uninitialized') || output.includes('development'), 'development mode → uninitialized');
     fs.removeSync(guardTmp);

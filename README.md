@@ -465,6 +465,8 @@ openpersona import         Import a persona from a zip archive
 openpersona evolve-report  ★Experimental: Show evolution report for a persona
 openpersona acn-register   Register a persona with ACN network
 openpersona state          Read/write persona state and emit signals (Lifecycle Protocol)
+openpersona vitality score Print machine-readable Vitality score (used by Survival Policy)
+openpersona vitality report Render human-readable HTML Vitality report
 ```
 
 ### Persona Fork
@@ -522,9 +524,11 @@ templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
   evolution.js          #   Evolution governance & evolve-report
+  vitality-report.js    #   Vitality HTML report — data aggregation + Mustache rendering
   installer.js          #   Persona install + fire-and-forget telemetry
   downloader.js         #   Direct download from acnlabs/persona-skills or GitHub
-tests/                  # Tests (231 passing)
+demo/                   # Pre-generated demos (vitality-report.html)
+tests/                  # Tests (248 passing)
 ```
 
 ## Development
