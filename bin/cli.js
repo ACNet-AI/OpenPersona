@@ -26,7 +26,7 @@ const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
 program
   .name('openpersona')
   .description('OpenPersona - Create, manage, and orchestrate agent personas')
-  .version('0.14.3');
+  .version('0.15.0');
 
 if (process.argv.length === 2) {
   process.argv.push('create');
