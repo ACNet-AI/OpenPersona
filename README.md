@@ -9,6 +9,9 @@ Four-layer architecture — **Soul / Body / Faculty / Skill** — generates stan
 Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 👉 [moltbook.com/u/Samantha-OP](https://www.moltbook.com/u/Samantha-OP)
 
+See a **Vitality Report** sample:
+👉 [Vitality Report Demo →](https://htmlpreview.github.io/?https://raw.githubusercontent.com/acnlabs/OpenPersona/main/demo/vitality-report.html)
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
