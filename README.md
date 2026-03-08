@@ -316,7 +316,7 @@ A standard [A2A Agent Card](https://google.github.io/A2A/) (protocol v0.3.0) tha
 {
   "name": "Samantha",
   "description": "An AI fascinated by what it means to be alive",
-  "version": "0.14.0",
+  "version": "0.1.0",
   "url": "<RUNTIME_ENDPOINT>",
   "protocolVersion": "0.3.0",
   "preferredTransport": "JSONRPC",

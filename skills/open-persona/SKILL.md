@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.15.0"
+version: "0.16.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
@@ -141,8 +141,7 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Evolve Report (★Exp):** `npx openpersona evolve-report <slug>` — display a formatted evolution report (relationship, mood, traits, drift, interests, milestones, eventLog, self-narrative, state history)
 - **Vitality Score:** `npx openpersona vitality score <slug>` — print machine-readable `VITALITY_REPORT` (tier, score, diagnosis, trend); used by Survival Policy and agent runners
 - **Vitality Report:** `npx openpersona vitality report <slug> [--output <file>]` — render a human-readable HTML Vitality report; omit `--output` to print to stdout
-- **Living Canvas:** `npx openpersona canvas <slug> [--output <file>] [--open]` — generate a self-contained HTML persona profile page (P14 Phase 1); shows Soul identity, Body runtime, Faculty badges, and Skill cards; default output is `canvas-<slug>.html`
-- **Living Canvas:** `npx openpersona canvas <slug> [--output <file>] [--open]` — generate a self-contained HTML persona profile page (P14 Phase 1); shows all four layers (Soul / Body / Faculty / Skill), evolved traits timeline, relationship stage, and A2A "Talk" button when endpoint is available; writes to `canvas-<slug>.html` by default
+- **Living Canvas:** `npx openpersona canvas <slug> [--output <file>] [--open]` — generate a self-contained HTML persona profile page (P14 Phase 1); shows all four layers (Soul / Body / Faculty / Skill), evolved traits timeline, relationship stage, and A2A "Talk" button when endpoint is available; default output is `canvas-<slug>.html`
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 

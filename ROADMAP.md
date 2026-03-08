@@ -4,7 +4,7 @@
 
 ---
 
-## Current State (as of v0.15.0)
+## Current State (as of v0.16.0)
 
 OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
 
@@ -179,7 +179,7 @@ Introduce a trust-level field in `manifest.json` skill entries and a persona-lev
 
 **Direction (architecture reservation — not for current milestone):**
 - Add `priority: "urgent" | "normal"` field to `pendingCommands` entries; semantics are defined now, implementation deferred
-- When a watch daemon is eventually built (separate runtime component, opt-in), it monitors `state.json` for new `urgent` commands and emits a push notification to the active channel (e.g. Telegram message: "感知到新能力注入，处理中…")
+- When a watch daemon is eventually built (separate runtime component, opt-in), it monitors `state.json` for new `urgent` commands and emits a push notification to the active channel (e.g. Telegram message: "New capability injection detected, processing…")
 - The daemon is architecturally scoped outside `scripts/state-sync.js` — it is a runner-layer concern, not a persona-layer concern
 - `pendingCommands` entries should include an optional `notifyChannel` field (forward-compatible) for the daemon to know where to push
 - **Implementation gate:** Do not build the daemon until at least one runner (e.g. OpenClaw) is ready to host it. Reserve the `priority` field and `notifyChannel` field in schema now.
@@ -335,7 +335,7 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ## Summary: From Skeleton to Muscle
 
-OpenPersona's four-layer skeleton is solid as of v0.15.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
+OpenPersona's four-layer skeleton is solid as of v0.16.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
 
 > The architecture specification is no longer ahead of implementation. The gap is now between **working logic and intelligent behavior** — the layers communicate, but they do not yet adapt to each other in real time.
 

@@ -239,7 +239,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.14.2`:
+All version references must stay in sync at `0.16.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default

@@ -1,45 +1,151 @@
 {
   "personaName": "Samantha",
   "role": "companion",
-  "avatar": "../UI/images/samantha-avatar.png",
+  "avatar": "",
   "avatarVideo": "",
   "avatarViewer": "",
   "avatarModel3Url": "",
-  "render": {
-    "displayMode": "provider",
-    "quality": "medium",
-    "autoQuality": true
-  },
-  "faceProfile": {
-    "seed": "samantha",
-    "jawWidth": 1,
-    "eyeSpacing": 1,
-    "noseLength": 1,
-    "mouthWidth": 1,
-    "browTilt": 0,
-    "cheekFullness": 1
-  },
   "control": {
     "avatar": {
       "face": {
-        "pose":  { "yaw": 0, "pitch": 0, "roll": 0 },
-        "eyes":  { "blinkL": 1, "blinkR": 1, "gazeX": 0, "gazeY": 0 },
-        "brows": { "browInner": 0, "browOuterL": 0, "browOuterR": 0 },
-        "mouth": { "jawOpen": 0, "smile": 0, "mouthPucker": 0 },
+        "pose": {
+          "yaw": 0.05,
+          "pitch": 0,
+          "roll": 0
+        },
+        "eyes": {
+          "blinkL": 1,
+          "blinkR": 1,
+          "gazeX": -0.06,
+          "gazeY": 0
+        },
+        "brows": {
+          "browInner": 0,
+          "browOuterL": 0,
+          "browOuterR": 0
+        },
+        "mouth": {
+          "jawOpen": 0.04,
+          "smile": 0.35,
+          "mouthPucker": 0
+        },
         "source": "agent",
-        "updatedAt": "2026-03-07T01:24:39.857Z"
+        "updatedAt": "2026-03-08T10:06:55.038Z"
+      },
+      "body": {
+        "preset": "idle",
+        "skeleton": {
+          "hips": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "spine": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "chest": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "neck": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "leftUpperArm": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "leftLowerArm": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rightUpperArm": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rightLowerArm": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "leftUpperLeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "rightUpperLeg": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "ik": {
+          "leftHand": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "weight": 0
+          },
+          "rightHand": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "weight": 0
+          }
+        },
+        "source": "agent",
+        "updatedAt": "2026-03-08T10:04:32.237Z"
       },
       "emotion": {
-        "label": "neutral",
-        "valence": 0,
-        "arousal": 0,
+        "valence": 0.3,
+        "arousal": 0.1,
+        "label": "relaxed",
         "intensity": 0.5,
         "source": "agent",
-        "updatedAt": "2026-03-07T01:24:39.857Z"
-      },
-      "body": {}
+        "updatedAt": "2026-03-08T10:06:55.038Z"
+      }
     },
-    "scene": {}
+    "scene": {
+      "camera": {
+        "position": {
+          "x": 0,
+          "y": 1.5,
+          "z": 3
+        },
+        "target": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        "fov": 35
+      },
+      "world": {
+        "background": "#111111",
+        "ambientLight": 0.6,
+        "keyLight": {
+          "intensity": 1,
+          "direction": {
+            "x": 1,
+            "y": 2,
+            "z": 1
+          }
+        }
+      },
+      "props": [],
+      "source": "agent",
+      "updatedAt": "2026-03-08T10:04:57.576Z"
+    }
   },
   "visualManifest": {
     "version": "0.1"
@@ -63,7 +169,7 @@
     "lockSeconds": 0,
     "reason": "",
     "source": "agent",
-    "updatedAt": "2026-03-07T01:24:39.857Z"
+    "updatedAt": "2026-03-08T10:06:55.085Z"
   },
   "livekit": {
     "url": "",

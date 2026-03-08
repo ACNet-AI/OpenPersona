@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -95,13 +95,6 @@
       background: #131327;
     }
 
-    .avatar-canvas {
-      position: absolute;
-      inset: 0;
-      z-index: 2;
-      background: transparent;
-    }
-
     .avatar-media {
       position: absolute;
       inset: 0;
@@ -174,93 +167,6 @@
       background: rgba(154, 141, 255, 0.1);
     }
 
-    .controls {
-      position: absolute;
-      left: 20px;
-      bottom: 20px;
-      width: min(300px, calc(100vw - 70px));
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(9, 10, 22, 0.48);
-      backdrop-filter: blur(8px);
-      border-radius: 12px;
-      padding: 10px 12px;
-      display: grid;
-      gap: 8px;
-      font-size: 12px;
-      opacity: 0.72;
-      transition: opacity 180ms ease;
-      z-index: 8;
-    }
-
-    .controls.hidden {
-      display: none !important;
-    }
-
-    .controls:hover {
-      opacity: 0.96;
-    }
-
-    .controls-row {
-      display: grid;
-      grid-template-columns: 78px 1fr;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .controls label {
-      color: var(--muted);
-    }
-
-    .controls select,
-    .controls input[type="checkbox"] {
-      accent-color: var(--active);
-    }
-
-    .controls select {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      color: var(--text);
-      padding: 6px 8px;
-      border-radius: 8px;
-    }
-
-    .fps {
-      display: flex;
-      justify-content: space-between;
-      color: #f3f2ff;
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1.4;
-      background: rgba(8, 10, 22, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 8px;
-      padding: 6px 8px;
-    }
-
-    .advanced-block {
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.03);
-      padding: 6px 8px;
-    }
-
-    .advanced-block > summary {
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      user-select: none;
-      padding: 2px 0;
-      outline: none;
-    }
-
-    .advanced-content {
-      margin-top: 8px;
-      display: grid;
-      gap: 8px;
-    }
-
     .status-badge {
       position: absolute;
       left: 20px;
@@ -301,7 +207,6 @@
 
     @media (max-width: 900px) {
       .avatar-wrap { width: min(72vw, 320px); }
-      .controls { width: min(240px, calc(100vw - 80px)); }
     }
   </style>
 </head>
@@ -355,7 +260,6 @@
         </div>
         <iframe class="avatar avatar-media" id="avatarViewer" title="provider avatar viewer" style="display:none; border:0;"></iframe>
         <div class="avatar avatar-media" id="live2dCanvas" style="display:none; background:transparent;" aria-label="live2d avatar canvas"></div>
-        <canvas class="avatar avatar-canvas" id="avatarCanvas" aria-label="digital avatar canvas"></canvas>
       </div>
       <div class="meta">
         <h1 class="name" id="personaName">Persona</h1>
@@ -372,36 +276,6 @@
       <div class="sense" id="sense-worldSense" title="world">env</div>
     </aside>
 
-    <section class="controls" aria-label="render controls">
-      <div class="controls-row">
-        <label for="displayMode">Display</label>
-        <select id="displayMode">
-          <option value="provider" selected>provider</option>
-          <option value="experimental">experimental</option>
-        </select>
-      </div>
-      <details class="advanced-block">
-        <summary>Advanced</summary>
-        <div class="advanced-content">
-          <div class="controls-row">
-            <label for="renderQuality">Quality</label>
-            <select id="renderQuality">
-              <option value="low">low</option>
-              <option value="medium" selected>medium</option>
-              <option value="high">high</option>
-            </select>
-          </div>
-          <div class="controls-row">
-            <label for="autoQuality">Auto Quality</label>
-            <input id="autoQuality" type="checkbox" checked />
-          </div>
-          <div class="fps">
-            <span id="fpsValue">fps: --</span>
-            <span id="perfNote">target: 30</span>
-          </div>
-        </div>
-      </details>
-    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
@@ -414,15 +288,11 @@
     var __pollTimer = null;
     var __lastStateHash = '';
     var __livekitConnected = false;
-    var __renderState = null;
-    var __renderer = null;
     var __queryIntentOverride = null;
-    var __debugMode = false;
     var __viewerRenderState = null;
     var __viewerWaitTimer = null;
     var __viewerWaitToken = 0;
     var __viewerFallbackByTimeout = false;
-    var __viewerLastSrc = '';
     var __viewerLoaded = false;
     var __viewerError = false;
     var __viewerLastHeartbeatAt = 0;
@@ -725,24 +595,9 @@
       syncPixiViewportFromWrap();
     });
 
-    var QUALITY_BUDGET = { low: 180, medium: 360, high: 720 };
-    var DEFAULT_VISUAL_MANIFEST = {
-      version: '0.1',
-      mood: { valence: 0.0, arousal: 0.4, intensity: 0.55 },
-      breath: { rate: 0.45, amplitude: 0.35 },
-      pulse: { bpm: 72, variability: 0.18 },
-      microExpression: { eyeFocus: 0.62, pupil: 0.48, mouthCurve: 0.12 },
-      aura: { hue: 246, saturation: 0.58, luminance: 0.64, flow: 0.7 },
-      envSync: { timeOfDay: 'night', ambientCct: 4100, ambientLux: 150 },
-      motionStyle: { softness: 0.72, jitter: 0.1, latencyMs: 120 },
-      signals: []
-    };
-
     function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
     function lerp(a, b, t) { return a + (b - a) * t; }
-    function fract(v) { return v - Math.floor(v); }
     function stableHash(obj) { try { return JSON.stringify(obj || {}); } catch (_) { return String(Date.now()); } }
-    function hslColor(h, s, l, a) { return 'hsla(' + Math.round(h % 360) + ', ' + Math.round(clamp(s, 0, 1) * 100) + '%, ' + Math.round(clamp(l, 0, 1) * 100) + '%, ' + clamp(a, 0, 1) + ')'; }
 
     function deepMerge(base, ext) {
       if (!ext || typeof ext !== 'object') return base;
@@ -761,27 +616,6 @@
       if (v === '1' || v === 'true' || v === 'on') return true;
       if (v === '0' || v === 'false' || v === 'off') return false;
       return fallback;
-    }
-
-    function normalizeVisualManifest(state) {
-      var vm = state && state.visualManifest ? state.visualManifest : null;
-      if (!vm && state && state.appearanceState && state.appearanceState.visualManifest) vm = state.appearanceState.visualManifest;
-      return deepMerge(DEFAULT_VISUAL_MANIFEST, vm || {});
-    }
-
-    function normalizeFaceProfile(state) {
-      var profile = state && state.faceProfile ? state.faceProfile : null;
-      if (!profile && state && state.appearanceState && state.appearanceState.faceProfile) profile = state.appearanceState.faceProfile;
-      var src = profile || {};
-      return {
-        seed: String(src.seed || state && state.personaName || 'persona-default'),
-        jawWidth: clamp(Number(src.jawWidth !== undefined ? src.jawWidth : 1), 0.75, 1.3),
-        eyeSpacing: clamp(Number(src.eyeSpacing !== undefined ? src.eyeSpacing : 1), 0.8, 1.25),
-        noseLength: clamp(Number(src.noseLength !== undefined ? src.noseLength : 1), 0.8, 1.25),
-        mouthWidth: clamp(Number(src.mouthWidth !== undefined ? src.mouthWidth : 1), 0.8, 1.3),
-        browTilt: clamp(Number(src.browTilt !== undefined ? src.browTilt : 0), -1, 1),
-        cheekFullness: clamp(Number(src.cheekFullness !== undefined ? src.cheekFullness : 1), 0.75, 1.3)
-      };
     }
 
     function normalizeFaceControl(state) {
@@ -887,18 +721,6 @@
       return out;
     }
 
-    function timeOfDayHueOffset(timeOfDay) {
-      switch (String(timeOfDay || '').toLowerCase()) {
-        case 'dawn': return 12;
-        case 'morning': return 0;
-        case 'noon': return -8;
-        case 'afternoon': return -2;
-        case 'dusk': return 22;
-        case 'night': return 38;
-        default: return 0;
-      }
-    }
-
     function getSensory(state) {
       if (state && state.sensory) return state.sensory;
       if (state && state.appearanceState && state.appearanceState.sensory) return state.appearanceState.sensory;
@@ -919,34 +741,6 @@
       if (state && state.providerCapabilities) return state.providerCapabilities;
       if (state && state.appearanceState && state.appearanceState.providerCapabilities) return state.appearanceState.providerCapabilities;
       return {};
-    }
-
-    function getRenderConfig(state) {
-      var render = state && state.render ? state.render : {};
-      var requestedDisplay = render.displayMode === 'experimental' ? 'experimental' : 'provider';
-      // Keep experimental renderer strictly behind debug gate.
-      var effectiveDisplay = __debugMode ? requestedDisplay : 'provider';
-      return {
-        displayMode: effectiveDisplay,
-        quality: QUALITY_BUDGET[render.quality] ? render.quality : 'medium',
-        autoQuality: render.autoQuality === undefined ? true : !!render.autoQuality
-      };
-    }
-
-    function updateControlValues() {
-      if (!__renderState) return;
-      document.getElementById('displayMode').value = __renderState.displayMode || 'provider';
-      document.getElementById('renderQuality').value = __renderState.quality;
-      document.getElementById('autoQuality').checked = !!__renderState.autoQuality;
-    }
-
-    function applyDebugModeGate() {
-      var p = new URLSearchParams(location.search);
-      var debugOn = parseBool(p.get('debug'), false);
-      __debugMode = debugOn;
-      var controls = document.querySelector('.controls');
-      if (!controls) return;
-      controls.classList.toggle('hidden', !debugOn);
     }
 
     function updateIntentBadge(text, locked) {
@@ -1002,26 +796,6 @@
       }, 8000);
     }
 
-    function attachControlEvents() {
-      document.getElementById('displayMode').addEventListener('change', function (e) {
-        if (!__renderState) return;
-        __renderState.displayMode = e.target.value === 'experimental' ? 'experimental' : 'provider';
-      });
-      document.getElementById('renderQuality').addEventListener('change', function (e) {
-        if (!__renderState) return;
-        __renderState.quality = QUALITY_BUDGET[e.target.value] ? e.target.value : 'medium';
-        if (__renderer) __renderer.setQuality(__renderState.quality);
-      });
-      document.getElementById('autoQuality').addEventListener('change', function (e) {
-        if (!__renderState) return;
-        __renderState.autoQuality = !!e.target.checked;
-      });
-    }
-
-    function setCanvasVisibility(visible) {
-      document.getElementById('avatarCanvas').style.display = visible ? 'block' : 'none';
-    }
-
     function setMediaVisibility(showVideo, showImage) {
       document.getElementById('avatarVideo').style.display = showVideo ? 'block' : 'none';
       document.getElementById('avatarImage').style.display = showImage ? 'block' : 'none';
@@ -1036,568 +810,18 @@
       }
     }
 
-    function createSeededRandom(seed) {
-      var n = 2166136261;
-      var text = String(seed || 'persona');
-      for (var i = 0; i < text.length; i += 1) {
-        n ^= text.charCodeAt(i);
-        n = Math.imul(n, 16777619);
-      }
-      return function rand() {
-        n += 0x6D2B79F5;
-        var t = Math.imul(n ^ (n >>> 15), 1 | n);
-        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      };
-    }
-
-    var TOPOLOGY_EDGES_68 = [
-      [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15], [15, 16],
-      [17, 18], [18, 19], [19, 20], [20, 21], [22, 23], [23, 24], [24, 25], [25, 26],
-      [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [32, 33], [33, 34], [34, 35],
-      [36, 37], [37, 38], [38, 39], [39, 40], [40, 41], [41, 36],
-      [42, 43], [43, 44], [44, 45], [45, 46], [46, 47], [47, 42],
-      [48, 49], [49, 50], [50, 51], [51, 52], [52, 53], [53, 54], [54, 55], [55, 56], [56, 57], [57, 58], [58, 59], [59, 48],
-      [60, 61], [61, 62], [62, 63], [63, 64], [64, 65], [65, 66], [66, 67], [67, 60]
-    ];
-    var LM68 = {
-      jaw: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-      browL: [17, 18, 19, 20, 21],
-      browR: [22, 23, 24, 25, 26],
-      noseBridge: [27, 28, 29, 30],
-      noseBase: [31, 32, 33, 34, 35],
-      eyeL: [36, 37, 38, 39, 40, 41],
-      eyeR: [42, 43, 44, 45, 46, 47],
-      mouthOuter: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-      mouthInner: [60, 61, 62, 63, 64, 65, 66, 67]
-    };
-
-    function buildLandmarks68(faceProfile) {
-      var p = faceProfile || normalizeFaceProfile({});
-      var points = [];
-      var cx = 0.5;
-      var jawRx = 0.2 * p.jawWidth;
-      var jawRy = 0.255;
-      var jawCy = 0.575;
-      var i;
-
-      // 0-16 jawline
-      for (i = 0; i <= 16; i += 1) {
-        var tJ = i / 16;
-        var ang = (Math.PI * (1.08 + (0.84 * tJ)));
-        var xJ = cx + (Math.cos(ang) * jawRx);
-        var yJ = jawCy + (Math.sin(ang) * jawRy);
-        points.push({ x: xJ, y: yJ, region: 'jaw' });
-      }
-
-      // 17-21 left brow
-      for (i = 0; i < 5; i += 1) {
-        var tBL = i / 4;
-        var xBL = 0.34 + (tBL * 0.11 * p.eyeSpacing);
-        var yBL = 0.388 - (Math.sin(tBL * Math.PI) * 0.022) - (p.browTilt * (0.01 - (tBL * 0.02)));
-        points.push({ x: xBL, y: yBL, region: 'brow' });
-      }
-      // 22-26 right brow
-      for (i = 0; i < 5; i += 1) {
-        var tBR = i / 4;
-        var xBR = 0.55 + (tBR * 0.11 * p.eyeSpacing);
-        var yBR = 0.388 - (Math.sin((1 - tBR) * Math.PI) * 0.022) + (p.browTilt * (0.01 - ((1 - tBR) * 0.02)));
-        points.push({ x: xBR, y: yBR, region: 'brow' });
-      }
-
-      // 27-30 nose ridge
-      for (i = 0; i < 4; i += 1) {
-        var tN = i / 3;
-        points.push({
-          x: 0.5 + (Math.sin((tN - 0.5) * Math.PI) * 0.006),
-          y: 0.43 + (tN * 0.16 * p.noseLength),
-          region: 'nose'
-        });
-      }
-      // 31-35 nose base
-      points.push({ x: 0.45, y: 0.595, region: 'nose' });
-      points.push({ x: 0.475, y: 0.612, region: 'nose' });
-      points.push({ x: 0.5, y: 0.618, region: 'nose' });
-      points.push({ x: 0.525, y: 0.612, region: 'nose' });
-      points.push({ x: 0.55, y: 0.595, region: 'nose' });
-
-      // 36-41 left eye (clockwise)
-      var eyeOffset = 0.078 * p.eyeSpacing;
-      var eyeRx = 0.045 * p.eyeSpacing;
-      var eyeRy = 0.022;
-      var leftEyeCx = 0.5 - eyeOffset;
-      var leftEyeCy = 0.452;
-      points.push({ x: leftEyeCx - eyeRx, y: leftEyeCy, region: 'eye' });
-      points.push({ x: leftEyeCx - eyeRx * 0.45, y: leftEyeCy - eyeRy, region: 'eye' });
-      points.push({ x: leftEyeCx + eyeRx * 0.45, y: leftEyeCy - eyeRy, region: 'eye' });
-      points.push({ x: leftEyeCx + eyeRx, y: leftEyeCy, region: 'eye' });
-      points.push({ x: leftEyeCx + eyeRx * 0.45, y: leftEyeCy + eyeRy, region: 'eye' });
-      points.push({ x: leftEyeCx - eyeRx * 0.45, y: leftEyeCy + eyeRy, region: 'eye' });
-
-      // 42-47 right eye
-      var rightEyeCx = 0.5 + eyeOffset;
-      var rightEyeCy = 0.452;
-      points.push({ x: rightEyeCx - eyeRx, y: rightEyeCy, region: 'eye' });
-      points.push({ x: rightEyeCx - eyeRx * 0.45, y: rightEyeCy - eyeRy, region: 'eye' });
-      points.push({ x: rightEyeCx + eyeRx * 0.45, y: rightEyeCy - eyeRy, region: 'eye' });
-      points.push({ x: rightEyeCx + eyeRx, y: rightEyeCy, region: 'eye' });
-      points.push({ x: rightEyeCx + eyeRx * 0.45, y: rightEyeCy + eyeRy, region: 'eye' });
-      points.push({ x: rightEyeCx - eyeRx * 0.45, y: rightEyeCy + eyeRy, region: 'eye' });
-
-      // 48-59 outer mouth
-      var mouthHalf = 0.095 * p.mouthWidth;
-      var mouthCy = 0.69;
-      var mouthRx = mouthHalf;
-      var mouthRyUp = 0.03;
-      var mouthRyDown = 0.04;
-      for (i = 0; i < 12; i += 1) {
-        var aM = (Math.PI * 2 * i) / 12;
-        var xM = 0.5 + (Math.cos(aM) * mouthRx);
-        var yM = mouthCy + (Math.sin(aM) * (aM > Math.PI ? mouthRyDown : mouthRyUp));
-        points.push({ x: xM, y: yM, region: 'mouth' });
-      }
-
-      // 60-67 inner mouth
-      var innerRx = mouthRx * 0.52;
-      var innerRyUp = mouthRyUp * 0.52;
-      var innerRyDown = mouthRyDown * 0.56;
-      for (i = 0; i < 8; i += 1) {
-        var aI = (Math.PI * 2 * i) / 8;
-        var xI = 0.5 + (Math.cos(aI) * innerRx);
-        var yI = mouthCy + (Math.sin(aI) * (aI > Math.PI ? innerRyDown : innerRyUp));
-        points.push({ x: xI, y: yI, region: 'mouth' });
-      }
-
-      return points;
-    }
-
-    function buildFaceTemplate(count, faceProfile) {
-      var p = faceProfile || normalizeFaceProfile({});
-      var rand = createSeededRandom(p.seed);
-      var base = buildLandmarks68(p);
-      var points = [];
-      var i;
-      var cx = 0.5;
-      var cy = 0.54;
-      var rx = 0.23 * p.jawWidth;
-      var ry = 0.33;
-
-      function gauss(x, y, mx, my, sx, sy) {
-        var dx = (x - mx) / sx;
-        var dy = (y - my) / sy;
-        return Math.exp(-0.5 * ((dx * dx) + (dy * dy)));
-      }
-
-      function faceDepth(x, y) {
-        var nx = (x - cx) / rx;
-        var ny = (y - cy) / ry;
-        var base = Math.sqrt(Math.max(0, 1 - (nx * nx) - (ny * ny)));
-        var noseBridge = 0.42 * gauss(x, y, 0.5, 0.5, 0.028, 0.12);
-        var noseTip = 0.26 * gauss(x, y, 0.5, 0.56, 0.032, 0.05);
-        var cheeks = 0.16 * p.cheekFullness * (gauss(x, y, 0.4, 0.56, 0.06, 0.08) + gauss(x, y, 0.6, 0.56, 0.06, 0.08));
-        var eyeSockets = -0.24 * (gauss(x, y, 0.42, 0.44, 0.05, 0.04) + gauss(x, y, 0.58, 0.44, 0.05, 0.04));
-        var jawLoss = y > 0.69 ? -(y - 0.69) * 0.8 : 0;
-        return clamp(base + noseBridge + noseTip + cheeks + eyeSockets + jawLoss, 0, 1);
-      }
-
-      for (i = 0; i < base.length; i += 1) {
-        var bp = base[i];
-        points.push({
-          x: bp.x,
-          y: bp.y,
-          w: (bp.region === 'eye' || bp.region === 'mouth') ? 0.95 : 0.85,
-          z: faceDepth(bp.x, bp.y),
-          region: bp.region
-        });
-      }
-
-      // Densify using standard topology edges while preserving landmark semantics.
-      var need = Math.max(0, count - points.length);
-      for (i = 0; i < need; i += 1) {
-        var e = TOPOLOGY_EDGES_68[i % TOPOLOGY_EDGES_68.length];
-        var a = base[e[0]];
-        var b = base[e[1]];
-        var t = 0.15 + (rand() * 0.7);
-        var xE = lerp(a.x, b.x, t);
-        var yE = lerp(a.y, b.y, t);
-        points.push({
-          x: xE,
-          y: yE,
-          w: 0.68,
-          z: faceDepth(xE, yE),
-          region: a.region
-        });
-      }
-      return points;
-    }
-
-    function drawSmoothPath(ctx, pts, indices, closed) {
-      if (!indices || !indices.length) return;
-      var first = pts[indices[0]];
-      if (!first) return;
-      ctx.beginPath();
-      ctx.moveTo(first.x, first.y);
-      for (var i = 1; i < indices.length; i += 1) {
-        var p0 = pts[indices[i - 1]];
-        var p1 = pts[indices[i]];
-        if (!p0 || !p1) continue;
-        var mx = (p0.x + p1.x) * 0.5;
-        var my = (p0.y + p1.y) * 0.5;
-        ctx.quadraticCurveTo(p0.x, p0.y, mx, my);
-      }
-      var last = pts[indices[indices.length - 1]];
-      if (last) ctx.lineTo(last.x, last.y);
-      if (closed && first) {
-        var mxc = (last.x + first.x) * 0.5;
-        var myc = (last.y + first.y) * 0.5;
-        ctx.quadraticCurveTo(last.x, last.y, mxc, myc);
-        ctx.quadraticCurveTo(first.x, first.y, first.x, first.y);
-        ctx.closePath();
-      }
-    }
-
-    function renderVectorFace(ctx, lm, hue, sat, lum, mood) {
-      if (!lm || !lm[67]) return;
-      var skin = hslColor(hue + 10, sat * 0.38, lum * 0.78, 0.22 + (mood * 0.1));
-      var line = hslColor(hue + 18, Math.min(1, sat * 1.08), Math.min(1, lum * 1.08), 0.82);
-      var soft = hslColor(hue + 12, sat * 0.9, Math.min(1, lum * 1.04), 0.46);
-
-      ctx.save();
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = hslColor(hue + 18, sat, lum, 0.34);
-
-      // Face mask (jaw + brows top bridge)
-      var faceLoop = LM68.jaw.concat([26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 0]);
-      drawSmoothPath(ctx, lm, faceLoop, true);
-      ctx.fillStyle = skin;
-      ctx.fill();
-
-      // Primary lines
-      ctx.lineWidth = 2.2;
-      ctx.strokeStyle = line;
-      drawSmoothPath(ctx, lm, LM68.jaw, false); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.browL, false); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.browR, false); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.noseBridge, false); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.noseBase, false); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.eyeL, true); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.eyeR, true); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.mouthOuter, true); ctx.stroke();
-
-      // Eye and mouth soft fill
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = soft;
-      ctx.fillStyle = hslColor(hue + 20, sat * 0.75, lum * 0.95, 0.2);
-      drawSmoothPath(ctx, lm, LM68.eyeL, true); ctx.fill(); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.eyeR, true); ctx.fill(); ctx.stroke();
-      drawSmoothPath(ctx, lm, LM68.mouthInner, true); ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function CanvasAvatarRenderer(canvas, getState) {
-      this.canvas = canvas;
-      this.ctx = canvas.getContext('2d');
-      this.getState = getState;
-      this.pixelRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      this.points = [];
-      this.quality = 'medium';
-      this.faceProfile = normalizeFaceProfile({ personaName: 'Persona' });
-      this.scatterPoints = [];
-      this.bootTs = 0;
-      this.hasBootAnimation = false;
-      this.lookTargetX = 0;
-      this.lookTargetY = 0;
-      this.lookX = 0;
-      this.lookY = 0;
-      this.debugYaw = 0;
-      this.debugPitch = 0;
-      this.lastTs = 0;
-      this.frames = 0;
-      this.fps = 0;
-      this.fpsStart = 0;
-      this.lowStreak = 0;
-      this.highStreak = 0;
-      this.width = 1;
-      this.height = 1;
-      this.resize();
-      this.setQuality('medium', { resetBoot: true });
-      this.loop = this.loop.bind(this);
-      this.onResize = this.onResize.bind(this);
-      this.onPointerMove = this.onPointerMove.bind(this);
-      this.onPointerLeave = this.onPointerLeave.bind(this);
-      window.addEventListener('resize', this.onResize);
-      this.canvas.addEventListener('mousemove', this.onPointerMove);
-      this.canvas.addEventListener('mouseleave', this.onPointerLeave);
-      requestAnimationFrame(this.loop);
-    }
-
-    CanvasAvatarRenderer.prototype.onResize = function () {
-      this.resize();
-      this.setQuality(this.quality);
-    };
-    CanvasAvatarRenderer.prototype.resize = function () {
-      var rect = this.canvas.getBoundingClientRect();
-      this.width = Math.max(1, Math.floor(rect.width));
-      this.height = Math.max(1, Math.floor(rect.height));
-      this.canvas.width = Math.floor(this.width * this.pixelRatio);
-      this.canvas.height = Math.floor(this.height * this.pixelRatio);
-      this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
-    };
-    CanvasAvatarRenderer.prototype.setQuality = function (quality, opts) {
-      opts = opts || {};
-      this.quality = QUALITY_BUDGET[quality] ? quality : 'medium';
-      var count = QUALITY_BUDGET[this.quality];
-      this.points = buildFaceTemplate(count, this.faceProfile);
-      if (this.scatterPoints.length !== this.points.length || opts.resetBoot) {
-        this.scatterPoints = [];
-        for (var i = 0; i < this.points.length; i += 1) {
-          var a = Math.random() * Math.PI * 2;
-          var r = Math.sqrt(Math.random()) * 0.52;
-          this.scatterPoints.push({
-            x: 0.5 + (Math.cos(a) * r),
-            y: 0.5 + (Math.sin(a) * r),
-            z: (Math.random() * 1.2) - 0.1
-          });
-        }
-      } else {
-        // Keep current visual continuity when only quality/profile updates.
-        for (var j = 0; j < this.points.length; j += 1) {
-          this.scatterPoints[j] = {
-            x: this.points[j].x,
-            y: this.points[j].y,
-            z: this.points[j].z === undefined ? 0.5 : this.points[j].z
-          };
-        }
-      }
-      if (opts.resetBoot || !this.hasBootAnimation) {
-        this.bootTs = 0;
-        this.hasBootAnimation = true;
-      }
-    };
-    CanvasAvatarRenderer.prototype.setFaceProfile = function (faceProfile, opts) {
-      this.faceProfile = faceProfile || this.faceProfile;
-      this.setQuality(this.quality, opts || { resetBoot: false });
-    };
-    CanvasAvatarRenderer.prototype.onPointerMove = function (ev) {
-      var rect = this.canvas.getBoundingClientRect();
-      var cx = rect.left + (rect.width * 0.5);
-      var cy = rect.top + (rect.height * 0.5);
-      var nx = (ev.clientX - cx) / (rect.width * 0.5);
-      var ny = (ev.clientY - cy) / (rect.height * 0.5);
-      var r = Math.sqrt((nx * nx) + (ny * ny));
-      if (r > 1) {
-        this.lookTargetX = 0;
-        this.lookTargetY = 0;
-        return;
-      }
-      // 8-direction guidance: keep continuous movement, but make diagonals and octants more distinct.
-      var angle = Math.atan2(ny, nx);
-      var octant = Math.round(angle / (Math.PI / 4));
-      var octantAngle = octant * (Math.PI / 4);
-      var snapStrength = 0.35;
-      var sx = Math.cos(octantAngle) * r;
-      var sy = Math.sin(octantAngle) * r;
-      var tx = lerp(nx, sx, snapStrength);
-      var ty = lerp(ny, sy, snapStrength);
-      this.lookTargetX = clamp(tx, -1, 1);
-      this.lookTargetY = clamp(ty, -1, 1);
-    };
-    CanvasAvatarRenderer.prototype.onPointerLeave = function () {
-      this.lookTargetX = 0;
-      this.lookTargetY = 0;
-    };
-    CanvasAvatarRenderer.prototype.handleAutoQuality = function () {
-      var s = this.getState() || {};
-      if (!s.autoQuality) return;
-      var order = ['low', 'medium', 'high'];
-      var idx = order.indexOf(this.quality);
-      if (this.fps < 24) { this.lowStreak += 1; this.highStreak = 0; }
-      else if (this.fps > 45) { this.highStreak += 1; this.lowStreak = 0; }
-      else { this.lowStreak = 0; this.highStreak = 0; }
-      if (this.lowStreak >= 3 && idx > 0) {
-        this.lowStreak = 0;
-        this.setQuality(order[idx - 1]);
-        s.quality = order[idx - 1];
-        updateControlValues();
-      } else if (this.highStreak >= 5 && idx < 2) {
-        this.highStreak = 0;
-        this.setQuality(order[idx + 1]);
-        s.quality = order[idx + 1];
-        updateControlValues();
-      }
-    };
-    CanvasAvatarRenderer.prototype.commitPerf = function (targetFps) {
-      document.getElementById('fpsValue').textContent = 'fps: ' + this.fps.toFixed(1);
-      document.getElementById('perfNote').textContent =
-        'target: ' + targetFps +
-        ' | points: ' + this.points.length +
-        ' | yaw: ' + this.debugYaw.toFixed(2) +
-        ' | pitch: ' + this.debugPitch.toFixed(2);
-    };
-    CanvasAvatarRenderer.prototype.draw = function (ts, vm, faceControl) {
-      var ctx = this.ctx;
-      var w = this.width;
-      var h = this.height;
-      var t = ts / 1000;
-      if (!this.bootTs) this.bootTs = ts;
-      var mood = clamp(vm.mood && vm.mood.intensity !== undefined ? vm.mood.intensity : 0.55, 0, 1);
-      var breathRate = clamp(vm.breath && vm.breath.rate !== undefined ? vm.breath.rate : 0.45, 0.05, 1.5);
-      var breathAmp = clamp(vm.breath && vm.breath.amplitude !== undefined ? vm.breath.amplitude : 0.35, 0.02, 1);
-      var pulseBpm = clamp(vm.pulse && vm.pulse.bpm !== undefined ? vm.pulse.bpm : 72, 40, 180);
-      var jitter = clamp(vm.motionStyle && vm.motionStyle.jitter !== undefined ? vm.motionStyle.jitter : 0.1, 0, 1);
-      var fc = faceControl || normalizeFaceControl({});
-      var fcEyes = fc.eyes || {};
-      var fcBrows = fc.brows || {};
-      var fcMouth = fc.mouth || {};
-      var fcPose = fc.pose || {};
-      var hue = clamp(vm.aura && vm.aura.hue !== undefined ? vm.aura.hue : 246, 0, 360) + timeOfDayHueOffset(vm.envSync && vm.envSync.timeOfDay);
-      var sat = clamp(vm.aura && vm.aura.saturation !== undefined ? vm.aura.saturation : 0.58, 0, 1);
-      var lum = clamp(vm.aura && vm.aura.luminance !== undefined ? vm.aura.luminance : 0.64, 0, 1);
-      var flow = clamp(vm.aura && vm.aura.flow !== undefined ? vm.aura.flow : 0.7, 0, 1);
-      var breath = Math.sin(t * (Math.PI * 2) * breathRate) * breathAmp;
-      var pulse = Math.sin(t * (Math.PI * 2) * (pulseBpm / 60));
-      var blink = clamp((fcEyes.blinkL + fcEyes.blinkR) * 0.5, 0, 1);
-      var settle = clamp((ts - this.bootTs) / 1200, 0, 1);
-      settle = 1 - Math.pow(1 - settle, 3);
-      this.lookX = lerp(this.lookX, this.lookTargetX, 0.12);
-      this.lookY = lerp(this.lookY, this.lookTargetY, 0.12);
-      var mouseYaw = this.lookX * 0.28;
-      // pointer-up => negative ny => lookY negative => pitch should go up, so invert here.
-      var mousePitch = -this.lookY * 0.22;
-      var yaw = (fcPose.yaw * 0.35) + (fcEyes.gazeX * 0.08) + (breath * 0.04);
-      var pitch = (fcPose.pitch * 0.26) - (fcEyes.gazeY * 0.06) - (breath * 0.03);
-      var roll = (fcPose.roll * 0.2);
-      yaw += mouseYaw;
-      pitch += mousePitch;
-      this.debugYaw = yaw;
-      this.debugPitch = pitch;
-      var cosY = Math.cos(yaw), sinY = Math.sin(yaw);
-      var cosX = Math.cos(pitch), sinX = Math.sin(pitch);
-      var cosR = Math.cos(roll), sinR = Math.sin(roll);
-      var cam = 1.75;
-      var faceCenterY = 0.445;
-
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = 'rgba(9, 9, 18, 0.15)';
-      ctx.fillRect(0, 0, w, h);
-      ctx.shadowBlur = 8 + flow * 12 + mood * 22;
-      ctx.shadowColor = hslColor(hue, sat, lum, 0.48);
-      var lmScreen = new Array(68);
-
-      for (var i = 0; i < this.points.length; i += 1) {
-        var pTarget = this.points[i];
-        var pScatter = this.scatterPoints[i] || pTarget;
-        var p = {
-          x: lerp(pScatter.x, pTarget.x, settle),
-          y: lerp(pScatter.y, pTarget.y, settle),
-          w: pTarget.w,
-          z: lerp(pScatter.z, pTarget.z === undefined ? 0.5 : pTarget.z, settle),
-          region: pTarget.region
-        };
-
-        var py = p.y;
-        if (p.region === 'eye' || p.region === 'iris') py = lerp(py, faceCenterY, blink * 0.88);
-        if (p.region === 'brow') {
-          var browLift = ((fcBrows.browInner * 0.008) + (fcBrows.browOuterL * 0.006) + (fcBrows.browOuterR * 0.006));
-          py = lerp(py - browLift, 0.392, blink * 0.2);
-        }
-        if (p.region === 'mouth') {
-          var mouthCurve = (fcMouth.smile * -0.014);
-          var jawDrop = fcMouth.jawOpen * 0.03;
-          py += mouthCurve + jawDrop;
-        }
-
-        var lx = (p.x - 0.5) * 1.12;
-        var ly = (py - 0.52) * 1.36;
-        var lz = (p.z - 0.5) * 0.9;
-        var dist = Math.sqrt((lx * lx) + (ly * ly));
-        var wave = Math.sin((t * 2.1) + (dist * 7.6) + (i * 0.013));
-        var swirl = 1 - settle;
-
-        lz += (wave * 0.035 * flow) + (pulse * 0.02 * (1 - clamp(dist, 0, 1))) + (Math.sin((t * 3.8) + (i * 0.17)) * 0.24 * swirl);
-        ly += (breath * 0.026) + (wave * 0.006) + (Math.cos((t * 3.2) + (i * 0.11)) * 0.14 * swirl);
-        lx += (Math.sin(t * 0.9 + (i * 0.021)) * breath * 0.01) + (Math.sin((t * 3.5) + (i * 0.09)) * 0.18 * swirl);
-        if (p.region === 'iris') {
-          lx += fcEyes.gazeX * 0.022;
-          ly += fcEyes.gazeY * 0.015;
-        }
-        if (p.region === 'mouth') {
-          lz += fcMouth.mouthPucker * 0.05;
-        }
-
-        var x1 = (lx * cosY) + (lz * sinY);
-        var z1 = (-lx * sinY) + (lz * cosY);
-        var y1 = (ly * cosX) - (z1 * sinX);
-        var z2 = (ly * sinX) + (z1 * cosX);
-        var x2 = (x1 * cosR) - (y1 * sinR);
-        var y2 = (x1 * sinR) + (y1 * cosR);
-
-        var perspective = cam / Math.max(0.35, cam - z2);
-        var x = (w * 0.5) + (x2 * w * 0.58 * perspective);
-        var y = (h * 0.54) + (y2 * h * 0.66 * perspective);
-        var jit = i < 68 ? (jitter * 0.12) : (jitter * 0.55);
-        x += (Math.random() - 0.5) * jit;
-        y += (Math.random() - 0.5) * jit;
-        if (i < 68) lmScreen[i] = { x: x, y: y };
-
-        var depth = clamp(p.z === undefined ? 0.5 : p.z, 0, 1);
-        depth = clamp((depth * 0.6) + (clamp(z2, -0.7, 0.9) + 0.7) * 0.3, 0, 1);
-        var alpha = 0.11 + (0.24 * p.w) + (0.24 * mood) + (0.09 * pulse) + (0.28 * depth);
-        var size = (0.65 + (1.3 * p.w) + (0.5 * mood) + (0.5 * Math.max(0, pulse)) + (1.1 * depth)) * perspective;
-        var pointHue = hue + (dist * 18) - (depth * 14);
-        var pointLum = lum - (dist * 0.08) + (depth * 0.11);
-
-        ctx.fillStyle = hslColor(pointHue, sat, pointLum, alpha);
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      renderVectorFace(ctx, lmScreen, hue, sat, lum, mood);
-      ctx.shadowBlur = 0;
-    };
-    CanvasAvatarRenderer.prototype.loop = function (ts) {
-      var s = this.getState() || {};
-      var displayMode = s.displayMode || 'provider';
-      var useCanvasFaceRig = !!s.useCanvasFaceRig;
-      var vm = s.visualManifest || DEFAULT_VISUAL_MANIFEST;
-      var fc = s.faceControl || normalizeFaceControl({});
-      var targetFps = document.visibilityState === 'visible' ? 30 : 12;
-      var frameGap = 1000 / targetFps;
-      if (!this.lastTs) this.lastTs = ts;
-      if (ts - this.lastTs < frameGap) { requestAnimationFrame(this.loop); return; }
-      this.lastTs = ts;
-      if (displayMode === 'experimental' || useCanvasFaceRig) this.draw(ts, vm, fc);
-      if (!this.fpsStart) this.fpsStart = ts;
-      this.frames += 1;
-      if (ts - this.fpsStart >= 1000) {
-        this.fps = (this.frames * 1000) / (ts - this.fpsStart);
-        this.frames = 0;
-        this.fpsStart = ts;
-        this.handleAutoQuality();
-        this.commitPerf(targetFps);
-      }
-      requestAnimationFrame(this.loop);
-    };
-
     function applyState(state) {
       if (!state) return;
       if (state.personaName) document.getElementById('personaName').textContent = state.personaName;
       if (state.role) document.getElementById('personaRole').textContent = state.role;
       window.__CANVAS_STATE = state;
-      var renderCfg = getRenderConfig(state);
-      var displayMode = renderCfg.displayMode;
-
       var media = getMediaState(state);
       var providerCaps = getProviderCapabilities(state);
       var hasVideo = !!media.avatarVideo;
       var hasViewer = !!media.avatarViewer;
       var hasFaceRig = !!providerCaps.faceRig;
-      var useCanvasFaceRig = false;
       var img = document.getElementById('avatarImage');
       var video = document.getElementById('avatarVideo');
-      var viewer = document.getElementById('avatarViewer');
       if (media.avatar) img.src = media.avatar;
       if (hasVideo) video.src = media.avatarVideo;
       else video.removeAttribute('src');
@@ -1610,16 +834,7 @@
         __live2dModelUrl = '';
       }
 
-      if (displayMode === 'experimental') {
-        clearViewerWaitTimer();
-        __viewerRenderState = null;
-        updateRenderBadge();
-        setCanvasVisibility(true);
-        setMediaVisibility(false, false);
-        setViewerVisibility(false);
-        setLive2DCanvasVisibility(false);
-      } else if (hasDirectLive2D) {
-        setCanvasVisibility(false);
+      if (hasDirectLive2D) {
         setMediaVisibility(false, false);
         setViewerVisibility(false);
         setLive2DCanvasVisibility(true);
@@ -1637,10 +852,10 @@
           applyFaceControlToLive2D(normalizeFaceControl(state));
         }
       } else if (hasViewer) {
-        setCanvasVisibility(false);
         setMediaVisibility(false, false);
         setViewerVisibility(true);
         setLive2DCanvasVisibility(false);
+        scheduleViewerWaitFallback(hasFaceRig);
         if (!__viewerRenderState) {
           __viewerRenderState = { renderer: 'unknown', detail: 'waiting-viewer' };
         }
@@ -1649,14 +864,12 @@
         clearViewerWaitTimer();
         __viewerRenderState = null;
         updateRenderBadge();
-        setCanvasVisibility(false);
         setMediaVisibility(true, false);
         setViewerVisibility(false);
       } else {
         clearViewerWaitTimer();
         __viewerRenderState = null;
         updateRenderBadge();
-        setCanvasVisibility(false);
         setViewerVisibility(false);
         setLive2DCanvasVisibility(false);
         if (media.avatar) {
@@ -1677,38 +890,7 @@
         el.classList.toggle('active', !!sensory[key]);
       });
 
-      var prevRenderState = __renderState;
-      var effectiveQuality = renderCfg.quality;
-      // In auto mode, keep locally adapted quality to avoid poll-reset oscillation.
-      if (renderCfg.autoQuality && prevRenderState && prevRenderState.autoQuality) {
-        effectiveQuality = prevRenderState.quality;
-      }
-      var nextFaceProfile = normalizeFaceProfile(state);
-      var faceProfileChanged = stableHash((__renderState && __renderState.faceProfile) || {}) !== stableHash(nextFaceProfile);
-      var qualityChanged = !prevRenderState || prevRenderState.quality !== effectiveQuality;
-      __renderState = {
-        displayMode: displayMode,
-        quality: effectiveQuality,
-        autoQuality: renderCfg.autoQuality,
-        visualManifest: normalizeVisualManifest(state),
-        appearanceIntent: normalizeAppearanceIntent(state),
-        faceProfile: nextFaceProfile,
-        faceControl: normalizeFaceControl(state),
-        useCanvasFaceRig: useCanvasFaceRig
-      };
-      updateIntentBadge(
-        displayMode === 'experimental' ? 'Experimental Face' : 'Provider Mode',
-        displayMode === 'experimental'
-      );
-      updateControlValues();
-      if (__renderer) {
-        if (faceProfileChanged) {
-          __renderer.setFaceProfile(__renderState.faceProfile, { resetBoot: false });
-        }
-        if (qualityChanged) {
-          __renderer.setQuality(__renderState.quality, { resetBoot: false });
-        }
-      }
+      updateIntentBadge('Provider Mode', false);
     }
 
     function stateFromQuery() {
@@ -1720,23 +902,11 @@
         avatar: p.get('avatar') || undefined,
         avatarVideo: p.get('video') || undefined,
         render: {
-          displayMode: p.get('display') === 'experimental' ? 'experimental' : 'provider',
-          quality: p.get('quality') || 'medium',
-          autoQuality: parseBool(p.get('autoQuality'), true),
           rendererMode: (function () {
             var r = String(p.get('renderer') || '').toLowerCase();
             if (r === 'pixi' || r === 'l2dwidget' || r === 'vector') return r;
             return undefined;
           })()
-        },
-        faceProfile: {
-          seed: p.get('seed') || '',
-          jawWidth: Number(p.get('jawWidth') || 1),
-          eyeSpacing: Number(p.get('eyeSpacing') || 1),
-          noseLength: Number(p.get('noseLength') || 1),
-          mouthWidth: Number(p.get('mouthWidth') || 1),
-          browTilt: Number(p.get('browTilt') || 0),
-          cheekFullness: Number(p.get('cheekFullness') || 1)
         },
         faceControl: {
           pose: {
@@ -1813,7 +983,6 @@
           video.replaceWith(element);
           img.style.display = 'none';
           element.style.display = 'block';
-          setCanvasVisibility(false);
         } catch (_) {}
       });
 
@@ -1824,8 +993,6 @@
     }
 
     async function init() {
-      attachControlEvents();
-      applyDebugModeGate();
       var viewerEl = document.getElementById('avatarViewer');
       if (viewerEl) {
         viewerEl.addEventListener('load', function () {
@@ -1860,10 +1027,8 @@
           clearViewerWaitTimer();
           __viewerRenderState = { renderer: 'vector-fallback', detail: 'viewer-load-error' };
           updateRenderBadge();
-          if (__renderState) __renderState.useCanvasFaceRig = true;
           setViewerVisibility(false);
           setMediaVisibility(false, false);
-          setCanvasVisibility(true);
         });
       }
       window.addEventListener('message', function (ev) {
@@ -1884,23 +1049,6 @@
         updateRenderBadge();
       });
       __queryIntentOverride = parseQueryIntentOverride();
-      __renderer = new CanvasAvatarRenderer(document.getElementById('avatarCanvas'), function () {
-        return __renderState || {
-          displayMode: 'provider',
-          quality: 'medium',
-          autoQuality: true,
-          visualManifest: DEFAULT_VISUAL_MANIFEST,
-          faceProfile: normalizeFaceProfile({ personaName: 'Persona' }),
-          faceControl: normalizeFaceControl({}),
-          appearanceIntent: {
-            version: '0.1',
-            form: 'auto',
-            transition: 'smooth',
-            lockSeconds: 0,
-            updatedAt: ''
-          }
-        };
-      });
 
       if (window.CANVAS_STATE) {
         applyState(window.CANVAS_STATE);

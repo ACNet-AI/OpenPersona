@@ -204,9 +204,6 @@ export LIVING_CANVAS_STATE_PATH="${LIVING_CANVAS_STATE_PATH:-demo/living-canvas.
 export LIVING_CANVAS_PERSONA_NAME="${LIVING_CANVAS_PERSONA_NAME:-Persona}"
 export LIVING_CANVAS_ROLE="${LIVING_CANVAS_ROLE:-companion}"
 export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-}"
-export LIVING_CANVAS_DISPLAY_MODE="${LIVING_CANVAS_DISPLAY_MODE:-provider}"
-export LIVING_CANVAS_QUALITY="${LIVING_CANVAS_QUALITY:-medium}"
-export LIVING_CANVAS_AUTO_QUALITY="${LIVING_CANVAS_AUTO_QUALITY:-true}"
 export LIVING_CANVAS_ALLOW_RUNTIME_TOKEN="${LIVING_CANVAS_ALLOW_RUNTIME_TOKEN:-true}"
 
 STATE_QUERY_PATH="$LIVING_CANVAS_STATE_PATH"
@@ -221,7 +218,7 @@ fi
 
 echo "[living-canvas] sessionId=$SESSION_ID"
 echo "[living-canvas] open: http://127.0.0.1:${HTTP_PORT}/demo/living-canvas.html?state=${STATE_QUERY_PATH}${_RENDERER_PARAM}"
-echo "[living-canvas] display controls via env: LIVING_CANVAS_DISPLAY_MODE=provider|experimental, LIVING_CANVAS_QUALITY=low|medium|high, LIVING_CANVAS_AUTO_QUALITY=true|false"
+echo "[living-canvas] renderer override via env: RENDERER_MODE=pixi|l2dwidget|vector"
 if [[ -n "$RENDERER_MODE" ]]; then
   echo "[living-canvas] renderer: ${RENDERER_MODE} (forced via --renderer flag)"
 fi

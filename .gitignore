@@ -22,3 +22,6 @@ coverage/
 # Design files
 UI/
 *.pen
+
+# Generated demo artifacts
+demo/vitality-report.html

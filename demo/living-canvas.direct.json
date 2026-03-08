@@ -6,19 +6,7 @@
   "avatarViewer": "",
   "avatarModel3Url": "/packages/avatar-runtime/assets/live2d/slot/default.model.json",
   "render": {
-    "displayMode": "provider",
-    "quality": "medium",
-    "autoQuality": true,
     "rendererMode": "pixi"
-  },
-  "faceProfile": {
-    "seed": "samantha",
-    "jawWidth": 1,
-    "eyeSpacing": 1,
-    "noseLength": 1,
-    "mouthWidth": 1,
-    "browTilt": 0,
-    "cheekFullness": 1
   },
   "control": {
     "avatar": {

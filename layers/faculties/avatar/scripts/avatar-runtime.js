@@ -319,9 +319,7 @@ function writeDemoCanvasState(slug, patch, runtimeStatus) {
     avatarViewer: process.env.LIVING_CANVAS_AVATAR_VIEWER || '',
     avatarModel3Url: resolvePersonaModel3Url(slug),
     render: {
-      displayMode: process.env.LIVING_CANVAS_DISPLAY_MODE || 'provider',
-      quality: process.env.LIVING_CANVAS_QUALITY || 'medium',
-      autoQuality: String(process.env.LIVING_CANVAS_AUTO_QUALITY || 'true') === 'true'
+      displayMode: 'provider'
     },
     faceProfile: {
       seed: process.env.LIVING_CANVAS_FACE_SEED || faceProfile.seed || slug,
