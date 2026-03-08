@@ -4,7 +4,7 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.16.0"
+version: "0.16.1"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 homepage: https://github.com/acnlabs/OpenPersona
@@ -60,7 +60,10 @@ persona-<slug>/
 ├── manifest.json           ← Four-layer manifest + ACN refs
 ├── scripts/
 │   └── state-sync.js       ← Runtime state bridge (read / write / signal)
-└── assets/                 ← Static assets
+└── assets/                 ← Static assets (per Agent Skills spec)
+    ├── avatar/             ← Virtual avatar assets (images, Live2D .model3.json, VRM)
+    ├── reference/          ← Reference images (e.g. for selfie)
+    └── templates/          ← Document/config templates (optional)
 ```
 
 - **`manifest.json`** — Four-layer manifest declaring what the persona uses:

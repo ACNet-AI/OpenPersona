@@ -362,7 +362,15 @@
         {{#hasReferenceImage}}
           <img src="{{referenceImage}}" alt="{{personaName}}" />
         {{/hasReferenceImage}}
-        {{^hasReferenceImage}}{{personaInitial}}{{/hasReferenceImage}}
+        {{^hasReferenceImage}}
+          <!-- OpenClaw crab placeholder — Twemoji CC BY 4.0 -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="80" height="80" aria-hidden="true">
+            <path fill="#A0041E" d="M6.96 20.637c.068.639-.543 1.228-1.368 1.315-.824.089-1.547-.357-1.615-.995-.068-.639.544-1.227 1.368-1.314.824-.089 1.547.356 1.615.994zm2.087 2.717c.125.818-1.756 2.544-2.576 2.669-.819.125-1.584-.438-1.708-1.257-.125-.818.58-1.14 1.398-1.265.819-.124 2.761-.965 2.886-.147zm1.783 2.104c.173.81-1.628 3.927-2.438 4.1-.811.173-1.645.146-1.817-.665-.173-.81.306-1.688 1.116-1.861.81-.174 2.966-2.384 3.139-1.574zm3.853.858c.165.811-1.338 4.354-2.15 4.519-.812.165-1.439.451-1.604-.36-.165-.812.261-1.975 1.006-2.58.644-.523 2.584-2.39 2.748-1.579z"/>
+            <path fill="#BE1931" d="M6 22c0-2 2-10 12-10s12 8 12 10c-5 3-5.373 7-12 7s-6-4-12-7z"/>
+            <circle fill="#292F33" cx="14.5" cy="9.5" r="1.5"/>
+            <circle fill="#292F33" cx="21.5" cy="9.5" r="1.5"/>
+          </svg>
+        {{/hasReferenceImage}}
       </div>
       <div class="hero-body">
         <div class="hero-name">{{personaName}}</div>

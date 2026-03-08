@@ -100,7 +100,10 @@ The generator outputs persona skill packs with this layout:
 - **`acn-config.json`** — ACN `AgentRegisterRequest` config; `owner` and `endpoint` are runtime placeholders; includes `wallet_address` (deterministic EVM address derived from slug via SHA-256) and `onchain.erc8004` section (chain: base, identity_contract, registration_script) for ERC-8004 on-chain identity registration
 - **`manifest.json`** — four-layer manifest (`layers.soul` → `./soul/persona.json`), includes `acn` section with references to agent-card and acn-config
 - **`scripts/state-sync.js`** — implementation artifact of the Body `interface` dimension (the nervous system's nerve fiber); `read` / `write` / `signal` commands implement the Lifecycle Protocol's state bridge; no external dependencies
-- **`scripts/`**, **`assets/`** — additional implementation scripts and static assets
+- **`scripts/`**, **`assets/`** — additional implementation scripts and static assets. Assets use subdirectories per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
+  - **`assets/avatar/`** — virtual avatar assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Paths in `persona.json` use `./assets/avatar/...`
+  - **`assets/reference/`** — reference images (e.g. for selfie faculty). `referenceImage` resolves to `./assets/reference/avatar.png` when bundled
+  - **`assets/templates/`** — document or config templates (optional)
 
 ### Lifecycle Protocol
 
@@ -239,7 +242,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.16.0`:
+All version references must stay in sync at `0.16.1`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
 - `lib/generator.js` → `frameworkVersion` default

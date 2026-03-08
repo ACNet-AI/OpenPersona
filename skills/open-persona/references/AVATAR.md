@@ -61,6 +61,15 @@ All external avatar skills should expose a stable contract equivalent to:
 
 These action names are interface-level semantics. Transport (CLI, HTTP, WebSocket) is implementation-specific.
 
+## Asset Placement
+
+Persona avatar assets belong in the generated skill pack's `assets/` directory per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
+
+- **`assets/avatar/`** — Virtual avatar assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Use relative paths like `./assets/avatar/default.model3.json` in `persona.json` or state.
+- **`assets/reference/`** — Reference images (e.g. for selfie faculty). `referenceImage` can resolve to `./assets/reference/avatar.png` when bundled.
+
+This keeps the skill pack self-contained and portable; consumers load assets via relative paths without external dependencies.
+
 ## Fallback Rules (Required)
 
 If avatar skill/runtime is unavailable:

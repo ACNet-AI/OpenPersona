@@ -822,7 +822,20 @@
       var hasFaceRig = !!providerCaps.faceRig;
       var img = document.getElementById('avatarImage');
       var video = document.getElementById('avatarVideo');
-      if (media.avatar) img.src = media.avatar;
+      if (!img._ocOnErrorSet) {
+        img._ocOnErrorSet = true;
+        img.onerror = function () {
+          img.src = 'data:,';
+          img.style.display = 'none';
+          var ph = document.getElementById('avatarPlaceholder');
+          if (ph) ph.style.display = 'flex';
+        };
+      }
+      if (media.avatar) {
+        img.src = media.avatar;
+      } else {
+        img.src = 'data:,';
+      }
       if (hasVideo) video.src = media.avatarVideo;
       else video.removeAttribute('src');
       var model3Url = (state && state.avatarModel3Url) || '';

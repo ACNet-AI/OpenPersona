@@ -4,7 +4,7 @@
 
 ---
 
-## Current State (as of v0.16.0)
+## Current State (as of v0.16.1)
 
 OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
 
@@ -335,7 +335,7 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ## Summary: From Skeleton to Muscle
 
-OpenPersona's four-layer skeleton is solid as of v0.16.0. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
+OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
 
 > The architecture specification is no longer ahead of implementation. The gap is now between **working logic and intelligent behavior** — the layers communicate, but they do not yet adapt to each other in real time.
 
