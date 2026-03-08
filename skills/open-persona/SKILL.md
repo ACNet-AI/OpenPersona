@@ -7,9 +7,16 @@ description: >
 version: "0.16.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
+homepage: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
 allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
 compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) requires OpenClaw.
+metadata:
+  clawdbot:
+    emoji: "🧑"
+    requires:
+      env: []
+    files: []
 ---
 
 # OpenPersona — Build & Manage Persona Skill Packs
@@ -293,6 +300,32 @@ npx openpersona acn-register <slug> --endpoint https://your-agent.example.com
 After successful registration, an `acn-registration.json` file is written to the persona directory containing `agent_id`, `api_key`, and connection URLs. The `acn_gateway` URL is sourced from `body.runtime.acn_gateway` in `persona.json`; all presets default to `https://acn-production.up.railway.app`.
 
 No additional configuration in `persona.json` is needed — A2A discoverability is a baseline capability of every persona.
+
+## External Endpoints
+
+| Endpoint | Purpose | Data Sent |
+|----------|---------|-----------|
+| `https://registry.npmjs.org` | Resolve `npx openpersona`, `npx clawhub@latest` | Package name only (no user data) |
+| `https://clawhub.ai` | Search skills via `npx clawhub search` | Search query (user-provided keywords) |
+| `https://acn-production.up.railway.app` | ACN registration (when user runs `acn-register`) | Agent metadata, endpoint URL |
+| `https://api.github.com` | `gh` CLI (contribute workflow) | Git operations, repo metadata |
+
+Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) only when the user configures those faculties and provides credentials. This meta-skill does not call third-party APIs directly.
+
+## Security & Privacy
+
+- **Local only by default**: Persona creation, state sync, and evolution run locally. No data leaves the machine unless the user explicitly publishes to ClawHub or registers with ACN.
+- **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) are stored in `~/.openclaw/credentials/` or environment. Never embedded in generated files.
+- **Search**: `npx clawhub search` sends the search query to ClawHub; no conversation or persona content is transmitted.
+- **Publish**: User-initiated; sends persona pack contents to ClawHub registry.
+
+## Trust Statement
+
+By using this skill, you delegate the agent to run `npx openpersona`, `npx clawhub`, `openclaw`, and `gh` commands. Search queries may be sent to ClawHub. Only install if you trust the OpenPersona framework (acnlabs/OpenPersona) and ClawHub.
+
+## Model Invocation Note
+
+This skill instructs the agent to invoke tools (Bash, Read, Write, WebFetch) autonomously when the user requests persona creation, installation, search, or publish. This is standard for meta-skills. The user can opt out by not invoking persona-related requests.
 
 ## References
 
