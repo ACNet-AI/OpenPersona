@@ -3194,7 +3194,7 @@ describe('economy faculty', () => {
 
   describe('calcFinancialHealth unit tests (AgentBooks v0.1.0)', () => {
     const { calcFinancialHealth, createInitialState: abCreateState, createIdentityInitialState } =
-      require('../packages/agentbooks/src/index');
+      require('agentbooks');
 
     function makeProductionState(overrides) {
       const base     = abCreateState('unit-test');
@@ -3320,7 +3320,7 @@ describe('calcFinancialHealth integration tests (AgentBooks v0.1.0)', () => {
     calcFinancialHealth,
     createInitialState,
     createIdentityInitialState,
-  } = require('../packages/agentbooks/src/index');
+  } = require('agentbooks');
 
   function makeProductionState(overrides) {
     const state    = createInitialState('unit-test');

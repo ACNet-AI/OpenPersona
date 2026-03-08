@@ -67,7 +67,7 @@ fi
 echo ""
 echo "Step 2 — Existing test suite (npm test)"
 echo "─────────────────────────────────────────────"
-if node --test "$ROOT_DIR/tests/" > /tmp/acceptance-unit.log 2>&1; then
+if (cd "$ROOT_DIR" && npm test) > /tmp/acceptance-unit.log 2>&1; then
   UNIT_PASS=$(grep -c '^ok' /tmp/acceptance-unit.log || true)
   ok "unit tests ($UNIT_PASS cases passed)"
 else

@@ -4,8 +4,8 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { calcVitality }    = require('../lib/vitality');
-const { InMemoryAdapter } = require('../packages/agentbooks/adapters/in-memory');
-const { createIdentityInitialState } = require('../packages/agentbooks/src/schema');
+const { InMemoryAdapter } = require('agentbooks/adapters/in-memory');
+const { createIdentityInitialState } = require('agentbooks');
 
 describe('lib/vitality calcVitality', () => {
   test('returns uninitialized tier in development mode', () => {
