@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{personaName}} — Living Canvas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F0F4F8;
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Top Bar ──────────────────────────────────────────────────────────── */
+    .topbar {
+      background: #1E1B4B;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 80px;
+      gap: 8px;
+    }
+    .topbar-logo { color: #fff; font-size: 13px; font-weight: 700; }
+    .topbar-sep  { color: #6366F1; font-size: 13px; }
+    .topbar-sub  { color: #A5B4FC; font-size: 13px; }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    .content {
+      padding: 32px 80px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* ── Card base ────────────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #E5E7EB;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      padding: 20px 24px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      color: #6B7280;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .divider { border: none; border-top: 1px solid #F3F4F6; margin: 14px 0; }
+
+    /* ── Badge ────────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge-indigo { background: #EEF2FF; color: #4F46E5; }
+    .badge-green  { background: #D1FAE5; color: #065F46; }
+    .badge-yellow { background: #FEF3C7; color: #92400E; }
+    .badge-gray   { background: #F3F4F6; color: #6B7280; }
+    .badge-blue   { background: #DBEAFE; color: #1D4ED8; }
+    .badge-purple { background: #F5F3FF; color: #6D28D9; }
+    .badge-pink   { background: #FCE7F3; color: #9D174D; }
+    .badge-dot    { width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+    .badge-dot-green  { background: #10B981; }
+    .badge-dot-yellow { background: #F59E0B; }
+    .badge-dot-gray   { background: #9CA3AF; }
+
+    /* ── Hero card ────────────────────────────────────────────────────────── */
+    .hero-card {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      padding: 24px;
+    }
+    .hero-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .hero-avatar img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .hero-body { flex: 1; min-width: 0; }
+    .hero-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.2;
+    }
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .hero-slug { color: #9CA3AF; font-size: 12px; font-family: monospace; }
+    .hero-bio {
+      margin-top: 10px;
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .hero-stat { display: flex; flex-direction: column; }
+    .hero-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1;
+    }
+    .hero-stat-label {
+      font-size: 11px;
+      color: #9CA3AF;
+      margin-top: 2px;
+    }
+
+    /* ── Mood pill ─────────────────────────────────────────────────────────── */
+    .mood-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 20px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      color: #6B7280;
+    }
+    .mood-icon { font-size: 13px; }
+
+    /* ── Timeline ────────────────────────────────────────────────────────── */
+    .timeline { display: flex; flex-direction: column; gap: 10px; }
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .timeline-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #6366F1;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .timeline-content { flex: 1; min-width: 0; }
+    .timeline-type {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6366F1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .timeline-trigger {
+      font-size: 13px;
+      color: #374151;
+      margin-top: 1px;
+    }
+    .timeline-date { font-size: 11px; color: #9CA3AF; margin-top: 1px; }
+
+    /* ── Trait tags ──────────────────────────────────────────────────────── */
+    .trait-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .trait-tag {
+      background: #EEF2FF;
+      color: #4F46E5;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* ── Faculty grid ────────────────────────────────────────────────────── */
+    .faculty-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .faculty-card {
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .faculty-card.dormant {
+      background: #FAFAFA;
+      border-color: #F3F4F6;
+      opacity: 0.7;
+    }
+    .faculty-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      text-transform: capitalize;
+    }
+    .faculty-card.dormant .faculty-name { color: #9CA3AF; }
+    .faculty-desc {
+      font-size: 12px;
+      color: #6B7280;
+      line-height: 1.4;
+    }
+    .faculty-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    /* Dimension color classes */
+    .dim-expression { background: #FFF7ED; color: #C2410C; }
+    .dim-cognition  { background: #EFF6FF; color: #1D4ED8; }
+    .dim-sense      { background: #F0FDF4; color: #166534; }
+    .dim-other      { background: #F9FAFB; color: #6B7280; }
+
+    .dormant-label {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-style: italic;
+    }
+
+    /* ── Skill list ───────────────────────────────────────────────────────── */
+    .skill-list { display: flex; flex-direction: column; gap: 10px; }
+    .skill-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+    }
+    .skill-item.dormant {
+      background: #FAFAFA;
+      border-color: #F3F4F6;
+      opacity: 0.7;
+    }
+    .skill-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: #EEF2FF;
+      display: flex; align-items: center; justify-content: center;
+      color: #4F46E5;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .skill-item.dormant .skill-icon {
+      background: #F3F4F6;
+      color: #9CA3AF;
+    }
+    .skill-body { flex: 1; min-width: 0; }
+    .skill-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+    .skill-item.dormant .skill-name { color: #9CA3AF; }
+    .skill-desc { font-size: 12px; color: #6B7280; margin-top: 2px; line-height: 1.4; }
+    .skill-install {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-family: monospace;
+      margin-top: 4px;
+    }
+    .skill-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .btn-talk {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-talk:hover { background: #4338CA; }
+
+    /* ── Body / runtime card ─────────────────────────────────────────────── */
+    .body-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .body-stat { display: flex; flex-direction: column; }
+    .body-stat-value { font-size: 15px; font-weight: 600; color: #111827; }
+    .body-stat-label { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 12px;
+      border-top: 1px solid #E5E7EB;
+      padding-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .footer-item { font-size: 11px; color: #9CA3AF; }
+    .footer-item span { color: #6B7280; font-weight: 500; }
+    .footer-mono { font-family: monospace; }
+    .footer-right { font-size: 11px; color: #D1D5DB; }
+
+    @media (max-width: 680px) {
+      .topbar { padding: 0 20px; }
+      .content { padding: 20px 16px 48px; }
+      .hero-card { flex-direction: column; align-items: center; text-align: center; }
+      .hero-meta { justify-content: center; }
+      .hero-stats { justify-content: center; }
+      .body-row { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <span class="topbar-logo">OpenPersona</span>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-sub">Living Canvas</span>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Hero card ──────────────────────────────────────────────────────── -->
+    <div class="card hero-card">
+      <div class="hero-avatar">
+        {{#hasReferenceImage}}
+          <img src="{{referenceImage}}" alt="{{personaName}}" />
+        {{/hasReferenceImage}}
+        {{^hasReferenceImage}}{{personaInitial}}{{/hasReferenceImage}}
+      </div>
+      <div class="hero-body">
+        <div class="hero-name">{{personaName}}</div>
+        <div class="hero-meta">
+          <span class="badge badge-indigo">{{role}}</span>
+          <span class="hero-slug">@{{slug}}</span>
+          <span class="mood-pill">
+            <span class="mood-icon">✦</span>
+            {{moodCurrent}}
+          </span>
+        </div>
+        {{#bioExcerpt}}
+          <div class="hero-bio">{{bioExcerpt}}</div>
+        {{/bioExcerpt}}
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-value">{{relationshipStage}}</span>
+            <span class="hero-stat-label">relationship</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">{{interactionCount}}</span>
+            <span class="hero-stat-label">interactions</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">{{daysTogether}}</span>
+            <span class="hero-stat-label">days together</span>
+          </div>
+          {{#lastSeenDisplay}}
+          <div class="hero-stat">
+            <span class="hero-stat-value" style="font-size:13px">{{lastSeenDisplay}}</span>
+            <span class="hero-stat-label">last seen</span>
+          </div>
+          {{/lastSeenDisplay}}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Soul: Evolution ──────────────────────────────────────────────── -->
+    {{#hasEvolvedTraits}}
+    <div class="card">
+      <div class="section-label">Soul — Evolved Traits</div>
+      <div class="trait-tags">
+        {{#evolvedTraits}}
+          <span class="trait-tag">{{name}}</span>
+        {{/evolvedTraits}}
+      </div>
+    </div>
+    {{/hasEvolvedTraits}}
+
+    {{#hasRecentEvents}}
+    <div class="card">
+      <div class="section-label">Soul — Recent Growth</div>
+      <div class="timeline">
+        {{#recentEvents}}
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-type">{{typeLabel}}</div>
+            <div class="timeline-trigger">{{trigger}}</div>
+            {{#dateShort}}<div class="timeline-date">{{dateShort}}</div>{{/dateShort}}
+          </div>
+        </div>
+        {{/recentEvents}}
+      </div>
+    </div>
+    {{/hasRecentEvents}}
+
+    <!-- ── Body layer ────────────────────────────────────────────────────── -->
+    {{#hasBody}}
+    <div class="card">
+      <div class="section-label">Body — Runtime Environment</div>
+      <div class="body-row">
+        <div class="body-stat">
+          <span class="body-stat-value">{{bodyPlatform}}</span>
+          <span class="body-stat-label">platform</span>
+        </div>
+        {{#heartbeatEnabled}}
+        <div class="body-stat">
+          <span class="body-stat-value">
+            <span class="badge badge-green">
+              <span class="badge-dot badge-dot-green"></span>
+              heartbeat on
+            </span>
+          </span>
+          <span class="body-stat-label">proactive mode</span>
+        </div>
+        {{/heartbeatEnabled}}
+        {{^heartbeatEnabled}}
+        <div class="body-stat">
+          <span class="body-stat-value">
+            <span class="badge badge-gray">
+              <span class="badge-dot badge-dot-gray"></span>
+              reactive only
+            </span>
+          </span>
+          <span class="body-stat-label">proactive mode</span>
+        </div>
+        {{/heartbeatEnabled}}
+      </div>
+    </div>
+    {{/hasBody}}
+
+    <!-- ── Faculty layer ─────────────────────────────────────────────────── -->
+    {{#hasFaculties}}
+    <div class="card">
+      <div class="section-label">Faculty — Capabilities</div>
+      <div class="faculty-grid">
+        {{#faculties}}
+        <div class="faculty-card{{#isDormant}} dormant{{/isDormant}}">
+          <div class="faculty-name">{{label}}</div>
+          {{#description}}
+            <div class="faculty-desc">{{description}}</div>
+          {{/description}}
+          <div class="faculty-foot">
+            {{#dimensionLabel}}
+              <span class="badge {{dimensionClass}}">{{dimensionLabel}}</span>
+            {{/dimensionLabel}}
+            {{#isDormant}}
+              <span class="dormant-label">not installed</span>
+            {{/isDormant}}
+          </div>
+        </div>
+        {{/faculties}}
+      </div>
+    </div>
+    {{/hasFaculties}}
+
+    <!-- ── Skill layer ────────────────────────────────────────────────────── -->
+    {{#hasSkills}}
+    <div class="card">
+      <div class="section-label">Skill — Actions</div>
+      <div class="skill-list">
+        {{#skills}}
+        <div class="skill-item{{#isDormant}} dormant{{/isDormant}}">
+          <div class="skill-icon">⚡</div>
+          <div class="skill-body">
+            <div class="skill-name">{{name}}</div>
+            {{#description}}
+              <div class="skill-desc">{{description}}</div>
+            {{/description}}
+            {{#isDormant}}
+              <div class="skill-install">install: {{installSource}}</div>
+            {{/isDormant}}
+          </div>
+          {{^isDormant}}
+          <div class="skill-actions">
+            {{#hasA2A}}
+              <a class="btn-talk" href="{{{a2aUrl}}}" target="_blank" rel="noopener">
+                ▶ Talk
+              </a>
+            {{/hasA2A}}
+          </div>
+          {{/isDormant}}
+        </div>
+        {{/skills}}
+      </div>
+    </div>
+    {{/hasSkills}}
+
+    <!-- ── Footer ─────────────────────────────────────────────────────────── -->
+    <div class="footer">
+      <div class="footer-left">
+        {{#hasWallet}}
+          <div class="footer-item">wallet <span class="footer-mono">{{walletAddress}}</span></div>
+        {{/hasWallet}}
+        {{#hasA2A}}
+          <div class="footer-item">A2A <span class="footer-mono">{{{a2aUrl}}}</span></div>
+        {{/hasA2A}}
+        <div class="footer-item">OpenPersona <span>v{{frameworkVersion}}</span></div>
+      </div>
+      <div class="footer-right">generated {{generatedAt}}</div>
+    </div>
+
+  </div><!-- /content -->
+
+</body>
+</html>

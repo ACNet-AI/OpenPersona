@@ -1,4 +1,5 @@
 node_modules/
+.tmp-hook-hist-*/
 packages/
 frontend/
 .cursor/
@@ -17,3 +18,7 @@ coverage/
 
 .pnpm-store/
 *.code-workspace
+
+# Design files
+UI/
+*.pen

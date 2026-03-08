@@ -652,4 +652,37 @@ vitalityCmd
     }
   });
 
+// ── canvas ────────────────────────────────────────────────────────────────────
+
+program
+  .command('canvas <slug>')
+  .description('Generate a Living Canvas persona profile page (P14 Phase 1)')
+  .option('--output <file>', 'Write HTML to <file> (default: canvas-<slug>.html)')
+  .option('--open', 'Open in default browser after writing')
+  .action((slug, options) => {
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const { renderCanvasHtml } = require('../lib/canvas-generator');
+    let html;
+    try {
+      html = renderCanvasHtml(personaDir, slug);
+    } catch (err) {
+      printError(`canvas: failed to render for ${slug}: ${err.message}`);
+      process.exit(1);
+    }
+    const outFile = options.output || `canvas-${slug}.html`;
+    fs.writeFileSync(outFile, html, 'utf-8');
+    printSuccess(`Living Canvas written to ${outFile}`);
+    if (options.open) {
+      const { execSync } = require('child_process');
+      const cmd = process.platform === 'darwin' ? 'open'
+        : process.platform === 'win32' ? 'start'
+        : 'xdg-open';
+      try { execSync(`${cmd} "${outFile}"`); } catch { /* ignore */ }
+    }
+  });
+
 program.parse();

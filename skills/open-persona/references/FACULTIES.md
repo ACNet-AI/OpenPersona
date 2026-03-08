@@ -4,6 +4,7 @@
 
 | Faculty | Dimension | What It Does | Recommend When |
 |---------|-----------|-------------|----------------|
+| **avatar** | expression | External avatar runtime bridge (provider-based, fallback-safe) | User wants visual embodiment (image/3D/motion/voice avatar) |
 | **selfie** | expression | AI selfie generation via fal.ai | User wants visual presence, profile pics, "send a pic" |
 | **voice** | expression | TTS via ElevenLabs ✅ / OpenAI ⚠️ / Qwen3-TTS ⚠️ | User wants the persona to speak, voice messages, audio content |
 | **music** | expression | AI music composition via ElevenLabs | User wants the persona to create music, songs, melodies |
@@ -12,6 +13,7 @@
 ## Environment Variables
 
 - **selfie**: `FAL_KEY` (from https://fal.ai/dashboard/keys)
+- **avatar**: `AVATAR_RUNTIME_URL`, `AVATAR_API_KEY` (provider/runtime specific)
 - **voice**: `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY`
 - **music**: `ELEVENLABS_API_KEY` (shared with voice — same key from https://elevenlabs.io)
 

@@ -141,6 +141,8 @@ If the user needs a capability that doesn't exist in any ecosystem:
 - **Evolve Report (★Exp):** `npx openpersona evolve-report <slug>` — display a formatted evolution report (relationship, mood, traits, drift, interests, milestones, eventLog, self-narrative, state history)
 - **Vitality Score:** `npx openpersona vitality score <slug>` — print machine-readable `VITALITY_REPORT` (tier, score, diagnosis, trend); used by Survival Policy and agent runners
 - **Vitality Report:** `npx openpersona vitality report <slug> [--output <file>]` — render a human-readable HTML Vitality report; omit `--output` to print to stdout
+- **Living Canvas:** `npx openpersona canvas <slug> [--output <file>] [--open]` — generate a self-contained HTML persona profile page (P14 Phase 1); shows Soul identity, Body runtime, Faculty badges, and Skill cards; default output is `canvas-<slug>.html`
+- **Living Canvas:** `npx openpersona canvas <slug> [--output <file>] [--open]` — generate a self-contained HTML persona profile page (P14 Phase 1); shows all four layers (Soul / Body / Faculty / Skill), evolved traits timeline, relationship stage, and A2A "Talk" button when endpoint is available; writes to `canvas-<slug>.html` by default
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 
@@ -298,6 +300,7 @@ No additional configuration in `persona.json` is needed — A2A discoverability 
 For detailed reference material, see the `references/` directory:
 
 - **`references/FACULTIES.md`** — Faculty catalog, environment variables, and configuration details
+- **`references/AVATAR.md`** — Avatar Faculty integration boundary, provider model, and fallback contract
 - **`references/HEARTBEAT.md`** — Proactive real-data check-in system
 - **`references/ECONOMY.md`** — Economy Faculty, FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
 - **[ACN SKILL.md](https://github.com/acnlabs/ACN/blob/main/skills/acn/SKILL.md)** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity (official, always up-to-date)

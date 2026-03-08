@@ -1,0 +1,73 @@
+{
+  "personaName": "samantha",
+  "role": "companion",
+  "avatar": "../UI/images/samantha-avatar.png",
+  "avatarVideo": "",
+  "avatarViewer": "",
+  "avatarModel3Url": "/packages/avatar-runtime/assets/live2d/slot/default.model.json",
+  "render": {
+    "displayMode": "provider",
+    "quality": "medium",
+    "autoQuality": true,
+    "rendererMode": "pixi"
+  },
+  "faceProfile": {
+    "seed": "samantha",
+    "jawWidth": 1,
+    "eyeSpacing": 1,
+    "noseLength": 1,
+    "mouthWidth": 1,
+    "browTilt": 0,
+    "cheekFullness": 1
+  },
+  "control": {
+    "avatar": {
+      "face": {
+        "pose":  { "yaw": 0.05, "pitch": 0, "roll": 0 },
+        "eyes":  { "blinkL": 1, "blinkR": 1, "gazeX": -0.06, "gazeY": 0 },
+        "brows": { "browInner": 0, "browOuterL": 0, "browOuterR": 0 },
+        "mouth": { "jawOpen": 0.04, "smile": 0.25, "mouthPucker": 0 },
+        "source": "agent"
+      },
+      "emotion": {
+        "label": "relaxed",
+        "valence": 0.25,
+        "arousal": 0.1,
+        "intensity": 0.45,
+        "source": "agent"
+      },
+      "body": {}
+    },
+    "scene": {}
+  },
+  "visualManifest": {
+    "version": "0.1",
+    "mood": { "valence": 0.25, "arousal": 0.4 }
+  },
+  "providerCapabilities": {
+    "faceRig": true,
+    "lipSync": true,
+    "gaze": true,
+    "blink": true,
+    "bodyMotion": false,
+    "streaming": false,
+    "bodyRig": false,
+    "sceneControl": false
+  },
+  "appearanceIntent": {
+    "version": "0.1",
+    "form": "face",
+    "style": "cubism-web",
+    "transition": "smooth",
+    "priority": "agent"
+  },
+  "livekit": { "url": "", "token": "" },
+  "sensory": {
+    "image": true,
+    "model3d": false,
+    "motion": true,
+    "voice": true,
+    "hearing": true,
+    "worldSense": false
+  }
+}

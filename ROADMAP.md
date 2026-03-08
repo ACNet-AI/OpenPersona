@@ -329,6 +329,8 @@ Living Canvas      →  how humans discover and interact with this persona
 
 **Implementation gate:** Phase 1 (static canvas) can ship independently using the same Mustache + data aggregation pattern as `vitality-report`. Phase 2 requires a stable A2A endpoint and runner integration contract.
 
+**Phase 1 — ✅ Implemented:** `openpersona canvas <slug> [--output <file>] [--open]` generates a self-contained HTML profile page from persona data. Delivered: `lib/canvas-generator.js`, `templates/canvas.template.html`, CLI command in `bin/cli.js`, 28 unit tests in `tests/canvas-generator.test.js`.
+
 ---
 
 ## Summary: From Skeleton to Muscle

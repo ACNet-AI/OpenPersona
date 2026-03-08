@@ -470,6 +470,7 @@ openpersona acn-register   Register a persona with ACN network
 openpersona state          Read/write persona state and emit signals (Lifecycle Protocol)
 openpersona vitality score Print machine-readable Vitality score (used by Survival Policy)
 openpersona vitality report Render human-readable HTML Vitality report
+openpersona canvas          Generate a Living Canvas persona profile page (P14 Phase 1)
 ```
 
 ### Persona Fork

@@ -1,0 +1,1944 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Living Canvas</title>
+  <style>
+    :root {
+      --bg-0: #04040a;
+      --bg-1: #0c1124;
+      --bg-2: #181f44;
+      --bg-3: #2b1e63;
+      --text: #ecebff;
+      --muted: #8f95bb;
+      --active: #9a8dff;
+      --inactive: #4e567f;
+      --ring: rgba(154, 141, 255, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(58% 52% at 50% 34%, var(--bg-3) 0%, var(--bg-2) 40%, var(--bg-1) 68%, var(--bg-0) 100%),
+        linear-gradient(160deg, #0b1020 0%, #06070f 100%);
+      overflow: hidden;
+    }
+
+    .canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      width: min(46vw, 360px);
+      aspect-ratio: 1;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01) 56%);
+      backdrop-filter: blur(6px);
+      box-shadow:
+        0 0 44px 6px rgba(154, 141, 255, 0.3),
+        0 0 140px 24px rgba(118, 91, 255, 0.16);
+      /* overflow: hidden removed — live2d avatar stands above the circle */
+    }
+    /* When live2d is active: circle completely invisible, just a layout anchor */
+    .avatar-wrap.has-live2d {
+      overflow: visible;
+      background: transparent !important;
+      border-color: transparent !important;
+      backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
+    .avatar-wrap.has-live2d::before,
+    .avatar-wrap.has-live2d::after {
+      display: none !important;
+    }
+
+    .avatar-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -8%;
+      border-radius: 999px;
+      border: 1px solid var(--ring);
+      filter: blur(2px);
+    }
+
+    .avatar-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -22%;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(154, 141, 255, 0.2), rgba(154, 141, 255, 0) 70%);
+      filter: blur(14px);
+      z-index: -1;
+    }
+
+    .avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      object-fit: cover;
+      display: block;
+      background: #131327;
+    }
+
+    .avatar-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: transparent;
+    }
+
+    .avatar-media {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #live2dCanvas {
+      z-index: 3;
+      border-radius: 0;
+      background: transparent !important;
+      width: 100%;
+      height: 100%;
+    }
+
+    .meta {
+      margin-top: 24px;
+      text-align: center;
+      display: none;
+    }
+
+    .name {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 38px);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .role {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .sense-rail {
+      position: absolute;
+      right: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      background: rgba(8, 10, 24, 0.5);
+      backdrop-filter: blur(8px);
+    }
+
+    .sense {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.03);
+      display: grid;
+      place-items: center;
+      color: var(--inactive);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      transition: all 180ms ease;
+    }
+
+    .sense.active {
+      color: var(--active);
+      border-color: rgba(154, 141, 255, 0.68);
+      box-shadow: 0 0 16px rgba(154, 141, 255, 0.32);
+      background: rgba(154, 141, 255, 0.1);
+    }
+
+    .controls {
+      position: absolute;
+      left: 20px;
+      bottom: 20px;
+      width: min(300px, calc(100vw - 70px));
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(9, 10, 22, 0.48);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+      opacity: 0.72;
+      transition: opacity 180ms ease;
+      z-index: 8;
+    }
+
+    .controls.hidden {
+      display: none !important;
+    }
+
+    .controls:hover {
+      opacity: 0.96;
+    }
+
+    .controls-row {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .controls label {
+      color: var(--muted);
+    }
+
+    .controls select,
+    .controls input[type="checkbox"] {
+      accent-color: var(--active);
+    }
+
+    .controls select {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .fps {
+      display: flex;
+      justify-content: space-between;
+      color: #f3f2ff;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      background: rgba(8, 10, 22, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+    .advanced-block {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 8px;
+    }
+
+    .advanced-block > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      user-select: none;
+      padding: 2px 0;
+      outline: none;
+    }
+
+    .advanced-content {
+      margin-top: 8px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .status-badge {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      z-index: 9;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      background: rgba(8, 10, 22, 0.66);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #d8dcff;
+      backdrop-filter: blur(8px);
+    }
+
+    .status-badge.locked {
+      color: #ffffff;
+      border-color: rgba(154, 141, 255, 0.8);
+      box-shadow: 0 0 14px rgba(154, 141, 255, 0.38);
+      background: rgba(44, 33, 108, 0.62);
+    }
+
+    .render-badge {
+      top: 56px;
+      color: #cbd4ff;
+      font-weight: 600;
+      font-size: 11px;
+      opacity: 0.95;
+      display: none;
+    }
+
+    .render-badge.fallback {
+      color: #ffd7d7;
+      border-color: rgba(255, 138, 138, 0.8);
+      background: rgba(95, 30, 40, 0.62);
+    }
+
+    @media (max-width: 900px) {
+      .avatar-wrap { width: min(72vw, 320px); }
+      .controls { width: min(240px, calc(100vw - 80px)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <div class="status-badge" id="intentBadge">Auto Morph</div>
+    <div class="status-badge render-badge" id="renderBadge">Renderer: --</div>
+    <section>
+      <div class="avatar-wrap">
+        <video class="avatar avatar-media" id="avatarVideo" playsinline autoplay muted loop style="display:none;"></video>
+        <img class="avatar avatar-media" id="avatarImage" src="data:," alt="avatar" style="display:none;" />
+        <div class="avatar avatar-media" id="avatarPlaceholder" style="display:none; align-items:center; justify-content:center; margin:auto;" title="No avatar configured — OpenClaw crab placeholder">
+          <!-- Twemoji 🦀 crab emoji — CC BY 4.0 Twitter, Inc. https://github.com/twitter/twemoji -->
+          <!-- Compound paths split into left-claw / right-claw / body groups for CSS animation -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="220" height="220" aria-hidden="true">
+            <style>
+              .ocrab-l{transform-box:fill-box;transform-origin:100% 55%;animation:ocrabL 1.8s ease-in-out infinite}
+              .ocrab-r{transform-box:fill-box;transform-origin:0% 55%;animation:ocrabR 1.8s ease-in-out infinite}
+              @keyframes ocrabL{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-14deg)}}
+              @keyframes ocrabR{0%,100%{transform:rotate(0deg)}50%{transform:rotate(14deg)}}
+            </style>
+            <g class="ocrab-l">
+              <path fill="#A0041E" d="M6.96 20.637c.068.639-.543 1.228-1.368 1.315-.824.089-1.547-.357-1.615-.995-.068-.639.544-1.227 1.368-1.314.824-.089 1.547.356 1.615.994zm2.087 2.717c.125.818-1.756 2.544-2.576 2.669-.819.125-1.584-.438-1.708-1.257-.125-.818.58-1.14 1.398-1.265.819-.124 2.761-.965 2.886-.147zm1.783 2.104c.173.81-1.628 3.927-2.438 4.1-.811.173-1.645.146-1.817-.665-.173-.81.306-1.688 1.116-1.861.81-.174 2.966-2.384 3.139-1.574zm3.853.858c.165.811-1.338 4.354-2.15 4.519-.812.165-1.439.451-1.604-.36-.165-.812.261-1.975 1.006-2.58.644-.523 2.584-2.39 2.748-1.579z"/>
+              <path fill="#A0041E" d="M3.925 18.869c.607.715 1.18 1.23.464 1.835-.716.606-1.747.162-2.354-.554-.605-.715-2.239-3.42-1.524-4.025.717-.606 2.809 2.029 3.414 2.744zm.33 4.88c.892.295 1.857.801 1.563 1.691-.294.891-1.328.991-2.219.698-.889-.295-3.772-1.691-3.478-2.581.295-.89 3.244-.102 4.134.192zm1.214 4.532c.905-.253 1.907-.283 2.159.619.252.903-.282 1.535-1.186 1.787-.902.251-4.342.727-4.594-.176-.251-.905 2.718-1.98 3.621-2.23zm4.348 3.188c.084-.937.644-1.669 1.577-1.585.934.085 1.258 1.025 1.173 1.96-.085.934.147 3.562-1.715 4.016-.912.221-1.121-3.46-1.035-4.391z"/>
+              <path fill="#A0041E" d="M3.148 13.878c-.383-.856.001-1.86.857-2.242.856-.383 1.86.002 2.243.858.381.855 2.651 5.612 1.795 5.994-.855.382-4.513-3.755-4.895-4.61z"/>
+              <path fill="#A0041E" d="M3.994 12.034c1.221 2.956 8.341-3.341 8.803-6.281.462-2.939-.308-4.201-.694-4.5-.386-.299.144 1.435-1.187 3.306-1.053 1.482-7.766 5.434-6.922 7.475z"/>
+              <path fill="#BE1931" d="M4.323 12.223c-3.153.543-.358-8.141 1.883-10.099C8.446.166 10.863.207 11.321.374s-1.174 2.595-1.75 4.178c-.293.803-3.072 7.296-5.248 7.671z"/>
+              <path fill="#DD2E44" d="M9.053 21.529c-.14.236-3.053.732-2.303-.731s2.443.497 2.303.731z"/>
+              <path fill="#DD2E44" d="M9.891 20.124c-.218.225-3.188.391-1.922-1.404 1.265-1.793 2.234 1.082 1.922 1.404z"/>
+              <path fill="#DD2E44" d="M11.657 18.66c-.378.231-3.471-.501-1.407-1.932 1.872-1.296 1.906 1.626 1.407 1.932z"/>
+              <path fill="#DD2E44" d="M14.102 17.427c-1.008.299-3.378-1.302-.881-2.141 2.498-.839 1.889 1.842.881 2.141z"/>
+            </g>
+            <g class="ocrab-r">
+              <path fill="#A0041E" d="M29.04 20.637c-.068.639.543 1.228 1.367 1.315.824.089 1.547-.357 1.615-.995.068-.639-.544-1.227-1.367-1.314-.824-.089-1.547.356-1.615.994zm-2.087 2.717c-.125.818 1.757 2.544 2.575 2.669.819.125 1.584-.438 1.709-1.257s-.58-1.14-1.398-1.265c-.819-.124-2.761-.965-2.886-.147zm-1.783 2.104c-.173.81 1.628 3.927 2.438 4.1.81.173 1.644.146 1.816-.665.174-.81-.305-1.688-1.115-1.861-.81-.174-2.966-2.384-3.139-1.574zm-3.853.858c-.166.811 1.338 4.354 2.149 4.519.812.165 1.438.451 1.604-.36.164-.812-.262-1.975-1.007-2.58-.642-.523-2.582-2.39-2.746-1.579z"/>
+              <path fill="#A0041E" d="M32.075 18.869c-.607.715-1.18 1.23-.465 1.835.716.606 1.747.162 2.354-.554.605-.715 2.239-3.42 1.523-4.025-.715-.606-2.807 2.029-3.412 2.744zm-.33 4.88c-.892.295-1.857.801-1.562 1.691.293.891 1.328.991 2.219.698.889-.295 3.771-1.691 3.477-2.581-.294-.89-3.244-.102-4.134.192zm-1.215 4.532c-.904-.253-1.906-.283-2.158.619-.252.903.282 1.535 1.185 1.787.902.251 4.343.727 4.594-.177.252-.904-2.717-1.979-3.621-2.229zm-4.347 3.188c-.084-.937-.645-1.669-1.577-1.585-.935.085-1.258 1.025-1.173 1.96.084.934-.147 3.562 1.715 4.016.912.221 1.121-3.46 1.035-4.391z"/>
+              <path fill="#A0041E" d="M32.852 13.878c.384-.856-.001-1.86-.857-2.242-.857-.383-1.861.002-2.244.858-.381.855-2.65 5.612-1.794 5.994.855.382 4.513-3.755 4.895-4.61z"/>
+              <path fill="#A0041E" d="M32.007 12.034c-1.222 2.956-8.341-3.341-8.804-6.281-.461-2.939.309-4.201.694-4.5.386-.299-.144 1.435 1.187 3.306 1.054 1.482 7.766 5.434 6.923 7.475z"/>
+              <path fill="#BE1931" d="M31.677 12.223c3.152.543.358-8.141-1.882-10.099C27.555.166 25.139.207 24.68.374c-.459.167 1.174 2.595 1.75 4.178.293.803 3.071 7.296 5.247 7.671z"/>
+              <path fill="#DD2E44" d="M26.856 21.529c.141.235 3.053.731 2.303-.731-.75-1.463-2.443.497-2.303.731z"/>
+              <path fill="#DD2E44" d="M26.019 20.124c.218.225 3.188.391 1.922-1.404-1.266-1.793-2.235 1.082-1.922 1.404z"/>
+              <path fill="#DD2E44" d="M24.253 18.66c.378.231 3.471-.501 1.406-1.932-1.872-1.296-1.906 1.626-1.406 1.932z"/>
+              <path fill="#DD2E44" d="M21.808 17.427c1.008.299 3.378-1.302.881-2.141-2.499-.839-1.89 1.842-.881 2.141z"/>
+            </g>
+            <path fill="#BE1931" d="M6 22c0-2 2-10 12-10s12 8 12 10c-5 3-5.373 7-12 7s-6-4-12-7z"/>
+            <path fill="#A0041E" d="M17.032 12.136c.335 1.339-.045 1.588-.849 1.789-.804.201-1.727.278-2.061-1.061-.335-1.339.045-2.588.849-2.789.803-.201 1.726.721 2.061 2.061zm4.846.728c-.335 1.34-1.258 1.262-2.061 1.061-.804-.201-1.184-.45-.849-1.789.335-1.34 1.258-2.262 2.062-2.061.803.2 1.183 1.449.848 2.789z"/>
+            <circle fill="#292F33" cx="14.5" cy="9.5" r="1.5"/>
+            <circle fill="#292F33" cx="21.5" cy="9.5" r="1.5"/>
+            <path fill="#A0041E" d="M26.849 16.25c0 .414-2.189-2.25-8.849-2.25-6.661 0-8.848 2.664-8.848 2.25 0-.414 2.754-3.75 8.848-3.75 6.094 0 8.849 3.336 8.849 3.75z"/>
+            <path fill="#DD2E44" d="M10.793 24.433c0-.414 1.782 2.25 7.207 2.25s7.208-2.664 7.208-2.25c0 .414-2.244 3.75-7.208 3.75s-7.207-3.336-7.207-3.75z"/>
+          </svg>
+        </div>
+        <iframe class="avatar avatar-media" id="avatarViewer" title="provider avatar viewer" style="display:none; border:0;"></iframe>
+        <div class="avatar avatar-media" id="live2dCanvas" style="display:none; background:transparent;" aria-label="live2d avatar canvas"></div>
+        <canvas class="avatar avatar-canvas" id="avatarCanvas" aria-label="digital avatar canvas"></canvas>
+      </div>
+      <div class="meta">
+        <h1 class="name" id="personaName">Persona</h1>
+        <p class="role" id="personaRole">companion</p>
+      </div>
+    </section>
+
+    <aside class="sense-rail" aria-label="sensory capabilities">
+      <div class="sense active" id="sense-image" title="image">img</div>
+      <div class="sense" id="sense-model3d" title="3d">3d</div>
+      <div class="sense active" id="sense-motion" title="motion">mov</div>
+      <div class="sense active" id="sense-voice" title="voice">vox</div>
+      <div class="sense" id="sense-hearing" title="hearing">ear</div>
+      <div class="sense" id="sense-worldSense" title="world">env</div>
+    </aside>
+
+    <section class="controls" aria-label="render controls">
+      <div class="controls-row">
+        <label for="displayMode">Display</label>
+        <select id="displayMode">
+          <option value="provider" selected>provider</option>
+          <option value="experimental">experimental</option>
+        </select>
+      </div>
+      <details class="advanced-block">
+        <summary>Advanced</summary>
+        <div class="advanced-content">
+          <div class="controls-row">
+            <label for="renderQuality">Quality</label>
+            <select id="renderQuality">
+              <option value="low">low</option>
+              <option value="medium" selected>medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+          <div class="controls-row">
+            <label for="autoQuality">Auto Quality</label>
+            <input id="autoQuality" type="checkbox" checked />
+          </div>
+          <div class="fps">
+            <span id="fpsValue">fps: --</span>
+            <span id="perfNote">target: 30</span>
+          </div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <script src="/packages/avatar-runtime/web/renderers/live2d-pixi-adapter.js"></script>
+  <script src="/packages/avatar-runtime/web/renderer-registry.js"></script>
+  <script src="/packages/avatar-runtime/web/renderers/vector-renderer.js"></script>
+  <script src="/packages/avatar-runtime/web/index.js"></script>
+  <script>
+    var __stateUrl = null;
+    var __pollTimer = null;
+    var __lastStateHash = '';
+    var __livekitConnected = false;
+    var __renderState = null;
+    var __renderer = null;
+    var __queryIntentOverride = null;
+    var __debugMode = false;
+    var __viewerRenderState = null;
+    var __viewerWaitTimer = null;
+    var __viewerWaitToken = 0;
+    var __viewerFallbackByTimeout = false;
+    var __viewerLastSrc = '';
+    var __viewerLoaded = false;
+    var __viewerError = false;
+    var __viewerLastHeartbeatAt = 0;
+
+    // ── Direct Live2D renderer (no iframe) ──
+    var __live2dModel = null;
+    var __live2dModelUrl = '';
+    var __live2dLoading = false;
+    var __live2dReady = false;
+    var __live2dRendererKind = '';
+    var __pixiAdapter = null;
+
+    function resolveLive2DRuntime(url) {
+      if (!url) return '';
+      return /\.model\.json($|\?)/i.test(url) ? 'c2' : 'c4';
+    }
+
+    function loadScript(src) {
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('Failed to load ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+
+    var VENDOR = '/demo/vendor-dist';
+
+    // ── L2Dwidget-based avatar (full SDK, no SES eval needed) ──
+    var __l2dWidgetEl = null;
+    var __l2dWidgetCanvas = null;
+    var __l2dObserver = null;
+
+    function waitForEl(selector, timeout) {
+      return new Promise(function (resolve, reject) {
+        var start = Date.now();
+        (function poll() {
+          var el = document.querySelector(selector);
+          if (el) return resolve(el);
+          if (Date.now() - start > timeout) return reject(new Error('waitForEl timeout: ' + selector));
+          setTimeout(poll, 80);
+        })();
+      });
+    }
+
+    function resolveRendererMode(state) {
+      var q = new URLSearchParams(location.search).get('renderer');
+      var queryMode = String(q || '').toLowerCase();
+      if (queryMode === 'pixi' || queryMode === 'l2dwidget' || queryMode === 'vector') return queryMode;
+      var stateMode = String(((((state || {}).render || {}).rendererMode) || '').toLowerCase());
+      if (stateMode === 'pixi' || stateMode === 'l2dwidget' || stateMode === 'vector') return stateMode;
+      return 'pixi';
+    }
+
+    function clearLive2DRenderers() {
+      if (__l2dObserver) {
+        try { __l2dObserver.disconnect(); } catch (_) {}
+        __l2dObserver = null;
+      }
+      var widget = document.getElementById('live2d-widget');
+      if (widget && widget.parentNode) widget.parentNode.removeChild(widget);
+      __l2dWidgetEl = null;
+      __l2dWidgetCanvas = null;
+
+      if (__pixiAdapter && typeof __pixiAdapter.destroy === 'function') {
+        try { __pixiAdapter.destroy(); } catch (_) {}
+      }
+      __pixiAdapter = null;
+      // Remove full-screen overlay if present.
+      var overlay = document.getElementById('pixiLive2DOverlay');
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      var live2dCanvas = document.getElementById('live2dCanvas');
+      if (live2dCanvas) {
+        while (live2dCanvas.firstChild) live2dCanvas.removeChild(live2dCanvas.firstChild);
+      }
+
+      __live2dRendererKind = '';
+      __live2dModel = null;
+    }
+
+    async function initPixiAdapterAvatar(modelJsonUrl, state) {
+      if (!window.OpenPersonaPixiLive2DAdapter || !window.OpenPersonaPixiLive2DAdapter.create) {
+        throw new Error('pixi-adapter-missing');
+      }
+
+      // ── Full-screen overlay container ───────────────────────────────────────
+      // Use a fixed-position overlay (like AIRI) so the Live2D character fills
+      // the entire viewport without being clipped by the layout's avatar-wrap box.
+      // This sidesteps the inset:0 / clientWidth mismatch that caused the small
+      // rendering when the PIXI canvas was confined inside avatar-wrap.
+      var overlay = document.getElementById('pixiLive2DOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'pixiLive2DOverlay';
+        document.body.appendChild(overlay);
+      }
+      overlay.style.cssText = [
+        'position:fixed',
+        'top:0', 'left:0',
+        'width:100vw', 'height:100vh',
+        'pointer-events:none',
+        'z-index:5',
+        'background:transparent',
+        'overflow:hidden'
+      ].join(';');
+
+      // Also mark the original avatar-wrap so its circle decorations hide.
+      var mount = document.getElementById('live2dCanvas');
+      var wrap = mount.parentElement;
+      wrap.classList.add('has-live2d');
+
+      var vW = window.innerWidth;
+      var vH = window.innerHeight;
+      var frameMode = String((((state || {}).appearanceIntent || {}).frameMode) || 'noCropContain');
+      var dpr = Math.max(1, window.devicePixelRatio || 1);
+      __pixiAdapter = await window.OpenPersonaPixiLive2DAdapter.create({
+        mountEl: overlay,
+        modelJsonUrl: modelJsonUrl,
+        vendorBase: VENDOR,
+        frameMode: frameMode === 'upperBodyFocus' ? 'upperBodyFocus' : 'noCropContain',
+        viewport: { width: vW, height: vH, dpr: dpr }
+      });
+
+      __live2dRendererKind = 'pixi';
+      __live2dModel = overlay;
+      __live2dReady = true;
+      __viewerRenderState = { renderer: 'live2d', detail: 'pixi-ready' };
+      updateRenderBadge();
+    }
+
+    async function initL2DWidgetAvatar(modelJsonUrl) {
+
+      var wrap = document.getElementById('live2dCanvas').parentElement;
+      var W = wrap.clientWidth || 360;
+      var H = wrap.clientHeight || 360;
+
+      // ── AIRI-inspired portrait canvas approach ──
+      // Chitose is a portrait model (~2:3 ratio). Square canvas forces width-fit,
+      // making height overflow. Use a portrait canvas so model fits naturally.
+      // Canvas CSS = 100% of container; model renders with Math.min(h,w) scale fit.
+      var vh      = window.innerHeight;
+      var safeTop = 90;                          // below top UI badges
+      var availH  = Math.round(vh * 0.90) - safeTop;  // usable height below badges
+      // Portrait canvas: width ≈ 1.2×W, height fills available viewport height
+      var CANVAS_H = Math.min(Math.round(W * 1.8), availH);
+      var CANVAS_W = Math.round(CANVAS_H / 1.5);  // ~2:3 portrait aspect
+      CANVAS_W     = Math.min(CANVAS_W, Math.round(W * 1.3));
+
+      try {
+        // Load the two-part L2Dwidget bundle (self-contained, no eval)
+        if (!window.L2Dwidget) {
+          await loadScript(VENDOR + '/L2Dwidget.min.js');
+        }
+
+        // Remove any previous widget DOM
+        var oldWidget = document.getElementById('live2d-widget');
+        if (oldWidget) oldWidget.parentNode.removeChild(oldWidget);
+
+        // Portrait canvas — model will scale to fit width AND height proportionally
+        window.L2Dwidget.init({
+          pluginRootPath: VENDOR + '/',
+          pluginJsPath: VENDOR + '/',
+          pluginModelPath: '',
+          tagMode: false,
+          model: { jsonPath: modelJsonUrl },
+          display: {
+            position: 'left',
+            width:  CANVAS_W,
+            height: CANVAS_H,
+            hOffset: 0,
+            vOffset: 0,
+            superSample: 1
+          },
+          mobile: { show: true, scale: 1 },
+          react: { opacity: 1 }
+        });
+
+        // Wait for the widget canvas to appear in DOM
+        var widgetEl = await waitForEl('#live2d-widget', 8000);
+        await waitForEl('#live2d-widget canvas', 8000);
+
+        // Hide the circle wrap decorations
+        wrap.style.cssText = [
+          'border:none',
+          'background:transparent',
+          'box-shadow:none',
+          'backdrop-filter:none',
+          'overflow:visible',
+          'position:relative',
+          'width:' + W + 'px',
+          'aspect-ratio:1'
+        ].join(';');
+        wrap.classList.add('has-live2d');
+
+        // Center the portrait canvas on wrap, top at safeTop
+        var rect = wrap.getBoundingClientRect();
+        var cx   = rect.left + rect.width / 2;
+        var left = Math.round(cx - CANVAS_W / 2);
+        var top  = safeTop;
+
+        var lockStyle = [
+          'position:fixed',
+          'left:' + left + 'px',
+          'top:' + top + 'px',
+          'width:' + CANVAS_W + 'px',
+          'height:' + CANVAS_H + 'px',
+          'pointer-events:none',
+          'z-index:50'
+        ].join(';');
+
+        document.body.appendChild(widgetEl);
+        widgetEl.setAttribute('style', lockStyle);
+
+        // Prevent L2Dwidget's internal timer from resetting the style
+        __l2dObserver = new MutationObserver(function () {
+          if (widgetEl.getAttribute('style') !== lockStyle) {
+            widgetEl.setAttribute('style', lockStyle);
+          }
+        });
+        __l2dObserver.observe(widgetEl, { attributes: true, attributeFilter: ['style'] });
+
+        __l2dWidgetEl = widgetEl;
+        __l2dWidgetCanvas = widgetEl.querySelector('canvas');
+        __live2dRendererKind = 'l2dwidget';
+        __live2dReady = true;
+        __live2dModel = widgetEl;
+
+        __viewerRenderState = { renderer: 'live2d', detail: 'l2dwidget-ready' };
+        updateRenderBadge();
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    async function initLive2DRenderer(modelJsonUrl, state) {
+      if (__live2dLoading) return;
+      if (__live2dReady && __live2dModelUrl === modelJsonUrl) return;
+      __live2dLoading = true;
+      __live2dReady = false;
+      __live2dModelUrl = modelJsonUrl;
+      clearLive2DRenderers();
+
+      var mode = resolveRendererMode(state);
+      var chain = mode === 'l2dwidget' ? ['l2dwidget'] : (mode === 'vector' ? [] : ['pixi', 'l2dwidget']);
+      var lastError = null;
+
+      for (var i = 0; i < chain.length; i++) {
+        var step = chain[i];
+        try {
+          __viewerRenderState = { renderer: 'live2d', detail: 'loading-' + step };
+          updateRenderBadge();
+          if (step === 'pixi') await initPixiAdapterAvatar(modelJsonUrl, state);
+          else await initL2DWidgetAvatar(modelJsonUrl);
+          __live2dLoading = false;
+          return;
+        } catch (err) {
+          lastError = err;
+          clearLive2DRenderers();
+          __viewerRenderState = { renderer: 'live2d', detail: step + '-failed:' + ((err && err.message) || 'unknown') };
+          updateRenderBadge();
+        }
+      }
+
+      __live2dReady = false;
+      __live2dLoading = false;
+      __live2dModelUrl = '';
+      __viewerRenderState = {
+        renderer: 'vector-fallback',
+        detail: 'live2d-failed:' + ((lastError && lastError.message) || 'unknown')
+      };
+      updateRenderBadge();
+    }
+
+    function applyFaceControlToLive2D(fc) {
+      if (__live2dRendererKind === 'pixi' && __pixiAdapter && typeof __pixiAdapter.applyFaceControl === 'function') {
+        __pixiAdapter.applyFaceControl(fc);
+      }
+      // L2Dwidget doesn't expose a faceControl API externally; motion plays automatically
+    }
+
+    function setLive2DCanvasVisibility(show) {
+      var el = document.getElementById('live2dCanvas');
+      if (el) el.style.display = show ? 'block' : 'none';
+      // L2Dwidget creates its own canvas; show/hide the widget el
+      if (__l2dWidgetEl) __l2dWidgetEl.style.display = show ? '' : 'none';
+    }
+
+    function syncPixiViewportFromWrap() {
+      if (__live2dRendererKind !== 'pixi' || !__pixiAdapter || typeof __pixiAdapter.setViewport !== 'function') return;
+      // Overlay fills the full viewport; use window dimensions directly.
+      __pixiAdapter.setViewport({
+        width:  window.innerWidth,
+        height: window.innerHeight,
+        dpr:    Math.max(1, window.devicePixelRatio || 1)
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      syncPixiViewportFromWrap();
+    });
+
+    var QUALITY_BUDGET = { low: 180, medium: 360, high: 720 };
+    var DEFAULT_VISUAL_MANIFEST = {
+      version: '0.1',
+      mood: { valence: 0.0, arousal: 0.4, intensity: 0.55 },
+      breath: { rate: 0.45, amplitude: 0.35 },
+      pulse: { bpm: 72, variability: 0.18 },
+      microExpression: { eyeFocus: 0.62, pupil: 0.48, mouthCurve: 0.12 },
+      aura: { hue: 246, saturation: 0.58, luminance: 0.64, flow: 0.7 },
+      envSync: { timeOfDay: 'night', ambientCct: 4100, ambientLux: 150 },
+      motionStyle: { softness: 0.72, jitter: 0.1, latencyMs: 120 },
+      signals: []
+    };
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function fract(v) { return v - Math.floor(v); }
+    function stableHash(obj) { try { return JSON.stringify(obj || {}); } catch (_) { return String(Date.now()); } }
+    function hslColor(h, s, l, a) { return 'hsla(' + Math.round(h % 360) + ', ' + Math.round(clamp(s, 0, 1) * 100) + '%, ' + Math.round(clamp(l, 0, 1) * 100) + '%, ' + clamp(a, 0, 1) + ')'; }
+
+    function deepMerge(base, ext) {
+      if (!ext || typeof ext !== 'object') return base;
+      var out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
+      Object.keys(ext).forEach(function (k) {
+        var bv = out[k];
+        var ev = ext[k];
+        if (bv && typeof bv === 'object' && !Array.isArray(bv) && ev && typeof ev === 'object' && !Array.isArray(ev)) out[k] = deepMerge(bv, ev);
+        else out[k] = ev;
+      });
+      return out;
+    }
+
+    function parseBool(v, fallback) {
+      if (v === null || v === undefined || v === '') return fallback;
+      if (v === '1' || v === 'true' || v === 'on') return true;
+      if (v === '0' || v === 'false' || v === 'off') return false;
+      return fallback;
+    }
+
+    function normalizeVisualManifest(state) {
+      var vm = state && state.visualManifest ? state.visualManifest : null;
+      if (!vm && state && state.appearanceState && state.appearanceState.visualManifest) vm = state.appearanceState.visualManifest;
+      return deepMerge(DEFAULT_VISUAL_MANIFEST, vm || {});
+    }
+
+    function normalizeFaceProfile(state) {
+      var profile = state && state.faceProfile ? state.faceProfile : null;
+      if (!profile && state && state.appearanceState && state.appearanceState.faceProfile) profile = state.appearanceState.faceProfile;
+      var src = profile || {};
+      return {
+        seed: String(src.seed || state && state.personaName || 'persona-default'),
+        jawWidth: clamp(Number(src.jawWidth !== undefined ? src.jawWidth : 1), 0.75, 1.3),
+        eyeSpacing: clamp(Number(src.eyeSpacing !== undefined ? src.eyeSpacing : 1), 0.8, 1.25),
+        noseLength: clamp(Number(src.noseLength !== undefined ? src.noseLength : 1), 0.8, 1.25),
+        mouthWidth: clamp(Number(src.mouthWidth !== undefined ? src.mouthWidth : 1), 0.8, 1.3),
+        browTilt: clamp(Number(src.browTilt !== undefined ? src.browTilt : 0), -1, 1),
+        cheekFullness: clamp(Number(src.cheekFullness !== undefined ? src.cheekFullness : 1), 0.75, 1.3)
+      };
+    }
+
+    function normalizeFaceControl(state) {
+      // New control namespace (contractVersion 0.2+)
+      var control = state && state.control && state.control.avatar && state.control.avatar.face
+        ? state.control.avatar.face : null;
+      if (!control && state && state.appearanceState && state.appearanceState.control
+          && state.appearanceState.control.avatar && state.appearanceState.control.avatar.face) {
+        control = state.appearanceState.control.avatar.face;
+      }
+      // Legacy fallback (contractVersion 0.1)
+      if (!control && state && state.faceControl) control = state.faceControl;
+      if (!control && state && state.appearanceState && state.appearanceState.faceControl) control = state.appearanceState.faceControl;
+      var src = control || {};
+      var pose = src.pose || {};
+      var eyes = src.eyes || {};
+      var brows = src.brows || {};
+      var mouth = src.mouth || {};
+      var emotion = src.emotion || {};
+      return {
+        pose: {
+          yaw: clamp(Number(pose.yaw !== undefined ? pose.yaw : 0), -1, 1),
+          pitch: clamp(Number(pose.pitch !== undefined ? pose.pitch : 0), -1, 1),
+          roll: clamp(Number(pose.roll !== undefined ? pose.roll : 0), -1, 1)
+        },
+        eyes: {
+          blinkL: clamp(Number(eyes.blinkL !== undefined ? eyes.blinkL : 0), 0, 1),
+          blinkR: clamp(Number(eyes.blinkR !== undefined ? eyes.blinkR : 0), 0, 1),
+          gazeX: clamp(Number(eyes.gazeX !== undefined ? eyes.gazeX : 0), -1, 1),
+          gazeY: clamp(Number(eyes.gazeY !== undefined ? eyes.gazeY : 0), -1, 1)
+        },
+        brows: {
+          browInner: clamp(Number(brows.browInner !== undefined ? brows.browInner : 0), -1, 1),
+          browOuterL: clamp(Number(brows.browOuterL !== undefined ? brows.browOuterL : 0), -1, 1),
+          browOuterR: clamp(Number(brows.browOuterR !== undefined ? brows.browOuterR : 0), -1, 1)
+        },
+        mouth: {
+          jawOpen: clamp(Number(mouth.jawOpen !== undefined ? mouth.jawOpen : 0), 0, 1),
+          smile: clamp(Number(mouth.smile !== undefined ? mouth.smile : 0), -1, 1),
+          mouthPucker: clamp(Number(mouth.mouthPucker !== undefined ? mouth.mouthPucker : 0), 0, 1)
+        },
+        emotion: {
+          calm: clamp(Number(emotion.calm !== undefined ? emotion.calm : 0.6), 0, 1),
+          intensity: clamp(Number(emotion.intensity !== undefined ? emotion.intensity : 0.5), 0, 1)
+        },
+        source: src.source || 'agent',
+        updatedAt: src.updatedAt || ''
+      };
+    }
+
+    function normalizeFormName(form) {
+      var f = String(form || '').toLowerCase();
+      if (f === 'face' || f === 'auto') return f;
+      return 'auto';
+    }
+
+    function normalizeAppearanceIntent(state) {
+      var intent = state && state.appearanceIntent ? state.appearanceIntent : null;
+      if (!intent && state && state.appearanceState && state.appearanceState.appearanceIntent) intent = state.appearanceState.appearanceIntent;
+      var src = intent || {};
+      var lockSeconds = Number(src.lockSeconds);
+      lockSeconds = Number.isFinite(lockSeconds) ? clamp(lockSeconds, 0, 300) : 0;
+      return {
+        version: src.version || '0.1',
+        form: normalizeFormName(src.form),
+        style: src.style || 'default',
+        transition: src.transition || 'smooth',
+        priority: src.priority || 'agent',
+        lockSeconds: lockSeconds,
+        reason: src.reason || '',
+        source: src.source || 'agent',
+        updatedAt: src.updatedAt || ''
+      };
+    }
+
+    function parseQueryIntentOverride() {
+      var p = new URLSearchParams(location.search);
+      var hasIntent = p.has('form') || p.has('transition') || p.has('lockSeconds') || p.has('updatedAt') || p.has('style') || p.has('source');
+      if (!hasIntent) return null;
+      var override = {};
+      if (p.has('form')) override.form = normalizeFormName(p.get('form'));
+      if (p.has('transition')) override.transition = p.get('transition') || 'smooth';
+      if (p.has('lockSeconds')) {
+        var ls = Number(p.get('lockSeconds'));
+        override.lockSeconds = Number.isFinite(ls) ? clamp(ls, 0, 300) : 0;
+      }
+      if (p.has('style')) override.style = p.get('style') || 'default';
+      if (p.has('source')) override.source = p.get('source') || 'query';
+      if (p.has('updatedAt')) override.updatedAt = p.get('updatedAt') || '';
+      if (!override.updatedAt && override.form && override.form !== 'auto') {
+        override.updatedAt = new Date().toISOString();
+      }
+      return override;
+    }
+
+    function applyQueryIntentOverride(state) {
+      if (!state) return state;
+      if (!__queryIntentOverride) return state;
+      var current = normalizeAppearanceIntent(state);
+      var merged = Object.assign({}, current, __queryIntentOverride);
+      var out = Object.assign({}, state);
+      out.appearanceIntent = merged;
+      return out;
+    }
+
+    function timeOfDayHueOffset(timeOfDay) {
+      switch (String(timeOfDay || '').toLowerCase()) {
+        case 'dawn': return 12;
+        case 'morning': return 0;
+        case 'noon': return -8;
+        case 'afternoon': return -2;
+        case 'dusk': return 22;
+        case 'night': return 38;
+        default: return 0;
+      }
+    }
+
+    function getSensory(state) {
+      if (state && state.sensory) return state.sensory;
+      if (state && state.appearanceState && state.appearanceState.sensory) return state.appearanceState.sensory;
+      return {};
+    }
+
+    function getMediaState(state) {
+      var media = state && state.appearanceState && state.appearanceState.media ? state.appearanceState.media : {};
+      return {
+        avatar: (state && state.avatar) || media.avatarImage || '',
+        avatarVideo: (state && state.avatarVideo) || media.avatarVideo || '',
+        avatarViewer: (state && state.avatarViewer) || media.viewerUrl || '',
+        livekit: (state && state.livekit) || {}
+      };
+    }
+
+    function getProviderCapabilities(state) {
+      if (state && state.providerCapabilities) return state.providerCapabilities;
+      if (state && state.appearanceState && state.appearanceState.providerCapabilities) return state.appearanceState.providerCapabilities;
+      return {};
+    }
+
+    function getRenderConfig(state) {
+      var render = state && state.render ? state.render : {};
+      var requestedDisplay = render.displayMode === 'experimental' ? 'experimental' : 'provider';
+      // Keep experimental renderer strictly behind debug gate.
+      var effectiveDisplay = __debugMode ? requestedDisplay : 'provider';
+      return {
+        displayMode: effectiveDisplay,
+        quality: QUALITY_BUDGET[render.quality] ? render.quality : 'medium',
+        autoQuality: render.autoQuality === undefined ? true : !!render.autoQuality
+      };
+    }
+
+    function updateControlValues() {
+      if (!__renderState) return;
+      document.getElementById('displayMode').value = __renderState.displayMode || 'provider';
+      document.getElementById('renderQuality').value = __renderState.quality;
+      document.getElementById('autoQuality').checked = !!__renderState.autoQuality;
+    }
+
+    function applyDebugModeGate() {
+      var p = new URLSearchParams(location.search);
+      var debugOn = parseBool(p.get('debug'), false);
+      __debugMode = debugOn;
+      var controls = document.querySelector('.controls');
+      if (!controls) return;
+      controls.classList.toggle('hidden', !debugOn);
+    }
+
+    function updateIntentBadge(text, locked) {
+      var el = document.getElementById('intentBadge');
+      if (!el) return;
+      el.textContent = text || 'Auto Morph';
+      el.classList.toggle('locked', !!locked);
+    }
+
+    function updateRenderBadge() {
+      var el = document.getElementById('renderBadge');
+      if (!el) return;
+      var visible = !!__viewerRenderState;
+      if (!visible) {
+        el.style.display = 'none';
+        el.classList.remove('fallback');
+        return;
+      }
+      var state = __viewerRenderState || {};
+      var isFallback = state.renderer === 'vector-fallback';
+      var label = isFallback ? 'Renderer: Fallback' : 'Renderer: Live2D';
+      if (state.detail) label += ' (' + state.detail + ')';
+      el.textContent = label;
+      el.classList.toggle('fallback', !!isFallback);
+      el.style.display = 'block';
+    }
+
+    function clearViewerWaitTimer() {
+      if (__viewerWaitTimer) {
+        clearTimeout(__viewerWaitTimer);
+        __viewerWaitTimer = null;
+      }
+    }
+
+    function scheduleViewerWaitFallback(hasFaceRig) {
+      clearViewerWaitTimer();
+      if (!hasFaceRig) return;
+      var token = ++__viewerWaitToken;
+      __viewerWaitTimer = setTimeout(function () {
+        if (token !== __viewerWaitToken) return;
+        var waiting = __viewerRenderState && (
+          __viewerRenderState.detail === 'waiting-viewer' ||
+          __viewerRenderState.detail === 'initializing'
+        );
+        if (!waiting) return;
+        __viewerFallbackByTimeout = true;
+        __viewerRenderState = {
+          renderer: 'vector-fallback',
+          detail: __viewerLoaded ? 'viewer-timeout-no-signal' : 'viewer-timeout-loading'
+        };
+        updateRenderBadge();
+        // Soft timeout only: keep iframe visible to allow late renderer recovery.
+      }, 8000);
+    }
+
+    function attachControlEvents() {
+      document.getElementById('displayMode').addEventListener('change', function (e) {
+        if (!__renderState) return;
+        __renderState.displayMode = e.target.value === 'experimental' ? 'experimental' : 'provider';
+      });
+      document.getElementById('renderQuality').addEventListener('change', function (e) {
+        if (!__renderState) return;
+        __renderState.quality = QUALITY_BUDGET[e.target.value] ? e.target.value : 'medium';
+        if (__renderer) __renderer.setQuality(__renderState.quality);
+      });
+      document.getElementById('autoQuality').addEventListener('change', function (e) {
+        if (!__renderState) return;
+        __renderState.autoQuality = !!e.target.checked;
+      });
+    }
+
+    function setCanvasVisibility(visible) {
+      document.getElementById('avatarCanvas').style.display = visible ? 'block' : 'none';
+    }
+
+    function setMediaVisibility(showVideo, showImage) {
+      document.getElementById('avatarVideo').style.display = showVideo ? 'block' : 'none';
+      document.getElementById('avatarImage').style.display = showImage ? 'block' : 'none';
+      document.getElementById('avatarViewer').style.display = 'none';
+    }
+
+    function setViewerVisibility(showViewer) {
+      document.getElementById('avatarViewer').style.display = showViewer ? 'block' : 'none';
+      if (showViewer) {
+        document.getElementById('avatarVideo').style.display = 'none';
+        document.getElementById('avatarImage').style.display = 'none';
+      }
+    }
+
+    function createSeededRandom(seed) {
+      var n = 2166136261;
+      var text = String(seed || 'persona');
+      for (var i = 0; i < text.length; i += 1) {
+        n ^= text.charCodeAt(i);
+        n = Math.imul(n, 16777619);
+      }
+      return function rand() {
+        n += 0x6D2B79F5;
+        var t = Math.imul(n ^ (n >>> 15), 1 | n);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    var TOPOLOGY_EDGES_68 = [
+      [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15], [15, 16],
+      [17, 18], [18, 19], [19, 20], [20, 21], [22, 23], [23, 24], [24, 25], [25, 26],
+      [27, 28], [28, 29], [29, 30], [30, 31], [31, 32], [32, 33], [33, 34], [34, 35],
+      [36, 37], [37, 38], [38, 39], [39, 40], [40, 41], [41, 36],
+      [42, 43], [43, 44], [44, 45], [45, 46], [46, 47], [47, 42],
+      [48, 49], [49, 50], [50, 51], [51, 52], [52, 53], [53, 54], [54, 55], [55, 56], [56, 57], [57, 58], [58, 59], [59, 48],
+      [60, 61], [61, 62], [62, 63], [63, 64], [64, 65], [65, 66], [66, 67], [67, 60]
+    ];
+    var LM68 = {
+      jaw: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      browL: [17, 18, 19, 20, 21],
+      browR: [22, 23, 24, 25, 26],
+      noseBridge: [27, 28, 29, 30],
+      noseBase: [31, 32, 33, 34, 35],
+      eyeL: [36, 37, 38, 39, 40, 41],
+      eyeR: [42, 43, 44, 45, 46, 47],
+      mouthOuter: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+      mouthInner: [60, 61, 62, 63, 64, 65, 66, 67]
+    };
+
+    function buildLandmarks68(faceProfile) {
+      var p = faceProfile || normalizeFaceProfile({});
+      var points = [];
+      var cx = 0.5;
+      var jawRx = 0.2 * p.jawWidth;
+      var jawRy = 0.255;
+      var jawCy = 0.575;
+      var i;
+
+      // 0-16 jawline
+      for (i = 0; i <= 16; i += 1) {
+        var tJ = i / 16;
+        var ang = (Math.PI * (1.08 + (0.84 * tJ)));
+        var xJ = cx + (Math.cos(ang) * jawRx);
+        var yJ = jawCy + (Math.sin(ang) * jawRy);
+        points.push({ x: xJ, y: yJ, region: 'jaw' });
+      }
+
+      // 17-21 left brow
+      for (i = 0; i < 5; i += 1) {
+        var tBL = i / 4;
+        var xBL = 0.34 + (tBL * 0.11 * p.eyeSpacing);
+        var yBL = 0.388 - (Math.sin(tBL * Math.PI) * 0.022) - (p.browTilt * (0.01 - (tBL * 0.02)));
+        points.push({ x: xBL, y: yBL, region: 'brow' });
+      }
+      // 22-26 right brow
+      for (i = 0; i < 5; i += 1) {
+        var tBR = i / 4;
+        var xBR = 0.55 + (tBR * 0.11 * p.eyeSpacing);
+        var yBR = 0.388 - (Math.sin((1 - tBR) * Math.PI) * 0.022) + (p.browTilt * (0.01 - ((1 - tBR) * 0.02)));
+        points.push({ x: xBR, y: yBR, region: 'brow' });
+      }
+
+      // 27-30 nose ridge
+      for (i = 0; i < 4; i += 1) {
+        var tN = i / 3;
+        points.push({
+          x: 0.5 + (Math.sin((tN - 0.5) * Math.PI) * 0.006),
+          y: 0.43 + (tN * 0.16 * p.noseLength),
+          region: 'nose'
+        });
+      }
+      // 31-35 nose base
+      points.push({ x: 0.45, y: 0.595, region: 'nose' });
+      points.push({ x: 0.475, y: 0.612, region: 'nose' });
+      points.push({ x: 0.5, y: 0.618, region: 'nose' });
+      points.push({ x: 0.525, y: 0.612, region: 'nose' });
+      points.push({ x: 0.55, y: 0.595, region: 'nose' });
+
+      // 36-41 left eye (clockwise)
+      var eyeOffset = 0.078 * p.eyeSpacing;
+      var eyeRx = 0.045 * p.eyeSpacing;
+      var eyeRy = 0.022;
+      var leftEyeCx = 0.5 - eyeOffset;
+      var leftEyeCy = 0.452;
+      points.push({ x: leftEyeCx - eyeRx, y: leftEyeCy, region: 'eye' });
+      points.push({ x: leftEyeCx - eyeRx * 0.45, y: leftEyeCy - eyeRy, region: 'eye' });
+      points.push({ x: leftEyeCx + eyeRx * 0.45, y: leftEyeCy - eyeRy, region: 'eye' });
+      points.push({ x: leftEyeCx + eyeRx, y: leftEyeCy, region: 'eye' });
+      points.push({ x: leftEyeCx + eyeRx * 0.45, y: leftEyeCy + eyeRy, region: 'eye' });
+      points.push({ x: leftEyeCx - eyeRx * 0.45, y: leftEyeCy + eyeRy, region: 'eye' });
+
+      // 42-47 right eye
+      var rightEyeCx = 0.5 + eyeOffset;
+      var rightEyeCy = 0.452;
+      points.push({ x: rightEyeCx - eyeRx, y: rightEyeCy, region: 'eye' });
+      points.push({ x: rightEyeCx - eyeRx * 0.45, y: rightEyeCy - eyeRy, region: 'eye' });
+      points.push({ x: rightEyeCx + eyeRx * 0.45, y: rightEyeCy - eyeRy, region: 'eye' });
+      points.push({ x: rightEyeCx + eyeRx, y: rightEyeCy, region: 'eye' });
+      points.push({ x: rightEyeCx + eyeRx * 0.45, y: rightEyeCy + eyeRy, region: 'eye' });
+      points.push({ x: rightEyeCx - eyeRx * 0.45, y: rightEyeCy + eyeRy, region: 'eye' });
+
+      // 48-59 outer mouth
+      var mouthHalf = 0.095 * p.mouthWidth;
+      var mouthCy = 0.69;
+      var mouthRx = mouthHalf;
+      var mouthRyUp = 0.03;
+      var mouthRyDown = 0.04;
+      for (i = 0; i < 12; i += 1) {
+        var aM = (Math.PI * 2 * i) / 12;
+        var xM = 0.5 + (Math.cos(aM) * mouthRx);
+        var yM = mouthCy + (Math.sin(aM) * (aM > Math.PI ? mouthRyDown : mouthRyUp));
+        points.push({ x: xM, y: yM, region: 'mouth' });
+      }
+
+      // 60-67 inner mouth
+      var innerRx = mouthRx * 0.52;
+      var innerRyUp = mouthRyUp * 0.52;
+      var innerRyDown = mouthRyDown * 0.56;
+      for (i = 0; i < 8; i += 1) {
+        var aI = (Math.PI * 2 * i) / 8;
+        var xI = 0.5 + (Math.cos(aI) * innerRx);
+        var yI = mouthCy + (Math.sin(aI) * (aI > Math.PI ? innerRyDown : innerRyUp));
+        points.push({ x: xI, y: yI, region: 'mouth' });
+      }
+
+      return points;
+    }
+
+    function buildFaceTemplate(count, faceProfile) {
+      var p = faceProfile || normalizeFaceProfile({});
+      var rand = createSeededRandom(p.seed);
+      var base = buildLandmarks68(p);
+      var points = [];
+      var i;
+      var cx = 0.5;
+      var cy = 0.54;
+      var rx = 0.23 * p.jawWidth;
+      var ry = 0.33;
+
+      function gauss(x, y, mx, my, sx, sy) {
+        var dx = (x - mx) / sx;
+        var dy = (y - my) / sy;
+        return Math.exp(-0.5 * ((dx * dx) + (dy * dy)));
+      }
+
+      function faceDepth(x, y) {
+        var nx = (x - cx) / rx;
+        var ny = (y - cy) / ry;
+        var base = Math.sqrt(Math.max(0, 1 - (nx * nx) - (ny * ny)));
+        var noseBridge = 0.42 * gauss(x, y, 0.5, 0.5, 0.028, 0.12);
+        var noseTip = 0.26 * gauss(x, y, 0.5, 0.56, 0.032, 0.05);
+        var cheeks = 0.16 * p.cheekFullness * (gauss(x, y, 0.4, 0.56, 0.06, 0.08) + gauss(x, y, 0.6, 0.56, 0.06, 0.08));
+        var eyeSockets = -0.24 * (gauss(x, y, 0.42, 0.44, 0.05, 0.04) + gauss(x, y, 0.58, 0.44, 0.05, 0.04));
+        var jawLoss = y > 0.69 ? -(y - 0.69) * 0.8 : 0;
+        return clamp(base + noseBridge + noseTip + cheeks + eyeSockets + jawLoss, 0, 1);
+      }
+
+      for (i = 0; i < base.length; i += 1) {
+        var bp = base[i];
+        points.push({
+          x: bp.x,
+          y: bp.y,
+          w: (bp.region === 'eye' || bp.region === 'mouth') ? 0.95 : 0.85,
+          z: faceDepth(bp.x, bp.y),
+          region: bp.region
+        });
+      }
+
+      // Densify using standard topology edges while preserving landmark semantics.
+      var need = Math.max(0, count - points.length);
+      for (i = 0; i < need; i += 1) {
+        var e = TOPOLOGY_EDGES_68[i % TOPOLOGY_EDGES_68.length];
+        var a = base[e[0]];
+        var b = base[e[1]];
+        var t = 0.15 + (rand() * 0.7);
+        var xE = lerp(a.x, b.x, t);
+        var yE = lerp(a.y, b.y, t);
+        points.push({
+          x: xE,
+          y: yE,
+          w: 0.68,
+          z: faceDepth(xE, yE),
+          region: a.region
+        });
+      }
+      return points;
+    }
+
+    function drawSmoothPath(ctx, pts, indices, closed) {
+      if (!indices || !indices.length) return;
+      var first = pts[indices[0]];
+      if (!first) return;
+      ctx.beginPath();
+      ctx.moveTo(first.x, first.y);
+      for (var i = 1; i < indices.length; i += 1) {
+        var p0 = pts[indices[i - 1]];
+        var p1 = pts[indices[i]];
+        if (!p0 || !p1) continue;
+        var mx = (p0.x + p1.x) * 0.5;
+        var my = (p0.y + p1.y) * 0.5;
+        ctx.quadraticCurveTo(p0.x, p0.y, mx, my);
+      }
+      var last = pts[indices[indices.length - 1]];
+      if (last) ctx.lineTo(last.x, last.y);
+      if (closed && first) {
+        var mxc = (last.x + first.x) * 0.5;
+        var myc = (last.y + first.y) * 0.5;
+        ctx.quadraticCurveTo(last.x, last.y, mxc, myc);
+        ctx.quadraticCurveTo(first.x, first.y, first.x, first.y);
+        ctx.closePath();
+      }
+    }
+
+    function renderVectorFace(ctx, lm, hue, sat, lum, mood) {
+      if (!lm || !lm[67]) return;
+      var skin = hslColor(hue + 10, sat * 0.38, lum * 0.78, 0.22 + (mood * 0.1));
+      var line = hslColor(hue + 18, Math.min(1, sat * 1.08), Math.min(1, lum * 1.08), 0.82);
+      var soft = hslColor(hue + 12, sat * 0.9, Math.min(1, lum * 1.04), 0.46);
+
+      ctx.save();
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = hslColor(hue + 18, sat, lum, 0.34);
+
+      // Face mask (jaw + brows top bridge)
+      var faceLoop = LM68.jaw.concat([26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 0]);
+      drawSmoothPath(ctx, lm, faceLoop, true);
+      ctx.fillStyle = skin;
+      ctx.fill();
+
+      // Primary lines
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = line;
+      drawSmoothPath(ctx, lm, LM68.jaw, false); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.browL, false); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.browR, false); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.noseBridge, false); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.noseBase, false); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.eyeL, true); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.eyeR, true); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.mouthOuter, true); ctx.stroke();
+
+      // Eye and mouth soft fill
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = soft;
+      ctx.fillStyle = hslColor(hue + 20, sat * 0.75, lum * 0.95, 0.2);
+      drawSmoothPath(ctx, lm, LM68.eyeL, true); ctx.fill(); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.eyeR, true); ctx.fill(); ctx.stroke();
+      drawSmoothPath(ctx, lm, LM68.mouthInner, true); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function CanvasAvatarRenderer(canvas, getState) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.getState = getState;
+      this.pixelRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      this.points = [];
+      this.quality = 'medium';
+      this.faceProfile = normalizeFaceProfile({ personaName: 'Persona' });
+      this.scatterPoints = [];
+      this.bootTs = 0;
+      this.hasBootAnimation = false;
+      this.lookTargetX = 0;
+      this.lookTargetY = 0;
+      this.lookX = 0;
+      this.lookY = 0;
+      this.debugYaw = 0;
+      this.debugPitch = 0;
+      this.lastTs = 0;
+      this.frames = 0;
+      this.fps = 0;
+      this.fpsStart = 0;
+      this.lowStreak = 0;
+      this.highStreak = 0;
+      this.width = 1;
+      this.height = 1;
+      this.resize();
+      this.setQuality('medium', { resetBoot: true });
+      this.loop = this.loop.bind(this);
+      this.onResize = this.onResize.bind(this);
+      this.onPointerMove = this.onPointerMove.bind(this);
+      this.onPointerLeave = this.onPointerLeave.bind(this);
+      window.addEventListener('resize', this.onResize);
+      this.canvas.addEventListener('mousemove', this.onPointerMove);
+      this.canvas.addEventListener('mouseleave', this.onPointerLeave);
+      requestAnimationFrame(this.loop);
+    }
+
+    CanvasAvatarRenderer.prototype.onResize = function () {
+      this.resize();
+      this.setQuality(this.quality);
+    };
+    CanvasAvatarRenderer.prototype.resize = function () {
+      var rect = this.canvas.getBoundingClientRect();
+      this.width = Math.max(1, Math.floor(rect.width));
+      this.height = Math.max(1, Math.floor(rect.height));
+      this.canvas.width = Math.floor(this.width * this.pixelRatio);
+      this.canvas.height = Math.floor(this.height * this.pixelRatio);
+      this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    };
+    CanvasAvatarRenderer.prototype.setQuality = function (quality, opts) {
+      opts = opts || {};
+      this.quality = QUALITY_BUDGET[quality] ? quality : 'medium';
+      var count = QUALITY_BUDGET[this.quality];
+      this.points = buildFaceTemplate(count, this.faceProfile);
+      if (this.scatterPoints.length !== this.points.length || opts.resetBoot) {
+        this.scatterPoints = [];
+        for (var i = 0; i < this.points.length; i += 1) {
+          var a = Math.random() * Math.PI * 2;
+          var r = Math.sqrt(Math.random()) * 0.52;
+          this.scatterPoints.push({
+            x: 0.5 + (Math.cos(a) * r),
+            y: 0.5 + (Math.sin(a) * r),
+            z: (Math.random() * 1.2) - 0.1
+          });
+        }
+      } else {
+        // Keep current visual continuity when only quality/profile updates.
+        for (var j = 0; j < this.points.length; j += 1) {
+          this.scatterPoints[j] = {
+            x: this.points[j].x,
+            y: this.points[j].y,
+            z: this.points[j].z === undefined ? 0.5 : this.points[j].z
+          };
+        }
+      }
+      if (opts.resetBoot || !this.hasBootAnimation) {
+        this.bootTs = 0;
+        this.hasBootAnimation = true;
+      }
+    };
+    CanvasAvatarRenderer.prototype.setFaceProfile = function (faceProfile, opts) {
+      this.faceProfile = faceProfile || this.faceProfile;
+      this.setQuality(this.quality, opts || { resetBoot: false });
+    };
+    CanvasAvatarRenderer.prototype.onPointerMove = function (ev) {
+      var rect = this.canvas.getBoundingClientRect();
+      var cx = rect.left + (rect.width * 0.5);
+      var cy = rect.top + (rect.height * 0.5);
+      var nx = (ev.clientX - cx) / (rect.width * 0.5);
+      var ny = (ev.clientY - cy) / (rect.height * 0.5);
+      var r = Math.sqrt((nx * nx) + (ny * ny));
+      if (r > 1) {
+        this.lookTargetX = 0;
+        this.lookTargetY = 0;
+        return;
+      }
+      // 8-direction guidance: keep continuous movement, but make diagonals and octants more distinct.
+      var angle = Math.atan2(ny, nx);
+      var octant = Math.round(angle / (Math.PI / 4));
+      var octantAngle = octant * (Math.PI / 4);
+      var snapStrength = 0.35;
+      var sx = Math.cos(octantAngle) * r;
+      var sy = Math.sin(octantAngle) * r;
+      var tx = lerp(nx, sx, snapStrength);
+      var ty = lerp(ny, sy, snapStrength);
+      this.lookTargetX = clamp(tx, -1, 1);
+      this.lookTargetY = clamp(ty, -1, 1);
+    };
+    CanvasAvatarRenderer.prototype.onPointerLeave = function () {
+      this.lookTargetX = 0;
+      this.lookTargetY = 0;
+    };
+    CanvasAvatarRenderer.prototype.handleAutoQuality = function () {
+      var s = this.getState() || {};
+      if (!s.autoQuality) return;
+      var order = ['low', 'medium', 'high'];
+      var idx = order.indexOf(this.quality);
+      if (this.fps < 24) { this.lowStreak += 1; this.highStreak = 0; }
+      else if (this.fps > 45) { this.highStreak += 1; this.lowStreak = 0; }
+      else { this.lowStreak = 0; this.highStreak = 0; }
+      if (this.lowStreak >= 3 && idx > 0) {
+        this.lowStreak = 0;
+        this.setQuality(order[idx - 1]);
+        s.quality = order[idx - 1];
+        updateControlValues();
+      } else if (this.highStreak >= 5 && idx < 2) {
+        this.highStreak = 0;
+        this.setQuality(order[idx + 1]);
+        s.quality = order[idx + 1];
+        updateControlValues();
+      }
+    };
+    CanvasAvatarRenderer.prototype.commitPerf = function (targetFps) {
+      document.getElementById('fpsValue').textContent = 'fps: ' + this.fps.toFixed(1);
+      document.getElementById('perfNote').textContent =
+        'target: ' + targetFps +
+        ' | points: ' + this.points.length +
+        ' | yaw: ' + this.debugYaw.toFixed(2) +
+        ' | pitch: ' + this.debugPitch.toFixed(2);
+    };
+    CanvasAvatarRenderer.prototype.draw = function (ts, vm, faceControl) {
+      var ctx = this.ctx;
+      var w = this.width;
+      var h = this.height;
+      var t = ts / 1000;
+      if (!this.bootTs) this.bootTs = ts;
+      var mood = clamp(vm.mood && vm.mood.intensity !== undefined ? vm.mood.intensity : 0.55, 0, 1);
+      var breathRate = clamp(vm.breath && vm.breath.rate !== undefined ? vm.breath.rate : 0.45, 0.05, 1.5);
+      var breathAmp = clamp(vm.breath && vm.breath.amplitude !== undefined ? vm.breath.amplitude : 0.35, 0.02, 1);
+      var pulseBpm = clamp(vm.pulse && vm.pulse.bpm !== undefined ? vm.pulse.bpm : 72, 40, 180);
+      var jitter = clamp(vm.motionStyle && vm.motionStyle.jitter !== undefined ? vm.motionStyle.jitter : 0.1, 0, 1);
+      var fc = faceControl || normalizeFaceControl({});
+      var fcEyes = fc.eyes || {};
+      var fcBrows = fc.brows || {};
+      var fcMouth = fc.mouth || {};
+      var fcPose = fc.pose || {};
+      var hue = clamp(vm.aura && vm.aura.hue !== undefined ? vm.aura.hue : 246, 0, 360) + timeOfDayHueOffset(vm.envSync && vm.envSync.timeOfDay);
+      var sat = clamp(vm.aura && vm.aura.saturation !== undefined ? vm.aura.saturation : 0.58, 0, 1);
+      var lum = clamp(vm.aura && vm.aura.luminance !== undefined ? vm.aura.luminance : 0.64, 0, 1);
+      var flow = clamp(vm.aura && vm.aura.flow !== undefined ? vm.aura.flow : 0.7, 0, 1);
+      var breath = Math.sin(t * (Math.PI * 2) * breathRate) * breathAmp;
+      var pulse = Math.sin(t * (Math.PI * 2) * (pulseBpm / 60));
+      var blink = clamp((fcEyes.blinkL + fcEyes.blinkR) * 0.5, 0, 1);
+      var settle = clamp((ts - this.bootTs) / 1200, 0, 1);
+      settle = 1 - Math.pow(1 - settle, 3);
+      this.lookX = lerp(this.lookX, this.lookTargetX, 0.12);
+      this.lookY = lerp(this.lookY, this.lookTargetY, 0.12);
+      var mouseYaw = this.lookX * 0.28;
+      // pointer-up => negative ny => lookY negative => pitch should go up, so invert here.
+      var mousePitch = -this.lookY * 0.22;
+      var yaw = (fcPose.yaw * 0.35) + (fcEyes.gazeX * 0.08) + (breath * 0.04);
+      var pitch = (fcPose.pitch * 0.26) - (fcEyes.gazeY * 0.06) - (breath * 0.03);
+      var roll = (fcPose.roll * 0.2);
+      yaw += mouseYaw;
+      pitch += mousePitch;
+      this.debugYaw = yaw;
+      this.debugPitch = pitch;
+      var cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+      var cosX = Math.cos(pitch), sinX = Math.sin(pitch);
+      var cosR = Math.cos(roll), sinR = Math.sin(roll);
+      var cam = 1.75;
+      var faceCenterY = 0.445;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(9, 9, 18, 0.15)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.shadowBlur = 8 + flow * 12 + mood * 22;
+      ctx.shadowColor = hslColor(hue, sat, lum, 0.48);
+      var lmScreen = new Array(68);
+
+      for (var i = 0; i < this.points.length; i += 1) {
+        var pTarget = this.points[i];
+        var pScatter = this.scatterPoints[i] || pTarget;
+        var p = {
+          x: lerp(pScatter.x, pTarget.x, settle),
+          y: lerp(pScatter.y, pTarget.y, settle),
+          w: pTarget.w,
+          z: lerp(pScatter.z, pTarget.z === undefined ? 0.5 : pTarget.z, settle),
+          region: pTarget.region
+        };
+
+        var py = p.y;
+        if (p.region === 'eye' || p.region === 'iris') py = lerp(py, faceCenterY, blink * 0.88);
+        if (p.region === 'brow') {
+          var browLift = ((fcBrows.browInner * 0.008) + (fcBrows.browOuterL * 0.006) + (fcBrows.browOuterR * 0.006));
+          py = lerp(py - browLift, 0.392, blink * 0.2);
+        }
+        if (p.region === 'mouth') {
+          var mouthCurve = (fcMouth.smile * -0.014);
+          var jawDrop = fcMouth.jawOpen * 0.03;
+          py += mouthCurve + jawDrop;
+        }
+
+        var lx = (p.x - 0.5) * 1.12;
+        var ly = (py - 0.52) * 1.36;
+        var lz = (p.z - 0.5) * 0.9;
+        var dist = Math.sqrt((lx * lx) + (ly * ly));
+        var wave = Math.sin((t * 2.1) + (dist * 7.6) + (i * 0.013));
+        var swirl = 1 - settle;
+
+        lz += (wave * 0.035 * flow) + (pulse * 0.02 * (1 - clamp(dist, 0, 1))) + (Math.sin((t * 3.8) + (i * 0.17)) * 0.24 * swirl);
+        ly += (breath * 0.026) + (wave * 0.006) + (Math.cos((t * 3.2) + (i * 0.11)) * 0.14 * swirl);
+        lx += (Math.sin(t * 0.9 + (i * 0.021)) * breath * 0.01) + (Math.sin((t * 3.5) + (i * 0.09)) * 0.18 * swirl);
+        if (p.region === 'iris') {
+          lx += fcEyes.gazeX * 0.022;
+          ly += fcEyes.gazeY * 0.015;
+        }
+        if (p.region === 'mouth') {
+          lz += fcMouth.mouthPucker * 0.05;
+        }
+
+        var x1 = (lx * cosY) + (lz * sinY);
+        var z1 = (-lx * sinY) + (lz * cosY);
+        var y1 = (ly * cosX) - (z1 * sinX);
+        var z2 = (ly * sinX) + (z1 * cosX);
+        var x2 = (x1 * cosR) - (y1 * sinR);
+        var y2 = (x1 * sinR) + (y1 * cosR);
+
+        var perspective = cam / Math.max(0.35, cam - z2);
+        var x = (w * 0.5) + (x2 * w * 0.58 * perspective);
+        var y = (h * 0.54) + (y2 * h * 0.66 * perspective);
+        var jit = i < 68 ? (jitter * 0.12) : (jitter * 0.55);
+        x += (Math.random() - 0.5) * jit;
+        y += (Math.random() - 0.5) * jit;
+        if (i < 68) lmScreen[i] = { x: x, y: y };
+
+        var depth = clamp(p.z === undefined ? 0.5 : p.z, 0, 1);
+        depth = clamp((depth * 0.6) + (clamp(z2, -0.7, 0.9) + 0.7) * 0.3, 0, 1);
+        var alpha = 0.11 + (0.24 * p.w) + (0.24 * mood) + (0.09 * pulse) + (0.28 * depth);
+        var size = (0.65 + (1.3 * p.w) + (0.5 * mood) + (0.5 * Math.max(0, pulse)) + (1.1 * depth)) * perspective;
+        var pointHue = hue + (dist * 18) - (depth * 14);
+        var pointLum = lum - (dist * 0.08) + (depth * 0.11);
+
+        ctx.fillStyle = hslColor(pointHue, sat, pointLum, alpha);
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      renderVectorFace(ctx, lmScreen, hue, sat, lum, mood);
+      ctx.shadowBlur = 0;
+    };
+    CanvasAvatarRenderer.prototype.loop = function (ts) {
+      var s = this.getState() || {};
+      var displayMode = s.displayMode || 'provider';
+      var useCanvasFaceRig = !!s.useCanvasFaceRig;
+      var vm = s.visualManifest || DEFAULT_VISUAL_MANIFEST;
+      var fc = s.faceControl || normalizeFaceControl({});
+      var targetFps = document.visibilityState === 'visible' ? 30 : 12;
+      var frameGap = 1000 / targetFps;
+      if (!this.lastTs) this.lastTs = ts;
+      if (ts - this.lastTs < frameGap) { requestAnimationFrame(this.loop); return; }
+      this.lastTs = ts;
+      if (displayMode === 'experimental' || useCanvasFaceRig) this.draw(ts, vm, fc);
+      if (!this.fpsStart) this.fpsStart = ts;
+      this.frames += 1;
+      if (ts - this.fpsStart >= 1000) {
+        this.fps = (this.frames * 1000) / (ts - this.fpsStart);
+        this.frames = 0;
+        this.fpsStart = ts;
+        this.handleAutoQuality();
+        this.commitPerf(targetFps);
+      }
+      requestAnimationFrame(this.loop);
+    };
+
+    function applyState(state) {
+      if (!state) return;
+      if (state.personaName) document.getElementById('personaName').textContent = state.personaName;
+      if (state.role) document.getElementById('personaRole').textContent = state.role;
+      window.__CANVAS_STATE = state;
+      var renderCfg = getRenderConfig(state);
+      var displayMode = renderCfg.displayMode;
+
+      var media = getMediaState(state);
+      var providerCaps = getProviderCapabilities(state);
+      var hasVideo = !!media.avatarVideo;
+      var hasViewer = !!media.avatarViewer;
+      var hasFaceRig = !!providerCaps.faceRig;
+      var useCanvasFaceRig = false;
+      var img = document.getElementById('avatarImage');
+      var video = document.getElementById('avatarVideo');
+      var viewer = document.getElementById('avatarViewer');
+      if (media.avatar) img.src = media.avatar;
+      if (hasVideo) video.src = media.avatarVideo;
+      else video.removeAttribute('src');
+      var model3Url = (state && state.avatarModel3Url) || '';
+      var hasDirectLive2D = !!model3Url;
+      if (!hasDirectLive2D && (__live2dReady || __live2dLoading || __l2dWidgetEl || __pixiAdapter)) {
+        clearLive2DRenderers();
+        __live2dReady = false;
+        __live2dLoading = false;
+        __live2dModelUrl = '';
+      }
+
+      if (displayMode === 'experimental') {
+        clearViewerWaitTimer();
+        __viewerRenderState = null;
+        updateRenderBadge();
+        setCanvasVisibility(true);
+        setMediaVisibility(false, false);
+        setViewerVisibility(false);
+        setLive2DCanvasVisibility(false);
+      } else if (hasDirectLive2D) {
+        setCanvasVisibility(false);
+        setMediaVisibility(false, false);
+        setViewerVisibility(false);
+        setLive2DCanvasVisibility(true);
+        if (!__live2dReady && !__live2dLoading) {
+          __viewerRenderState = { renderer: 'live2d', detail: 'loading-model' };
+          updateRenderBadge();
+          initLive2DRenderer(model3Url, state);
+        }
+        if (__live2dReady) {
+          if (__live2dRendererKind === 'pixi' && __pixiAdapter && typeof __pixiAdapter.setFrameMode === 'function') {
+            var fm = String((((state || {}).appearanceIntent || {}).frameMode) || 'noCropContain');
+            __pixiAdapter.setFrameMode(fm === 'upperBodyFocus' ? 'upperBodyFocus' : 'noCropContain');
+            syncPixiViewportFromWrap();
+          }
+          applyFaceControlToLive2D(normalizeFaceControl(state));
+        }
+      } else if (hasViewer) {
+        setCanvasVisibility(false);
+        setMediaVisibility(false, false);
+        setViewerVisibility(true);
+        setLive2DCanvasVisibility(false);
+        if (!__viewerRenderState) {
+          __viewerRenderState = { renderer: 'unknown', detail: 'waiting-viewer' };
+        }
+        updateRenderBadge();
+      } else if (__livekitConnected || hasVideo) {
+        clearViewerWaitTimer();
+        __viewerRenderState = null;
+        updateRenderBadge();
+        setCanvasVisibility(false);
+        setMediaVisibility(true, false);
+        setViewerVisibility(false);
+      } else if (hasFaceRig) {
+        clearViewerWaitTimer();
+        __viewerRenderState = null;
+        updateRenderBadge();
+        useCanvasFaceRig = true;
+        setCanvasVisibility(true);
+        setMediaVisibility(false, false);
+        setViewerVisibility(false);
+        setLive2DCanvasVisibility(false);
+      } else {
+        clearViewerWaitTimer();
+        __viewerRenderState = null;
+        updateRenderBadge();
+        setCanvasVisibility(false);
+        setViewerVisibility(false);
+        setLive2DCanvasVisibility(false);
+        if (media.avatar) {
+          setMediaVisibility(false, true);
+          var _ph = document.getElementById('avatarPlaceholder');
+          if (_ph) _ph.style.display = 'none';
+        } else {
+          setMediaVisibility(false, false);
+          var _ph = document.getElementById('avatarPlaceholder');
+          if (_ph) _ph.style.display = 'flex';
+        }
+      }
+
+      var sensory = getSensory(state);
+      ['image', 'model3d', 'motion', 'voice', 'hearing', 'worldSense'].forEach(function (key) {
+        var el = document.getElementById('sense-' + key);
+        if (!el) return;
+        el.classList.toggle('active', !!sensory[key]);
+      });
+
+      var prevRenderState = __renderState;
+      var effectiveQuality = renderCfg.quality;
+      // In auto mode, keep locally adapted quality to avoid poll-reset oscillation.
+      if (renderCfg.autoQuality && prevRenderState && prevRenderState.autoQuality) {
+        effectiveQuality = prevRenderState.quality;
+      }
+      var nextFaceProfile = normalizeFaceProfile(state);
+      var faceProfileChanged = stableHash((__renderState && __renderState.faceProfile) || {}) !== stableHash(nextFaceProfile);
+      var qualityChanged = !prevRenderState || prevRenderState.quality !== effectiveQuality;
+      __renderState = {
+        displayMode: displayMode,
+        quality: effectiveQuality,
+        autoQuality: renderCfg.autoQuality,
+        visualManifest: normalizeVisualManifest(state),
+        appearanceIntent: normalizeAppearanceIntent(state),
+        faceProfile: nextFaceProfile,
+        faceControl: normalizeFaceControl(state),
+        useCanvasFaceRig: useCanvasFaceRig
+      };
+      updateIntentBadge(
+        displayMode === 'experimental'
+          ? 'Experimental Face'
+          : (hasFaceRig ? 'Provider FaceRig' : 'Provider Mode'),
+        displayMode === 'experimental'
+      );
+      updateControlValues();
+      if (__renderer) {
+        if (faceProfileChanged) {
+          __renderer.setFaceProfile(__renderState.faceProfile, { resetBoot: false });
+        }
+        if (qualityChanged) {
+          __renderer.setQuality(__renderState.quality, { resetBoot: false });
+        }
+      }
+    }
+
+    function stateFromQuery() {
+      var p = new URLSearchParams(location.search);
+      if (![...p.keys()].length) return null;
+      return {
+        personaName: p.get('name') || undefined,
+        role: p.get('role') || undefined,
+        avatar: p.get('avatar') || undefined,
+        avatarVideo: p.get('video') || undefined,
+        render: {
+          displayMode: p.get('display') === 'experimental' ? 'experimental' : 'provider',
+          quality: p.get('quality') || 'medium',
+          autoQuality: parseBool(p.get('autoQuality'), true),
+          rendererMode: (function () {
+            var r = String(p.get('renderer') || '').toLowerCase();
+            if (r === 'pixi' || r === 'l2dwidget' || r === 'vector') return r;
+            return undefined;
+          })()
+        },
+        faceProfile: {
+          seed: p.get('seed') || '',
+          jawWidth: Number(p.get('jawWidth') || 1),
+          eyeSpacing: Number(p.get('eyeSpacing') || 1),
+          noseLength: Number(p.get('noseLength') || 1),
+          mouthWidth: Number(p.get('mouthWidth') || 1),
+          browTilt: Number(p.get('browTilt') || 0),
+          cheekFullness: Number(p.get('cheekFullness') || 1)
+        },
+        faceControl: {
+          pose: {
+            yaw: Number(p.get('yaw') || 0),
+            pitch: Number(p.get('pitch') || 0),
+            roll: Number(p.get('roll') || 0)
+          },
+          eyes: {
+            blinkL: Number(p.get('blinkL') || 0),
+            blinkR: Number(p.get('blinkR') || 0),
+            gazeX: Number(p.get('gazeX') || 0),
+            gazeY: Number(p.get('gazeY') || 0)
+          },
+          mouth: {
+            jawOpen: Number(p.get('jawOpen') || 0),
+            smile: Number(p.get('smile') || 0),
+            mouthPucker: Number(p.get('mouthPucker') || 0)
+          }
+        },
+        appearanceIntent: {
+          form: normalizeFormName(p.get('form') || 'auto'),
+          transition: p.get('transition') || 'smooth',
+          lockSeconds: Number(p.get('lockSeconds') || 0),
+          updatedAt: p.get('updatedAt') || ''
+        },
+        sensory: {
+          image: parseBool(p.get('image'), true),
+          model3d: parseBool(p.get('model3d'), false),
+          motion: parseBool(p.get('motion'), true),
+          voice: parseBool(p.get('voice'), true),
+          hearing: parseBool(p.get('hearing'), false),
+          worldSense: parseBool(p.get('worldSense'), false)
+        }
+      };
+    }
+
+    async function pollStateFile() {
+      if (!__stateUrl) return;
+      try {
+        var data = await fetch(__stateUrl + (__stateUrl.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now()).then(function (r) { return r.json(); });
+        data = applyQueryIntentOverride(data);
+        var nextHash = stableHash(data);
+        if (nextHash === __lastStateHash) return;
+        __lastStateHash = nextHash;
+        applyState(data);
+        await tryConnectLiveKit();
+      } catch (_) {}
+    }
+
+    function startPolling() {
+      if (!__stateUrl || __pollTimer) return;
+      __pollTimer = setInterval(pollStateFile, 2000);
+    }
+
+    async function tryConnectLiveKit() {
+      var state = window.__CANVAS_STATE || {};
+      var lk = state.livekit || {};
+      if (!lk.url || !lk.token) return;
+      if (!window.livekit || !window.livekit.Room) return;
+      if (__livekitConnected) return;
+      var img = document.getElementById('avatarImage');
+      var video = document.getElementById('avatarVideo');
+      var room = new window.livekit.Room();
+
+      room.on(window.livekit.RoomEvent.TrackSubscribed, function (track) {
+        if (track.kind !== 'video') return;
+        try {
+          var element = track.attach();
+          element.autoplay = true;
+          element.muted = true;
+          element.playsInline = true;
+          element.className = video.className;
+          element.id = video.id;
+          video.replaceWith(element);
+          img.style.display = 'none';
+          element.style.display = 'block';
+          setCanvasVisibility(false);
+        } catch (_) {}
+      });
+
+      try {
+        await room.connect(lk.url, lk.token);
+        __livekitConnected = true;
+      } catch (_) {}
+    }
+
+    async function init() {
+      attachControlEvents();
+      applyDebugModeGate();
+      var viewerEl = document.getElementById('avatarViewer');
+      if (viewerEl) {
+        viewerEl.addEventListener('load', function () {
+          __viewerLoaded = true;
+          __viewerError = false;
+          clearViewerWaitTimer();
+          if (__viewerRenderState && (
+            __viewerRenderState.detail === 'waiting-viewer' ||
+            __viewerRenderState.detail === 'initializing'
+          )) {
+            __viewerRenderState = {
+              renderer: 'live2d',
+              detail: 'viewer-loaded-awaiting-renderer'
+            };
+            updateRenderBadge();
+          }
+          setTimeout(function () {
+            if (!__viewerLoaded) return;
+            var stale = !__viewerLastHeartbeatAt || (Date.now() - __viewerLastHeartbeatAt > 2000);
+            if (stale && __viewerRenderState && __viewerRenderState.detail === 'viewer-loaded-awaiting-renderer') {
+              __viewerRenderState = {
+                renderer: 'vector-fallback',
+                detail: 'viewer-no-heartbeat'
+              };
+              updateRenderBadge();
+            }
+          }, 2200);
+        });
+        viewerEl.addEventListener('error', function () {
+          __viewerError = true;
+          __viewerLoaded = false;
+          clearViewerWaitTimer();
+          __viewerRenderState = { renderer: 'vector-fallback', detail: 'viewer-load-error' };
+          updateRenderBadge();
+          if (__renderState) __renderState.useCanvasFaceRig = true;
+          setViewerVisibility(false);
+          setMediaVisibility(false, false);
+          setCanvasVisibility(true);
+        });
+      }
+      window.addEventListener('message', function (ev) {
+        var data = ev && ev.data ? ev.data : null;
+        if (!data || data.source !== 'live2d-cubism-web-bridge' || data.type !== 'renderer-state') return;
+        clearViewerWaitTimer();
+        __viewerLastHeartbeatAt = Date.now();
+        __viewerLoaded = true;
+        __viewerError = false;
+        if (data.detail && data.detail !== 'waiting-viewer') {
+          __viewerFallbackByTimeout = false;
+        }
+        __viewerRenderState = {
+          renderer: data.renderer || 'unknown',
+          detail: data.detail || '',
+          model3Url: data.model3Url || ''
+        };
+        updateRenderBadge();
+      });
+      __queryIntentOverride = parseQueryIntentOverride();
+      __renderer = new CanvasAvatarRenderer(document.getElementById('avatarCanvas'), function () {
+        return __renderState || {
+          displayMode: 'provider',
+          quality: 'medium',
+          autoQuality: true,
+          visualManifest: DEFAULT_VISUAL_MANIFEST,
+          faceProfile: normalizeFaceProfile({ personaName: 'Persona' }),
+          faceControl: normalizeFaceControl({}),
+          appearanceIntent: {
+            version: '0.1',
+            form: 'auto',
+            transition: 'smooth',
+            lockSeconds: 0,
+            updatedAt: ''
+          }
+        };
+      });
+
+      if (window.CANVAS_STATE) {
+        applyState(window.CANVAS_STATE);
+        await tryConnectLiveKit();
+        return;
+      }
+
+      var p = new URLSearchParams(location.search);
+      var stateUrl = p.get('state');
+      if (stateUrl) {
+        __stateUrl = stateUrl;
+        try {
+          var data = await fetch(stateUrl).then(function (r) { return r.json(); });
+          data = applyQueryIntentOverride(data);
+          __lastStateHash = stableHash(data);
+          applyState(data);
+          await tryConnectLiveKit();
+          startPolling();
+          return;
+        } catch (_) {}
+      }
+
+      applyState(stateFromQuery());
+      await tryConnectLiveKit();
+    }
+
+    init();
+  </script>
+</body>
+</html>

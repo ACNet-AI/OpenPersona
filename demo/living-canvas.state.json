@@ -1,0 +1,80 @@
+{
+  "personaName": "Samantha",
+  "role": "companion",
+  "avatar": "../UI/images/samantha-avatar.png",
+  "avatarVideo": "",
+  "avatarViewer": "",
+  "avatarModel3Url": "",
+  "render": {
+    "displayMode": "provider",
+    "quality": "medium",
+    "autoQuality": true
+  },
+  "faceProfile": {
+    "seed": "samantha",
+    "jawWidth": 1,
+    "eyeSpacing": 1,
+    "noseLength": 1,
+    "mouthWidth": 1,
+    "browTilt": 0,
+    "cheekFullness": 1
+  },
+  "control": {
+    "avatar": {
+      "face": {
+        "pose":  { "yaw": 0, "pitch": 0, "roll": 0 },
+        "eyes":  { "blinkL": 1, "blinkR": 1, "gazeX": 0, "gazeY": 0 },
+        "brows": { "browInner": 0, "browOuterL": 0, "browOuterR": 0 },
+        "mouth": { "jawOpen": 0, "smile": 0, "mouthPucker": 0 },
+        "source": "agent",
+        "updatedAt": "2026-03-07T01:24:39.857Z"
+      },
+      "emotion": {
+        "label": "neutral",
+        "valence": 0,
+        "arousal": 0,
+        "intensity": 0.5,
+        "source": "agent",
+        "updatedAt": "2026-03-07T01:24:39.857Z"
+      },
+      "body": {}
+    },
+    "scene": {}
+  },
+  "visualManifest": {
+    "version": "0.1"
+  },
+  "providerCapabilities": {
+    "faceRig": true,
+    "lipSync": false,
+    "gaze": true,
+    "blink": true,
+    "bodyMotion": false,
+    "streaming": false,
+    "bodyRig": false,
+    "sceneControl": false
+  },
+  "appearanceIntent": {
+    "version": "0.1",
+    "form": "auto",
+    "style": "default",
+    "transition": "smooth",
+    "priority": "agent",
+    "lockSeconds": 0,
+    "reason": "",
+    "source": "agent",
+    "updatedAt": "2026-03-07T01:24:39.857Z"
+  },
+  "livekit": {
+    "url": "",
+    "token": ""
+  },
+  "sensory": {
+    "image": true,
+    "model3d": true,
+    "motion": true,
+    "voice": true,
+    "hearing": true,
+    "worldSense": false
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "avatar",
+  "dimension": "expression",
+  "description": "External avatar runtime bridge (image/3D/motion/voice) with graceful fallback when not installed.",
+  "provider": "heygen",
+  "fallback": "text_only",
+  "install": "npx skills add github:acnlabs/avatar-runtime/skill/avatar",
+  "allowedTools": ["Bash(node scripts/avatar-runtime.js:*)"],
+  "envVars": ["AVATAR_RUNTIME_URL", "AVATAR_API_KEY"],
+  "triggers": [
+    "show your avatar",
+    "switch to 3d form",
+    "animate yourself",
+    "talk with voice avatar",
+    "open your visual mode"
+  ],
+  "files": ["SKILL.md", "scripts/avatar-runtime.js"]
+}
