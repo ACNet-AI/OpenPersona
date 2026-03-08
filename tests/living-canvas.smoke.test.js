@@ -15,6 +15,10 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 
+/** When packages/avatar-runtime is absent (e.g. CI), skip avatar-runtime suites. */
+const HAS_AVATAR_RUNTIME = fs.existsSync(path.join(ROOT, 'packages/avatar-runtime/web/renderers/live2d-pixi-adapter.js'));
+const d = HAS_AVATAR_RUNTIME ? describe : describe.skip;
+
 function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
@@ -99,7 +103,7 @@ describe('living-canvas.html', () => {
 
 // ── packages/avatar-runtime/web/renderers/live2d-pixi-adapter.js ─────────────
 
-describe('avatar-runtime web renderer: live2d-pixi-adapter', () => {
+d('avatar-runtime web renderer: live2d-pixi-adapter', () => {
   let pkg;
   test('file exists', () => {
     pkg = read('packages/avatar-runtime/web/renderers/live2d-pixi-adapter.js');
@@ -170,7 +174,7 @@ describe('living-canvas.direct.json', () => {
 
 // ── avatar-runtime Renderer Registry ─────────────────────────────────────────
 
-describe('avatar-runtime: renderer-registry', () => {
+d('avatar-runtime: renderer-registry', () => {
   let src;
   test('renderer-registry.js file exists', () => {
     src = read('packages/avatar-runtime/web/renderer-registry.js');
@@ -202,7 +206,7 @@ describe('avatar-runtime: renderer-registry', () => {
   });
 });
 
-describe('avatar-runtime: vector-renderer', () => {
+d('avatar-runtime: vector-renderer', () => {
   let src;
   test('vector-renderer.js file exists', () => {
     src = read('packages/avatar-runtime/web/renderers/vector-renderer.js');
@@ -234,7 +238,7 @@ describe('avatar-runtime: vector-renderer', () => {
   });
 });
 
-describe('avatar-runtime: web/index.js', () => {
+d('avatar-runtime: web/index.js', () => {
   let src;
   test('web/index.js file exists', () => {
     src = read('packages/avatar-runtime/web/index.js');
@@ -258,7 +262,7 @@ describe('avatar-runtime: web/index.js', () => {
   });
 });
 
-describe('avatar-runtime: live2d-pixi-adapter IRendererFactory interface', () => {
+d('avatar-runtime: live2d-pixi-adapter IRendererFactory interface', () => {
   let src;
   test('adapter exposes canHandle()', () => {
     src = src || read('packages/avatar-runtime/web/renderers/live2d-pixi-adapter.js');
@@ -277,7 +281,7 @@ describe('avatar-runtime: live2d-pixi-adapter IRendererFactory interface', () =>
   });
 });
 
-describe('avatar-runtime: package.json exports', () => {
+d('avatar-runtime: package.json exports', () => {
   test('exports field has ".", "./web", and "./widget" entries', () => {
     const pkg = readJSON('packages/avatar-runtime/package.json');
     assert.ok(pkg.exports, 'package.json should have exports field');
@@ -289,7 +293,7 @@ describe('avatar-runtime: package.json exports', () => {
 
 // ── avatar-widget.js ──────────────────────────────────────────────────────────
 
-describe('avatar-runtime: avatar-widget.js', () => {
+d('avatar-runtime: avatar-widget.js', () => {
   let src;
   test('file exists and is non-empty', () => {
     src = read('packages/avatar-runtime/web/avatar-widget.js');
