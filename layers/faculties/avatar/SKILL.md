@@ -14,9 +14,11 @@ This faculty bridges OpenPersona to an external avatar skill/runtime. OpenPerson
 
 Use the install source declared in `faculty.json`:
 
-`npx skills add github:acnlabs/avatar-runtime/skill/avatar`
-
-Replace the placeholder with the official avatar skill source when published.
+```bash
+npx skills add avatar-runtime
+# or directly from GitHub:
+npx skills add github:acnlabs/avatar-runtime/skill/avatar-runtime
+```
 
 ## Runtime Behavior
 

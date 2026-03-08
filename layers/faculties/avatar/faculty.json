@@ -4,7 +4,7 @@
   "description": "External avatar runtime bridge (image/3D/motion/voice) with graceful fallback when not installed.",
   "provider": "heygen",
   "fallback": "text_only",
-  "install": "npx skills add github:acnlabs/avatar-runtime/skill/avatar",
+  "install": "npx skills add avatar-runtime",
   "allowedTools": ["Bash(node scripts/avatar-runtime.js:*)"],
   "envVars": ["AVATAR_RUNTIME_URL", "AVATAR_API_KEY"],
   "triggers": [

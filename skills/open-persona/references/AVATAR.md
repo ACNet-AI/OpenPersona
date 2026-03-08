@@ -12,7 +12,11 @@ This document defines the boundary between OpenPersona and external avatar runti
 
 Use the following install source in OpenPersona faculty declarations:
 
-`npx skills add github:acnlabs/avatar-runtime/skill/avatar`
+```bash
+npx skills add avatar-runtime
+# or directly from GitHub:
+npx skills add github:acnlabs/avatar-runtime/skill/avatar-runtime
+```
 
 ## What Stays in OpenPersona
 
