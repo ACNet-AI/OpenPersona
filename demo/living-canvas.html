@@ -1652,15 +1652,6 @@
         setCanvasVisibility(false);
         setMediaVisibility(true, false);
         setViewerVisibility(false);
-      } else if (hasFaceRig) {
-        clearViewerWaitTimer();
-        __viewerRenderState = null;
-        updateRenderBadge();
-        useCanvasFaceRig = true;
-        setCanvasVisibility(true);
-        setMediaVisibility(false, false);
-        setViewerVisibility(false);
-        setLive2DCanvasVisibility(false);
       } else {
         clearViewerWaitTimer();
         __viewerRenderState = null;
@@ -1706,9 +1697,7 @@
         useCanvasFaceRig: useCanvasFaceRig
       };
       updateIntentBadge(
-        displayMode === 'experimental'
-          ? 'Experimental Face'
-          : (hasFaceRig ? 'Provider FaceRig' : 'Provider Mode'),
+        displayMode === 'experimental' ? 'Experimental Face' : 'Provider Mode',
         displayMode === 'experimental'
       );
       updateControlValues();
