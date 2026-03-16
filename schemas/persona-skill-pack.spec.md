@@ -147,7 +147,7 @@ persona-{slug}/
     ├── speak.sh          [FACULTY: voice] Shell wrapper for speak.js.
     │
     ├── compose.js        [FACULTY: music → SKILL] Music composition invocation.  (*)
-    ├── compose.sh        [FACULTY: music → SKILL] Shell wrapper for compose.js.   (*)
+    ├── compose.sh        [SKILL: music] Shell wrapper for compose.js.
     │
     ├── economy.js        [ECONOMY INFRASTRUCTURE] AgentBooks management commands.
     │                     Present only when economy.enabled: true.
@@ -200,7 +200,7 @@ persona-{slug}/
 | `references/SIGNAL-PROTOCOL.md` | Body (nervous system) |
 | `scripts/state-sync.js` | Body (nervous system) |
 | `scripts/speak.js` / `speak.sh` | Faculty: Voice |
-| `scripts/compose.js` / `compose.sh` | Faculty: Music → Skill: Music (pending migration) |
+| `scripts/compose.js` / `compose.sh` | Skill: Music |
 | `scripts/economy*.js` | Economy Infrastructure / Vitality |
 | `handoff.json` | Body (runtime-only) |
 
@@ -281,7 +281,7 @@ Persona skill packs intentionally deviate from standard Agent Skills conventions
 
 > **`selfie`, `music`, and `reminder` are Skills, not Faculties.** They are on-demand discrete tasks (generate a photo, compose a song, set a reminder). Declare them in `persona.json` under `skills`, not `faculties`. They are implemented in `layers/skills/` with `skill.json` + `SKILL.md` + optional `scripts/`.
 
-> **`economy` is not a traditional Faculty.** It is a top-level cross-cutting field. Activate it via `economy: { enabled: true }` in `persona.json` — the generator then emits `scripts/economy*.js` (AgentBooks wrappers). The old `"faculties": ["economy"]` syntax remains backward-compatible but is deprecated. `economy` does not follow the Faculty contract (`dimension`, `faculty.json`) and should not be treated as a peer of `voice`, `avatar`, or `memory`.
+> **`economy` is a systemic concept, not a Faculty.** Its source files live in `aspects/economy/` (not `layers/faculties/`). Activate it via `economy: { enabled: true }` in `persona.json` — the generator loads it via `loadEconomy()` and emits `scripts/economy*.js` (AgentBooks wrappers). The old `"faculties": ["economy"]` syntax remains backward-compatible but is deprecated. `economy` does not follow the Faculty contract (`dimension`, `faculty.json`) and should not be treated as a peer of `voice`, `avatar`, or `memory`.
 
 ### Faculty vs. Skill distinction
 

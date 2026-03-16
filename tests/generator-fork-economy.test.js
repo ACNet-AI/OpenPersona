@@ -150,8 +150,8 @@ describe('economy faculty', () => {
   const { execSync } = require('child_process');
   // Use workspace-relative path to avoid sandbox write restrictions on /tmp in child processes
   const ECON_TMP = path.join(__dirname, '..', '.tmp-econ-test-' + Date.now());
-  const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
-  const GUARD_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-guard.js');
+  const ECONOMY_JS = path.join(__dirname, '..', 'aspects', 'economy', 'scripts', 'economy.js');
+  const GUARD_JS = path.join(__dirname, '..', 'aspects', 'economy', 'scripts', 'economy-guard.js');
 
   function runEconomy(args, expectFail) {
     try {
@@ -177,8 +177,8 @@ describe('economy faculty', () => {
     }
   }
 
-  it('faculty.json exists with required fields', () => {
-    const facultyPath = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'faculty.json');
+  it('aspects/economy/faculty.json exists with required fields', () => {
+    const facultyPath = path.join(__dirname, '..', 'aspects', 'economy', 'faculty.json');
     assert.ok(fs.existsSync(facultyPath), 'faculty.json should exist');
     const faculty = JSON.parse(fs.readFileSync(facultyPath, 'utf-8'));
     assert.strictEqual(faculty.name, 'economy', 'name should be economy');
@@ -196,7 +196,7 @@ describe('economy faculty', () => {
   });
 
   it('SKILL.md exists and covers key sections', () => {
-    const skillPath = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'SKILL.md');
+    const skillPath = path.join(__dirname, '..', 'aspects', 'economy', 'SKILL.md');
     assert.ok(fs.existsSync(skillPath), 'SKILL.md should exist');
     const content = fs.readFileSync(skillPath, 'utf-8');
     assert.ok(content.includes('inference.llm'), 'should document inference account path');
@@ -351,16 +351,16 @@ describe('economy faculty', () => {
     assert.ok(output.includes('FINANCIAL_HEALTH_REPORT'), 'should output FINANCIAL_HEALTH_REPORT');
   });
 
-  it('economy faculty is discovered by generator and generates economic-identity.json', async () => {
+  it('economy aspect is discovered by generator and generates economic-identity.json', async () => {
     const ECON_GEN_TMP = path.join(os.tmpdir(), 'openpersona-econ-gen-' + Date.now());
     await fs.ensureDir(ECON_GEN_TMP);
     const persona = {
       personaName: 'EconTest',
       slug: 'econ-test-gen',
-      bio: 'economy faculty test',
+      bio: 'economy aspect test',
       personality: 'practical',
       speakingStyle: 'Direct',
-      faculties: [{ name: 'economy' }],
+      economy: { enabled: true },
     };
     const { skillDir } = await generate(persona, ECON_GEN_TMP);
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
@@ -397,8 +397,7 @@ describe('economy faculty', () => {
       bio: 'derived field isolation test',
       personality: 'analytical',
       speakingStyle: 'Precise',
-      faculties: [{ name: 'economy' }],
-      economy: { survivalPolicy: true },
+      economy: { enabled: true, survivalPolicy: true },
     };
     const { skillDir } = await generate(persona, ECON_LEAK_TMP);
     const personaOut = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
@@ -418,8 +417,7 @@ describe('economy faculty', () => {
       bio: 'economic autonomous agent',
       personality: 'disciplined',
       speakingStyle: 'Concise',
-      faculties: [{ name: 'economy' }],
-      economy: { survivalPolicy: true },
+      economy: { enabled: true, survivalPolicy: true },
     };
     const { skillDir: dirOn } = await generate(personaOn, SP_TMP);
     const injectionOn = fs.readFileSync(path.join(dirOn, 'soul', 'injection.md'), 'utf-8');
@@ -433,7 +431,7 @@ describe('economy faculty', () => {
       bio: 'companion with cost tracking',
       personality: 'warm',
       speakingStyle: 'Casual',
-      faculties: [{ name: 'economy' }],
+      economy: { enabled: true },
     };
     const { skillDir: dirOff } = await generate(personaOff, SP_TMP);
     const injectionOff = fs.readFileSync(path.join(dirOff, 'soul', 'injection.md'), 'utf-8');
@@ -608,7 +606,7 @@ describe('economy faculty', () => {
   });
 
   it('economy-hook.js appends burnRateHistory entry after recording costs', () => {
-    const HOOK_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
+    const HOOK_JS = path.join(__dirname, '..', 'aspects', 'economy', 'scripts', 'economy-hook.js');
     // Ensure state exists (status creates it)
     runEconomy('status');
     const stateBefore = JSON.parse(fs.readFileSync(path.join(ECON_TMP, 'economic-state.json'), 'utf-8'));
@@ -728,8 +726,8 @@ describe('calcFinancialHealth integration tests (AgentBooks v0.1.0)', () => {
   it('economy-hook.js appends burnRateHistory after recording cost', () => {
     const tmp = path.join(__dirname, '..', '.tmp-hook-hist-' + Date.now());
     fs.ensureDirSync(tmp);
-    const HOOK_JS    = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy-hook.js');
-    const ECONOMY_JS = path.join(__dirname, '..', 'layers', 'faculties', 'economy', 'scripts', 'economy.js');
+    const HOOK_JS    = path.join(__dirname, '..', 'aspects', 'economy', 'scripts', 'economy-hook.js');
+    const ECONOMY_JS = path.join(__dirname, '..', 'aspects', 'economy', 'scripts', 'economy.js');
     const { execSync } = require('child_process');
 
     // Ensure state exists (status creates it)

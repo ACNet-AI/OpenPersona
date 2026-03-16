@@ -53,9 +53,15 @@ layers/
     constitution.md     ← ⚠️ PROTECTED — universal ethical foundation
     README.md
     soul-state.template.json ← Evolution state template
-  faculties/            ← Faculty implementations (voice, selfie, avatar, music, reminder, memory)
-  skills/               ← Local skill definitions (skill.json + SKILL.md per skill)
+  faculties/            ← Faculty implementations (voice, avatar, memory)
+  skills/               ← Local skill definitions (skill.json + SKILL.md per skill; music, selfie, reminder)
   body/                 ← Body layer definitions
+aspects/                ← 5 systemic concept source assets (orthogonal to the 4 layers)
+  economy/              ← Economy scripts + SKILL.md (AgentBooks wrapper)
+  evolution/            ← README (state template in layers/soul/, state-sync in templates/)
+  vitality/             ← README (lib/vitality.js, templates/reports/vitality.template.html)
+  social/               ← README (agent-card/acn-config generated inline by generator)
+  rhythm/               ← README (heartbeat config in persona.json, sync in lib/switcher.js)
 schemas/                ← JSON schemas for validation (signal.schema.json, persona.schema.json, persona.input.schema.json)
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
 tests/                  ← Node.js native test runner (node:test)
@@ -253,7 +259,7 @@ The fork command reads the parent's installed directory, copies the persona pack
 
 ### Economy Faculty & Vitality System
 
-The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrapper around the **[AgentBooks](https://github.com/acnlabs/agentbooks)** npm package (`agentbooks@^0.1.0`). Financial logic lives entirely in AgentBooks; the wrapper only maps OpenPersona env vars (`PERSONA_SLUG` → `AGENTBOOKS_AGENT_ID`).
+The `economy` aspect (`aspects/economy/`) is a thin OpenPersona wrapper around the **[AgentBooks](https://github.com/acnlabs/agentbooks)** npm package (`agentbooks@^0.1.0`). Financial logic lives entirely in AgentBooks; the wrapper only maps OpenPersona env vars (`PERSONA_SLUG` → `AGENTBOOKS_AGENT_ID`).
 
 **Wrapper scripts (delegates to AgentBooks):**
 - `scripts/economy.js` → `require('agentbooks/cli/economy')` — all management commands
@@ -285,7 +291,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 }
 ```
 
-Note: `economy` is a top-level cross-cutting field, **not** a `faculties` entry. It does not follow the Faculty contract. The generator auto-activates the economy faculty scripts when `economy.enabled: true`.
+Note: `economy` is a top-level systemic concept, **not** a `faculties` entry. Its source files live in `aspects/economy/`. The generator loads it via `loadEconomy()` (not `loadFaculty()`) and auto-activates economy scripts when `economy.enabled: true`.
 
 ### Five Systemic Cross-Cutting Concepts (the "5" in 4+5+3)
 
