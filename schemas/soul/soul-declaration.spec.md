@@ -123,7 +123,7 @@ When a file reference is used, the generator:
 2. Copies it to `soul/behavior-guide.md` in the pack
 3. Keeps the `file:` reference in `persona.json` output
 
-When an inline string is provided that exceeds a reasonable threshold, the generator may externalize it to `soul/behavior-guide.md` and convert the reference automatically.
+When an inline string is provided, the generator always externalizes it — writes the content to `soul/behavior-guide.md` and converts the field value to `"file:soul/behavior-guide.md"` in the output `persona.json`.
 
 ---
 
@@ -173,7 +173,10 @@ Both formats produce identical generated output. New personas should use the v0.
 | `identity.role` | `soul/injection.md` identity section |
 | `identity.sourceIdentity` | Digital twin disclosure in `soul/injection.md` |
 | `aesthetic.referenceImage` | Copied to `assets/reference/avatar.png` |
-| `aesthetic.vibe` + `aesthetic.creature` | Injected into `soul/injection.md` intro |
+| `aesthetic.creature` | Injected into `soul/injection.md` intro (entity type label) |
+| `aesthetic.emoji` | Injected into `soul/injection.md` intro (identity display) |
+| `aesthetic.age` | Injected into `soul/injection.md` intro |
+| `aesthetic.vibe` | Injected into `soul/injection.md` intro (tonality hint) |
 | `character.personality` + `character.speakingStyle` | Injected into `soul/injection.md` intro |
 | `character.boundaries` | Injected into `soul/injection.md` (validated against constitution) |
 | `character.background` | Injected into `soul/injection.md` intro |

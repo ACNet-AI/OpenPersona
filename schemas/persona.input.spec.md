@@ -24,7 +24,7 @@
   "economy":   { ... },   ← Optional — [ECONOMY] financial operations (cross-cutting)
   "vitality":  { ... },   ← Optional — [VITALITY] health aggregation config (cross-cutting)
   "social":    { ... },   ← Optional — [SOCIAL] agent discoverability (cross-cutting)
-  "rhythm":    { ... }    ← Optional — [LIFE RHYTHM] temporal behavior (cross-cutting)
+  "rhythm":    { ... },   ← Optional — [LIFE RHYTHM] temporal behavior (cross-cutting)
 
   "additionalAllowedTools": [ ... ],
   "version": "0.1.0",
@@ -38,7 +38,7 @@ The root is **strict** (`additionalProperties: false`) — no unknown top-level 
 
 ## Required Fields
 
-Only three fields are strictly required to produce a valid persona:
+The minimum required fields to produce a valid persona are five — three identity fields and two character fields:
 
 | Field | Path |
 |-------|------|
@@ -160,6 +160,33 @@ Everything else has defaults or is omitted gracefully. A minimal persona:
 
 ---
 
+## `vitality` Reference
+
+```json
+{
+  "vitality": {
+    "dimensions": {
+      "financial": { "weight": 1.0 },
+      "memory":    { "weight": 0.3 },
+      "social":    { "weight": 0.2 }
+    }
+  }
+}
+```
+
+`vitality` configures the multi-dimension health score aggregation. Most personas do not need to declare this field — the financial dimension activates automatically when `economy.enabled: true`, with a default weight of `1.0`.
+
+| Dimension | Activation | Status |
+|-----------|-----------|--------|
+| `financial` | Auto-activated by `economy.enabled: true` | ✅ Implemented (AgentBooks) |
+| `memory` | Reserved — future (memory faculty) | Planned |
+| `social` | Reserved — future (`social.acn.enabled`) | Planned |
+| `reputation` | Reserved — future | Planned |
+
+`weight` controls each dimension's contribution to the aggregate Vitality score (0–1). Weights are normalized at aggregation time.
+
+---
+
 ## `social` Reference
 
 ```json
@@ -218,7 +245,7 @@ Hard rejections:
 - `slug` not matching `^[a-z0-9-]+$`
 - `evolution.boundaries` format violations
 - `evolution.influenceBoundary.rules` format violations
-- `character.boundaries` attempting to loosen constitutional constraints (§3, §6)
+- `soul.character.boundaries` (v0.17+) or `boundaries` (flat format) attempting to loosen constitutional constraints (§3, §6)
 
 The JSON schema (`schemas/persona.input.schema.json`) can be used for editor validation (VS Code, JetBrains) before running the generator.
 

@@ -59,7 +59,7 @@ layers/skills/weather/
 
 ### SKILL.md (Optional)
 
-If present, the skill's SKILL.md content is injected as a **full section** (under `### Skill: {name}`) in the generated SKILL.md, instead of appearing as a table row. This allows rich, multi-paragraph behavior instructions.
+If present, the skill's SKILL.md content is injected as a **full section** (under `### {name}`) in the generated SKILL.md, instead of appearing as a table row. This allows rich, multi-paragraph behavior instructions.
 
 ## External Skills
 
