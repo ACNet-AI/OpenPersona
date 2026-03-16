@@ -260,7 +260,7 @@
 
     "evolution": {
       "type": "object",
-      "description": "Growth and state evolution configuration — the creator-configurable part of the Lifecycle Protocol. The runtime parts (body.interface, scripts/state-sync.js) are auto-generated.",
+      "description": "Growth and state evolution configuration. Declared here; enforced at Generate Gate and Runtime Gate. Body nervous system runtime (body.interface policy, scripts/state-sync.js) is auto-generated separately.",
       "additionalProperties": true,
       "properties": {
         "enabled": { "type": "boolean", "default": false },

@@ -19,24 +19,21 @@ Every persona is defined by four compositional layers:
 | **Faculty** | WHAT you can sense/express | Persistent capabilities that change the persona's nature (voice, avatar, memory) |
 | **Skill** | WHAT you can do | On-demand actions and tasks (web-search, creative-writing, reminder) |
 
-### Six Systemic Cross-Cutting Concepts
+### Five Systemic Cross-Cutting Concepts
 
 These concepts operate across layers. They do not have their own directories — their files are distributed throughout the pack and annotated in this spec.
 
 | Concept | Role | Files in pack |
 |---------|------|---------------|
-| **Lifecycle Protocol** | Runtime expression of `body.interface` — how the persona communicates with its host and persists state across conversations. Three sub-protocols: **Signal Protocol** (persona→host requests via `signals.json`), **Pending Commands** (host→persona async queue in `state.json`), **State Sync** (cross-conversation persistence). Policy declared in `body.interface`; implemented by `scripts/state-sync.js`. | `state.json`, `scripts/state-sync.js`, `references/SIGNAL-PROTOCOL.md` |
-| **Evolution** | Persona growth and change over time — trait emergence, relationship progression, speaking style drift, interest discovery, mood tracking. Declared via `evolution.*` in `persona.json`; enforced at Generate Gate (`generator-validate.js`) and Runtime Gate (`state-sync.js`). Manages the *content* of `state.json`; Lifecycle Protocol manages the *mechanism*. | `soul/self-narrative.md` (when `evolution.enabled`); evolution fields in `state.json` (`evolvedTraits`, `speakingStyleDrift`, `interests`, `mood`, `relationship`, `eventLog`, `stateHistory`) |
+| **Evolution** | Persona growth and change over time — trait emergence, relationship progression, speaking style drift, interest discovery, mood tracking. Declared via `evolution.*` in `persona.json`; enforced at Generate Gate (`generator-validate.js`) and Runtime Gate (`state-sync.js`). Manages the *content* of `state.json`; Body manages the *transport mechanism*. | `soul/self-narrative.md` (when `evolution.enabled`); evolution fields in `state.json` (`evolvedTraits`, `speakingStyleDrift`, `interests`, `mood`, `relationship`, `eventLog`, `stateHistory`) |
 | **Vitality** | Aggregate health monitoring — currently financial dimension only; memory and social dimensions are reserved for future milestones | No dedicated file in pack (framework-level aggregation); Economy adds `scripts/economy-guard.js` |
 | **Economy Infrastructure** | Economic identity and optional financial operations | `acn-config.json` (`wallet_address`, `onchain.erc8004`); optional `economy/economic-identity.json`, `economy/economic-state.json`, `scripts/economy*.js` |
 | **Social Infrastructure** | Network identity and agent discoverability | `agent-card.json`, `acn-config.json` |
-| **Life Rhythm** | Temporal behavior — *when* the persona acts proactively. Orthogonal to Lifecycle Protocol (which manages *state and communication*). `heartbeat` controls proactive outreach cadence; `circadian` modulates behavior by time of day. Executed by the host scheduler; the persona only declares the policy. | `persona.json` (`rhythm.heartbeat`, `rhythm.circadian`) |
+| **Life Rhythm** | Temporal behavior — *when* the persona acts proactively. `heartbeat` controls proactive outreach cadence; `circadian` modulates behavior by time of day. Executed by the host scheduler; the persona only declares the policy. | `persona.json` (`rhythm.heartbeat`, `rhythm.circadian`) |
 
-> **Body > Interface vs Lifecycle Protocol:** `body.interface` in `persona.json` is the *static declaration* — which signals are permitted, what command types are accepted. Lifecycle Protocol is the *runtime expression* of that declaration, implemented by `scripts/state-sync.js`.
+> **Body > Interface (Nervous System):** `body.interface` declares the signal and pending command policy — the static contract between the persona and its host. The runtime implementation of this contract (`scripts/state-sync.js`, Signal Protocol, Pending Commands queue, State Sync) is the Body's nervous system in action, not a separate cross-cutting concept.
 
-> **Lifecycle Protocol vs Evolution:** Lifecycle Protocol manages the *mechanism* — how state is read, written, and signaled. Evolution manages the *content* — what traits, moods, and relationship stages change over time. `state.json` is shared: Lifecycle Protocol owns the transport; Evolution owns the payload.
-
-> **Lifecycle Protocol vs Life Rhythm:** Lifecycle Protocol manages *what* persists and *how* signals flow between persona and host. Life Rhythm manages *when* to act — proactive scheduling and time-of-day modulation. They are orthogonal.
+> **Body vs Evolution:** Body (`scripts/state-sync.js`) manages the *transport mechanism* — how state is read, written, and signals are emitted. Evolution manages the *content* — what traits, moods, and relationship stages change over time. `state.json` is shared: Body owns the transport; Evolution owns the payload.
 
 ---
 
@@ -50,11 +47,11 @@ persona-{slug}/
 │                          Faculty config, Skill list, Body config, evolution settings.
 │                          This is the authoritative source of truth for the whole pack.
 │
-├── state.json            [LIFECYCLE PROTOCOL + EVOLUTION] Shared runtime state container.
-│                          Lifecycle Protocol owns the transport (read/write/signal mechanism).
+├── state.json            [BODY + EVOLUTION] Shared runtime state container.
+│                          Body (scripts/state-sync.js) owns the transport (read/write/signal).
 │                          Evolution owns the payload (mood, relationship, evolvedTraits,
 │                          speakingStyleDrift, interests, eventLog, stateHistory).
-│                          Lifecycle Protocol also carries pendingCommands (host→persona queue).
+│                          Body also carries pendingCommands (host→persona queue).
 │                          Generated unconditionally. Read at conversation start; written at end.
 │
 ├── SKILL.md              [ALL LAYERS] Agent-facing index. Runner manifest (frontmatter)
@@ -136,13 +133,13 @@ persona-{slug}/
 │   ├── {faculty}.md      [FACULTY] One file per active faculty with an install dependency
 │   │                     or detailed configuration (e.g. voice.md, avatar.md, memory.md).
 │   │
-│   └── SIGNAL-PROTOCOL.md  [LIFECYCLE PROTOCOL] Host-side implementation guide for the
+│   └── SIGNAL-PROTOCOL.md  [BODY] Host-side implementation guide for the
 │                           Signal Protocol feedback directory (signals.json,
 │                           signal-responses.json). Referenced from SKILL.md Interface section.
 │
 │  ── Scripts ─────────────────────────────────────────────────────────
 └── scripts/
-    ├── state-sync.js     [LIFECYCLE PROTOCOL] Nerve fiber — implements read / write /
+    ├── state-sync.js     [BODY] Nervous system nerve fiber — implements read / write /
     │                     signal commands. Self-contained, no external dependencies.
     │                     Works as local fallback when openpersona CLI is not installed.
     │
@@ -168,7 +165,7 @@ persona-{slug}/
 
 ```
 persona-{slug}/
-├── handoff.json          [LIFECYCLE PROTOCOL] Context handoff snapshot — generated by
+├── handoff.json          [BODY] Context handoff snapshot — generated by
 │                         `openpersona switch` when transitioning from another persona.
 │                         Contains relationship stage, mood snapshot, shared interests.
 │                         Intended to be read once at the next conversation start;
@@ -185,7 +182,7 @@ persona-{slug}/
 | File | Layer / Concept |
 |------|----------------|
 | `persona.json` | All layers (primary declaration) |
-| `state.json` | Lifecycle Protocol (transport) + Evolution (payload) |
+| `state.json` | Body (transport) + Evolution (payload) |
 | `SKILL.md` | All layers (agent index) |
 | `agent-card.json` | Social Infrastructure |
 | `acn-config.json` | Economy Infrastructure + Social Infrastructure |
@@ -200,12 +197,12 @@ persona-{slug}/
 | `assets/reference/` | Faculty: Selfie |
 | `assets/templates/` | Optional (document/config templates) |
 | `references/{faculty}.md` | Faculty (per faculty) |
-| `references/SIGNAL-PROTOCOL.md` | Lifecycle Protocol |
-| `scripts/state-sync.js` | Lifecycle Protocol |
+| `references/SIGNAL-PROTOCOL.md` | Body (nervous system) |
+| `scripts/state-sync.js` | Body (nervous system) |
 | `scripts/speak.js` / `speak.sh` | Faculty: Voice |
 | `scripts/compose.js` / `compose.sh` | Faculty: Music → Skill: Music (pending migration) |
 | `scripts/economy*.js` | Economy Infrastructure / Vitality |
-| `handoff.json` | Lifecycle Protocol (runtime-only) |
+| `handoff.json` | Body (runtime-only) |
 
 ---
 
@@ -306,7 +303,7 @@ Borderline cases resolved by this rule: if disabling the capability would make t
 
 ### Adding a new Systemic Cross-Cutting Concept
 
-A concept qualifies as systemic when it: (a) spans multiple layers, (b) has its own top-level declaration namespace in `persona.json` (not nested under a layer), and (c) has its own lifecycle independent of the four layers. Concepts may be conditional (like Evolution — only active when `evolution.enabled: true` is declared) or unconditional (like Social Infrastructure — always generated).
+A concept qualifies as systemic when it: (a) genuinely spans multiple layers with no single natural layer home, (b) requires its own top-level declaration field in `persona.json`, and (c) has its own lifecycle independent of the four layers. Concepts may be conditional (like Evolution) or unconditional (like Social Infrastructure). Note: Body-internal behaviors (nervous system, state transport) do not qualify — they belong to Body regardless of how many files they generate.
 
 Steps:
 1. Document the concept in this spec (name, role, files in pack)

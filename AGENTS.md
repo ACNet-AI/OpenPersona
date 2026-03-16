@@ -139,23 +139,23 @@ The generator injects a unified **Self-Awareness** section (`### Self-Awareness`
 
 The generator outputs persona skill packs with this layout:
 - **`SKILL.md`** — agent-facing index with four layer headings: `## Soul`, `## Body`, `## Faculty`, `## Skill`
-- **`persona.json`** / **`state.json`** — at pack root: primary declaration + Lifecycle Protocol runtime state
+- **`persona.json`** / **`state.json`** — at pack root: primary declaration + Body nervous system runtime state (transport owned by Body; payload owned by Evolution)
 - **`soul/`** — Soul layer artifacts: `injection.md`, `constitution.md`; when `behaviorGuide` declared: `behavior-guide.md`; when evolution enabled: `self-narrative.md` (first-person growth log); when forked: `lineage.json` (parent slug, constitution SHA-256, generation depth)
 - **`economy/`** — Economy Infrastructure data files when `economy.enabled: true`: `economic-identity.json` (AgentBooks identity bootstrap), `economic-state.json` (initial financial state)
 - **`references/`** — on-demand detail docs: `<faculty>.md` per active faculty + `SIGNAL-PROTOCOL.md` (host-side Signal Protocol implementation guide, always generated)
 - **`agent-card.json`** — A2A Agent Card (a2a-sdk compatible, protocol v0.3.0); `url` is `<RUNTIME_ENDPOINT>` placeholder
 - **`acn-config.json`** — ACN `AgentRegisterRequest` config; includes `wallet_address` (deterministic EVM address derived from slug via SHA-256) and `onchain.erc8004` section for ERC-8004 on-chain identity registration
-- **`scripts/state-sync.js`** — Lifecycle Protocol nerve fiber; `read` / `write` / `signal` commands; no external dependencies
+- **`scripts/state-sync.js`** — Body nervous system nerve fiber; `read` / `write` / `signal` commands; no external dependencies
 - **`scripts/`**, **`assets/`** — additional implementation scripts and static assets. Assets use subdirectories per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
   - **`assets/avatar/`** — Body > Appearance assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Populated from `body.appearance.avatar` / `body.appearance.model3d`
   - **`assets/reference/`** — selfie faculty reference images. `referenceImage` resolves to `./assets/reference/avatar.png` when bundled
   - **`assets/templates/`** — document or config templates (optional)
 
-### Lifecycle Protocol
+### Body Nervous System
 
 Together, the Signal Protocol, Pending Commands queue, and State Sync form the persona's **nervous system** — a bidirectional communication infrastructure connecting the persona's inner state (Soul) to its outer environment (Body). The formal architectural home is the `body.interface` dimension.
 
-The Lifecycle Protocol is the runtime expression of `body.interface`: it describes how a persona *lives* across conversations. It is not a layer — it is implemented by `scripts/state-sync.js` and the `openpersona state` CLI.
+This is the runtime expression of `body.interface`: it describes how a persona *lives* across conversations. It is implemented by `scripts/state-sync.js` and the `openpersona state` CLI. All related files (`state.json`, `state-sync.js`, `signals.json`, `SIGNAL-PROTOCOL.md`) are Body artifacts.
 
 **At conversation start:**
 1. Load evolution state: `openpersona state read <slug>` (runner) or `node scripts/state-sync.js read` (local)
@@ -178,7 +178,7 @@ The Lifecycle Protocol is the runtime expression of `body.interface`: it describ
 | Nerve fiber | `scripts/state-sync.js` |
 | Synaptic interface | `openpersona state` CLI |
 | Transmission medium | Host feedback directory: `signals.json` + `signal-responses.json` (runner-agnostic; resolves via `OPENCLAW_HOME` / `OPENPERSONA_HOME`) |
-| Memory | `soul/state.json` |
+| Memory | `state.json` (pack root) |
 | Homeostasis | Economy Faculty (Vitality system) |
 
 ### Runner Integration Protocol
@@ -281,20 +281,21 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 
 Note: `economy` is a top-level cross-cutting field, **not** a `faculties` entry. It does not follow the Faculty contract. The generator auto-activates the economy faculty scripts when `economy.enabled: true`.
 
-### Six Systemic Cross-Cutting Concepts
+### Five Systemic Cross-Cutting Concepts
 
-Orthogonal to the four-layer static structure, six concepts span across all layers:
+Orthogonal to the four-layer static structure, five concepts span across all layers and are declared as top-level fields in `persona.json`:
 
 | Field in `persona.json` | Concept | Description |
 |---|---|---|
 | `evolution` | **Evolution** | Persona growth and change: trait emergence, relationship progression, speaking style drift, event log, self-narrative. Enforced at Generate Gate + Runtime Gate. |
-| `body.interface` | **Lifecycle Protocol** | Runtime expression of `body.interface`: Signal Protocol (persona→host), Pending Commands (host→persona), State Sync (cross-conversation persistence). Manages the *mechanism*; Evolution manages the *content*. |
 | `economy` | **Economy Infrastructure** | Financial tracking, vitality scoring, survival policy (AgentBooks) |
 | `vitality` | **Vitality Aggregation** | Multi-dimension health score (financial + future: memory/social/reputation) |
 | `social` | **Social Infrastructure** | ACN discovery, ERC-8004 on-chain identity, A2A agent card |
-| `rhythm` | **Life Rhythm** | Temporal behavior: proactive outreach cadence (`heartbeat`) + time-of-day modulation (`circadian`). Orthogonal to Lifecycle Protocol — manages *when* to act, not *how* state flows. |
+| `rhythm` | **Life Rhythm** | Temporal behavior: proactive outreach cadence (`heartbeat`) + time-of-day modulation (`circadian`). Manages *when* to act — orthogonal to Body's state transport mechanism. |
 
 `rhythm` crosses both Soul (strategy, character expression) and Body (runtime scheduling parameters). Both `heartbeat` and `circadian` live in `persona.json` under `rhythm`. The flat top-level `heartbeat` field (P19 interim) remains backward-compatible but is superseded by `rhythm.heartbeat`.
+
+> **Lifecycle Protocol is not a separate cross-cutting concept — it is Body's nervous system at runtime.** `body.interface` declares the policy (which signals/commands are permitted); `scripts/state-sync.js` implements it (Signal Protocol, Pending Commands, State Sync). All Lifecycle Protocol files (`state.json`, `state-sync.js`, `signals.json`, `SIGNAL-PROTOCOL.md`) are Body artifacts.
 
 ### Template System
 
