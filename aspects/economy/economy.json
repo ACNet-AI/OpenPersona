@@ -1,5 +1,6 @@
 {
   "name": "economy",
+  "type": "aspect",
   "description": "Financial accountability — multi-asset wallet, track costs (inference, runtime, faculty, skill, custom), record confirmed income, maintain P&L and balance sheet, compute financial health score, adapt behavior to vitality tier and prescriptions. Powered by AgentBooks (framework-agnostic).",
   "allowedTools": [
     "Bash(node scripts/economy.js:*)"
