@@ -157,9 +157,7 @@ persona-{slug}/
                           Present only when economy.enabled: true.
 ```
 
-> (*) `compose.js` / `compose.sh` are currently generated under the `music` Faculty but are
-> planned for migration to the `music` Skill (`music-migrate` task). This note will be removed
-> once the migration is complete.
+> `compose.js` / `compose.sh` are Skill source files — copied from `layers/skills/music/scripts/` during generation.
 
 ### Runtime-only files (not generated, appear at runtime)
 

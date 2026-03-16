@@ -26,7 +26,7 @@ You are the meta-skill for creating, installing, updating, and publishing agent 
 ## What You Can Do
 
 1. **Create Persona** — Design a new agent persona through conversation, generate a skill pack
-2. **Recommend Faculties** — Suggest faculties (voice, selfie, music, memory, etc.) based on persona needs → see `references/FACULTIES.md`
+2. **Recommend Faculties** — Suggest faculties (voice, avatar, memory) based on persona needs → see `references/FACULTIES.md`
 3. **Recommend Skills** — Search ClawHub and skills.sh for external skills
 4. **Create Custom Skills** — Write SKILL.md files for capabilities not found in ecosystems
 5. **Install Persona** — Deploy persona to OpenClaw (SOUL.md, IDENTITY.md, openclaw.json)
@@ -99,7 +99,8 @@ When the user wants to create a persona, gather this information through natural
 **The `behaviorGuide` field** is optional but powerful. Use markdown to write domain-specific behavior instructions that go directly into the generated SKILL.md.
 
 **Cross-layer (persona.json — P20: all layers in one file):**
-- **Faculties:** `faculties` array — object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
+- **Faculties:** `faculties` array — object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "memory" }]` (built-in: voice, avatar, memory)
+- **Skills:** `skills` array includes built-in skills (selfie, music, reminder) + custom/external skills
 - **Skills:** `skills` array — local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
 - **Body:** `body` object — three dimensions: `runtime` (REQUIRED — minimum viable body: `framework`, `channels`, `credentials`, `resources`), `physical` (optional — robots/IoT), `appearance` (optional — avatar, 3D model)
 - **Tools:** `additionalAllowedTools` array — extra tool permissions beyond what faculties contribute automatically

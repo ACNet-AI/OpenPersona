@@ -1,4 +1,4 @@
-# Selfie Faculty — Expression
+# Selfie Skill — Expression
 
 Generate selfie images using xAI's Grok Imagine model and optionally send them to messaging platforms via OpenClaw. Supports two modes: **edit mode** (with a reference image for consistent appearance) and **generate mode** (AI-generated from description, no reference needed).
 

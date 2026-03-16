@@ -87,7 +87,7 @@ Optional. Describes the persona's *conceptual* visual and tonal identity.
 | `emoji` | Representative emoji character. Used in SKILL.md headers and identity display |
 | `age` | Persona age — integer or descriptive string (`25`, `"timeless"`, `"ancient"`, `"new"`) |
 | `vibe` | The overall feeling of interacting with this persona (1-2 sentences). Used as a tonality hint in the generated soul context |
-| `referenceImage` | Path or URL to a reference photo for AI selfie generation (Selfie Faculty). Copied to `assets/reference/avatar.png` during generation |
+| `referenceImage` | Path or URL to a reference photo for AI selfie generation (Selfie Skill). Copied to `assets/reference/avatar.png` during generation |
 
 ---
 

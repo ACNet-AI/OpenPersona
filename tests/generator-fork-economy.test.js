@@ -177,12 +177,12 @@ describe('economy faculty', () => {
     }
   }
 
-  it('aspects/economy/faculty.json exists with required fields', () => {
-    const facultyPath = path.join(__dirname, '..', 'aspects', 'economy', 'faculty.json');
-    assert.ok(fs.existsSync(facultyPath), 'faculty.json should exist');
+  it('aspects/economy/economy.json exists with required fields', () => {
+    const facultyPath = path.join(__dirname, '..', 'aspects', 'economy', 'economy.json');
+    assert.ok(fs.existsSync(facultyPath), 'economy.json should exist');
     const faculty = JSON.parse(fs.readFileSync(facultyPath, 'utf-8'));
     assert.strictEqual(faculty.name, 'economy', 'name should be economy');
-    assert.strictEqual(faculty.dimension, 'cognition', 'dimension should be cognition');
+    assert.ok(!faculty.dimension, 'dimension should not be present (economy is an aspect, not a faculty)');
     assert.ok(Array.isArray(faculty.allowedTools), 'allowedTools should be array');
     // AgentBooks v0.1.0: single wildcard entry covers all economy.js commands
     assert.ok(faculty.allowedTools.some((t) => t.includes('economy.js')), 'should reference economy.js');

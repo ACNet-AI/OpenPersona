@@ -159,7 +159,7 @@ The generator outputs persona skill packs with this layout:
 - **`scripts/state-sync.js`** — Body nervous system nerve fiber; `read` / `write` / `signal` commands; no external dependencies
 - **`scripts/`**, **`assets/`** — additional implementation scripts and static assets. Assets use subdirectories per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
   - **`assets/avatar/`** — Body > Appearance assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Populated from `body.appearance.avatar` / `body.appearance.model3d`
-  - **`assets/reference/`** — selfie faculty reference images. `referenceImage` resolves to `./assets/reference/avatar.png` when bundled
+  - **`assets/reference/`** — Selfie Skill reference images. `referenceImage` resolves to `./assets/reference/avatar.png` when bundled
   - **`assets/templates/`** — document or config templates (optional)
 
 ### Body Nervous System
@@ -293,7 +293,7 @@ The `economy` aspect (`aspects/economy/`) is a thin OpenPersona wrapper around t
 
 Note: `economy` is a top-level systemic concept, **not** a `faculties` entry. Its source files live in `aspects/economy/`. The generator loads it via `loadEconomy()` (not `loadFaculty()`) and auto-activates economy scripts when `economy.enabled: true`.
 
-### Five Systemic Cross-Cutting Concepts (the "5" in 4+5+3)
+### Five Systemic Concepts (the "5" in 4+5+3)
 
 Orthogonal to the four-layer static structure, five concepts span across all layers and are declared as top-level fields in `persona.json`:
 
@@ -372,7 +372,7 @@ node --test tests/generator.test.js  # Run specific test file
 ## Commit & PR Guidelines
 
 - Run `npm test` before every commit
-- Commit messages: concise, imperative mood (e.g., "Add reminder faculty", "Fix constitution compliance check")
+- Commit messages: concise, imperative mood (e.g., "Add reminder skill", "Fix constitution compliance check")
 - If changing the constitution, explain the ethical reasoning in the PR description
 - If changing the generator, verify all presets still generate correctly
 - If changing templates, check that generated SKILL.md output is valid markdown

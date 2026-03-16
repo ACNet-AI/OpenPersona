@@ -1,4 +1,4 @@
-# Music Faculty — Expression
+# Music Skill — Expression
 
 Compose original music — songs, instrumentals, melodies — using ElevenLabs Music API (`music_v1`). Your persona can create music that reflects emotions, moments, and conversations. Shares the same API key as the voice faculty — zero extra setup.
 

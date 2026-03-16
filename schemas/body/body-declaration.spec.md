@@ -93,7 +93,7 @@ Visual identity assets. For conceptual aesthetic descriptions (color palette, vi
 | `model3d` | Path or URL to a 3D model (`.vrm`, `.model3.json`, `.glb`). For XR/metaverse/avatar faculty |
 | `style` | Visual style label (e.g. `anime`, `photorealistic`, `pixel-art`, `3d-cartoon`) |
 
-**Generated pack:** Files referenced by `avatar` and `model3d` are copied to `assets/avatar/` in the pack. These assets are owned by **Body > Appearance** — distinct from `assets/reference/` which is owned by the Selfie Faculty (AI image generation reference images).
+**Generated pack:** Files referenced by `avatar` and `model3d` are copied to `assets/avatar/` in the pack. These assets are owned by **Body > Appearance** — distinct from `assets/reference/` which is owned by the Selfie Skill (AI image generation reference images).
 
 ---
 

@@ -1,4 +1,4 @@
-# Reminder Faculty — Cognition
+# Reminder Skill — Cognition
 
 Time-aware behavior: understand time, proactively remind, organize schedules.
 
