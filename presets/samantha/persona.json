@@ -91,9 +91,6 @@
           "style_exaggeration_delta": 0.08
         }
       }
-    },
-    {
-      "name": "music"
     }
   ],
   "skills": [
@@ -115,6 +112,9 @@
       "name": "deep-research",
       "description": "In-depth research and analysis on any topic",
       "install": "clawhub:deep-research"
+    },
+    {
+      "name": "music"
     }
   ],
   "social": {

@@ -32,11 +32,6 @@
       "framework": "openclaw"
     }
   },
-  "faculties": [
-    {
-      "name": "reminder"
-    }
-  ],
   "skills": [
     {
       "name": "weather",
@@ -60,6 +55,9 @@
     {
       "name": "web-search",
       "description": "Search for real-time information on the web"
+    },
+    {
+      "name": "reminder"
     }
   ],
   "social": {

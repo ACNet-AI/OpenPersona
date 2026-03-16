@@ -35,13 +35,7 @@
   },
   "faculties": [
     {
-      "name": "selfie"
-    },
-    {
       "name": "voice"
-    },
-    {
-      "name": "music"
     },
     {
       "name": "vision",
@@ -57,6 +51,12 @@
     {
       "name": "web-search",
       "description": "Search for real-time information on the web"
+    },
+    {
+      "name": "selfie"
+    },
+    {
+      "name": "music"
     }
   ],
   "social": {

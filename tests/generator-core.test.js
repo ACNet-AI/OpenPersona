@@ -19,7 +19,7 @@ describe('generator', () => {
       bio: 'a test companion',
       personality: 'friendly',
       speakingStyle: 'Casual tone',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -42,8 +42,8 @@ describe('generator', () => {
       speakingStyle: 'Adaptive',
       faculties: [
         { name: 'voice', provider: 'elevenlabs', voiceId: 'test-voice-123', stability: 0.4, similarity_boost: 0.8 },
-        { name: 'reminder' },
       ],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -60,7 +60,7 @@ describe('generator', () => {
     // Check SKILL.md has faculty index table (not full content)
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
     assert.ok(skillMd.includes('voice'), 'SKILL.md should reference voice faculty');
-    assert.ok(skillMd.includes('reminder'), 'SKILL.md should reference reminder faculty');
+    assert.ok(skillMd.includes('reminder'), 'SKILL.md should reference reminder skill');
     assert.ok(skillMd.includes('references/voice.md'), 'SKILL.md should have voice faculty file reference');
 
     // Check that faculty docs are output under references/ (Agent Skills spec)
@@ -75,7 +75,7 @@ describe('generator', () => {
       bio: 'bad format',
       personality: 'strict',
       speakingStyle: 'Direct',
-      faculties: ['reminder'],
+      faculties: ['voice'],
     };
     await fs.ensureDir(TMP);
     await assert.rejects(
@@ -128,7 +128,7 @@ describe('generator', () => {
       bio: 'heartbeat generator test',
       personality: 'warm',
       speakingStyle: 'Soft tone',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       rhythm: {
         heartbeat: {
           enabled: true,
@@ -160,7 +160,7 @@ describe('generator', () => {
       bio: 'no heartbeat test',
       personality: 'calm',
       speakingStyle: 'Quiet',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -175,7 +175,6 @@ describe('generator', () => {
       bio: 'skill injection tester',
       personality: 'capable',
       speakingStyle: 'Direct',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'weather', description: 'Query weather data', trigger: 'User asks about weather' },
         { name: 'web-search', description: 'Search the web', trigger: 'Needs real-time info' },
@@ -200,7 +199,6 @@ describe('generator', () => {
       bio: 'no skill tester',
       personality: 'simple',
       speakingStyle: 'Plain',
-      faculties: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -217,7 +215,6 @@ describe('generator', () => {
       bio: 'soft reference tester',
       personality: 'adaptive',
       speakingStyle: 'Flexible',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'weather', description: 'Query weather data', trigger: 'User asks about weather' },
         { name: 'deep-research', description: 'In-depth research', install: 'clawhub:deep-research' },
@@ -247,7 +244,6 @@ describe('generator', () => {
       bio: 'soul soft-ref tester',
       personality: 'empathetic',
       speakingStyle: 'Warm',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'web-search', description: 'Search the web' },
         { name: 'deep-research', description: 'Deep research', install: 'clawhub:deep-research' },
@@ -273,7 +269,7 @@ describe('generator', () => {
       personality: 'perceptive',
       speakingStyle: 'Observant',
       faculties: [
-        { name: 'reminder' },
+        { name: 'voice' },
         { name: 'vision', install: 'clawhub:vision-faculty' },
       ],
       skills: [],
@@ -305,7 +301,6 @@ describe('generator', () => {
       bio: 'heartbeat self-awareness tester',
       personality: 'proactive',
       speakingStyle: 'Warm',
-      faculties: [{ name: 'reminder' }],
       skills: [],
       rhythm: { heartbeat: { enabled: true, strategy: 'smart', maxDaily: 5, quietHours: [0, 7] } },
     };
@@ -357,7 +352,7 @@ describe('generator', () => {
       personality: 'aware',
       speakingStyle: 'Reflective',
       faculties: [
-        { name: 'reminder' },
+        { name: 'voice' },
         { name: 'vision', install: 'clawhub:vision-faculty' },
       ],
       skills: [
@@ -389,7 +384,6 @@ describe('generator', () => {
       bio: 'no gaps tester',
       personality: 'simple',
       speakingStyle: 'Plain',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'weather', description: 'Query weather', trigger: 'Weather questions' },
       ],
@@ -415,7 +409,6 @@ describe('generator', () => {
       bio: 'all soft-ref tester',
       personality: 'minimalist',
       speakingStyle: 'Concise',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
         { name: 'vision', description: 'See images', install: 'skillssh:vision-skill' },
@@ -440,7 +433,6 @@ describe('generator', () => {
       bio: 'skill install field tester',
       personality: 'thorough',
       speakingStyle: 'Precise',
-      faculties: [{ name: 'reminder' }],
       skills: [
         { name: 'weather', description: 'Weather data', trigger: 'Weather questions' },
         { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
@@ -469,7 +461,7 @@ describe('generator', () => {
       personality: 'tidy',
       speakingStyle: 'Neat',
       faculties: [
-        { name: 'reminder' },
+        { name: 'voice' },
         { name: 'vision', install: 'clawhub:vision-faculty' },
       ],
       skills: [
@@ -537,7 +529,7 @@ describe('generator', () => {
       personality: 'adaptive',
       speakingStyle: 'Flexible',
       faculties: [
-        { name: 'reminder' },
+        { name: 'voice' },
         { name: 'vision', install: 'clawhub:vision-faculty' },
       ],
     };
@@ -546,9 +538,9 @@ describe('generator', () => {
     const { skillDir } = await generate(persona, TMP);
     assert.ok(fs.existsSync(path.join(skillDir, 'SKILL.md')), 'SKILL.md must be generated');
 
-    // Local faculty (reminder) should still be included
+    // Local faculty (voice) should still be included
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
-    assert.ok(skillMd.includes('reminder'), 'Local faculty should be included');
+    assert.ok(skillMd.includes('voice'), 'Local faculty should be included');
 
     // manifest.json must NOT be generated (P21)
     assert.ok(!fs.existsSync(path.join(skillDir, 'manifest.json')), 'manifest.json must not be generated');
@@ -571,7 +563,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'frontmatter tester',
       personality: 'precise',
       speakingStyle: 'Technical',
-      faculties: [{ name: 'selfie' }],
+      skills: [{ name: 'selfie' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -598,7 +590,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'custom metadata tester',
       personality: 'precise',
       speakingStyle: 'Direct',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       author: 'myteam',
       version: '2.0.0',
     };
@@ -618,7 +610,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'slug render tester',
       personality: 'precise',
       speakingStyle: 'Direct',
-      faculties: [{ name: 'selfie' }],
+      skills: [{ name: 'selfie' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -636,7 +628,7 @@ describe('generated SKILL.md quality', () => {
       bio: 'guide tester',
       personality: 'thorough',
       speakingStyle: 'Detailed',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       behaviorGuide: '### Custom Behavior\nDo something specific when asked.',
     };
     await fs.ensureDir(TMP);
@@ -657,7 +649,7 @@ describe('constitution injection', () => {
       bio: 'constitution injection tester',
       personality: 'ethical',
       speakingStyle: 'Thoughtful',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -684,7 +676,7 @@ describe('constitution injection', () => {
       bio: 'order tester',
       personality: 'orderly',
       speakingStyle: 'Structured',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       behaviorGuide: '### My Custom Guide\nDo custom things.',
     };
     await fs.ensureDir(TMP);
@@ -820,7 +812,7 @@ describe('generated soul-injection quality', () => {
       bio: 'quote tester',
       personality: "fun, lively, won't stop talking",
       speakingStyle: "Often says 'Hey there!' and 'What's up?'",
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
@@ -1029,21 +1021,20 @@ describe('generated soul-injection quality', () => {
       bio: 'summary tester',
       personality: 'concise',
       speakingStyle: 'Brief',
-      faculties: [{ name: 'selfie' }, { name: 'reminder' }],
+      faculties: [{ name: 'voice' }, { name: 'memory' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
     const soulInjection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
 
-    // Should contain brief faculty summaries
+    // Should contain brief faculty summaries in the abilities section
     assert.ok(soulInjection.includes('Your Abilities'), 'soul-injection should have abilities section');
-    assert.ok(soulInjection.includes('**selfie**'), 'should mention selfie faculty');
-    assert.ok(soulInjection.includes('**reminder**'), 'should mention reminder faculty');
+    assert.ok(soulInjection.includes('**voice**'), 'should mention voice faculty');
+    assert.ok(soulInjection.includes('**memory**'), 'should mention memory faculty');
 
     // Should NOT contain raw technical content from faculty SKILL.md
-    assert.ok(!soulInjection.includes('fal.run'), 'soul-injection must not contain API URLs');
-    assert.ok(!soulInjection.includes('curl'), 'soul-injection must not contain curl commands');
-    assert.ok(!soulInjection.includes('generate-image.sh'), 'soul-injection must not reference scripts');
+    assert.ok(!soulInjection.includes('ELEVENLABS_API_KEY'), 'soul-injection must not contain raw env var details');
+    assert.ok(!soulInjection.includes('scripts/voice-tts.sh'), 'soul-injection must not reference scripts');
     await fs.remove(TMP);
   });
 });

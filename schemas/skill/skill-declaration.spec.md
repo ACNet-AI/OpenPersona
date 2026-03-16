@@ -50,12 +50,24 @@ layers/skills/weather/
   "name": "weather",
   "description": "Query current weather conditions and forecasts",
   "allowedTools": ["WebFetch", "Bash(curl:*)"],
-  "triggers": ["weather", "forecast", "outdoor plans"]
+  "envVars": ["WEATHER_API_KEY"],
+  "triggers": ["weather", "forecast", "outdoor plans"],
+  "files": ["SKILL.md", "scripts/weather.sh"]
 }
 ```
 
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Skill identifier |
+| `description` | No | What this skill does |
+| `allowedTools` | No | Tool permissions merged into persona's allowed tools |
+| `envVars` | No | Environment variables required by this skill (documentation only) |
+| `triggers` | No | Activation phrases (joined as comma-separated string in SKILL.md table) |
+| `files` | No | Resource files to copy into the generated pack (relative to skill dir). `SKILL.md` is handled separately — list only scripts and other assets. Files are copied preserving their relative path (e.g. `scripts/foo.sh` → `{pack}/scripts/foo.sh`) |
+
 - `allowedTools` from local definitions are automatically merged into the persona's allowed tools.
 - `triggers` array is joined as a comma-separated string in the generated SKILL.md table.
+- `files` enables skills that require runtime scripts (e.g. `selfie`, `music`) — these were previously implemented as Faculties.
 
 ### SKILL.md (Optional)
 

@@ -19,7 +19,7 @@ describe('generated persona.json output', () => {
       bio: 'clean output tester',
       personality: 'tidy',
       speakingStyle: 'Neat',
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       behaviorGuide: '### Test\nSome guide.',
     };
     await fs.ensureDir(TMP);
@@ -71,7 +71,7 @@ describe('generated persona.json output', () => {
       bio: 'array tester',
       personality: 'structured',
       speakingStyle: 'Organized',
-      faculties: [{ name: 'selfie' }],
+      skills: [{ name: 'selfie' }],
       additionalAllowedTools: ['Read', 'Write'],
     };
     await fs.ensureDir(TMP);
@@ -176,14 +176,18 @@ describe('four-layer architecture', () => {
       bio: 'references directory test',
       personality: 'methodical',
       speakingStyle: 'Precise',
-      faculties: [{ name: 'voice' }, { name: 'reminder' }],
+      faculties: [{ name: 'voice' }],
+      skills: [{ name: 'reminder' }],
     };
     await fs.ensureDir(TMP);
     const { skillDir } = await generate(persona, TMP);
     const refsDir = path.join(skillDir, 'references');
 
     assert.ok(fs.existsSync(path.join(refsDir, 'voice.md')), 'references/voice.md must exist');
-    assert.ok(fs.existsSync(path.join(refsDir, 'reminder.md')), 'references/reminder.md must exist');
+    // reminder is a Skill (not Faculty) — goes into ## Skill section, not references/
+    assert.ok(!fs.existsSync(path.join(refsDir, 'reminder.md')), 'references/reminder.md must NOT exist — reminder is a Skill');
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
+    assert.ok(skillMd.includes('reminder'), 'reminder Skill should appear in SKILL.md');
 
     // Faculty docs must NOT be at root
     assert.ok(!fs.existsSync(path.join(skillDir, 'voice.md')), 'voice.md must not be at root');

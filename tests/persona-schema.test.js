@@ -42,9 +42,11 @@ describe('persona schema', () => {
       );
       const persona = JSON.parse(fs.readFileSync(p, 'utf-8'));
 
-      // faculties: must be array of { name: string, ...config }
-      assert.ok(Array.isArray(persona.faculties), `${preset} persona.faculties must be array`);
-      for (const f of persona.faculties) {
+      // faculties: optional — must be array of { name: string, ...config } if present
+      if (persona.faculties !== undefined) {
+        assert.ok(Array.isArray(persona.faculties), `${preset} persona.faculties must be array`);
+      }
+      for (const f of (persona.faculties || [])) {
         assert.strictEqual(typeof f, 'object', `${preset} faculty must be object`);
         assert.ok(f.name, `${preset} faculty object missing name`);
       }

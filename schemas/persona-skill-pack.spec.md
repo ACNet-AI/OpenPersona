@@ -276,9 +276,10 @@ Persona skill packs intentionally deviate from standard Agent Skills conventions
 | Faculty | Dimension | Rationale |
 |---------|-----------|-----------|
 | `voice` | expression | Persistent synthesis capability; changes how the persona communicates |
-| `selfie` | expression | On-demand AI image generation (fal.ai / Grok Imagine); generates photos of the persona using a reference image. Local implementation, no external install required. |
-| `avatar` | expression | Real-time 3D/video avatar runtime bridge (HeyGen); requires external install. Distinct from `selfie` — animated live presence, not static image generation. |
+| `avatar` | expression | Real-time 3D/video avatar runtime bridge (HeyGen); requires external install. Animated live presence — disabling makes the persona invisible/non-animated. |
 | `memory` | cognition | Episodic/semantic memory store; cross-runner portable; distinct from structural state in `state.json` |
+
+> **`selfie`, `music`, and `reminder` are Skills, not Faculties.** They are on-demand discrete tasks (generate a photo, compose a song, set a reminder). Declare them in `persona.json` under `skills`, not `faculties`. They are implemented in `layers/skills/` with `skill.json` + `SKILL.md` + optional `scripts/`.
 
 > **`economy` is not a traditional Faculty.** It is a top-level cross-cutting field. Activate it via `economy: { enabled: true }` in `persona.json` — the generator then emits `scripts/economy*.js` (AgentBooks wrappers). The old `"faculties": ["economy"]` syntax remains backward-compatible but is deprecated. `economy` does not follow the Faculty contract (`dimension`, `faculty.json`) and should not be treated as a peer of `voice`, `avatar`, or `memory`.
 
@@ -287,7 +288,7 @@ Persona skill packs intentionally deviate from standard Agent Skills conventions
 - **Faculty** — a persistent capability that changes the persona's nature. Always active once declared. Alters what the persona *is*.
 - **Skill** — an on-demand action or task. Invoked when needed. Defines what the persona *can do*.
 
-Borderline cases resolved by this rule: if disabling the capability would make the persona fundamentally *different* (voice → silent, avatar → invisible), it is a Faculty. If it is a discrete task the persona performs on request (compose music, set reminder, search web), it is a Skill.
+Borderline cases resolved by this rule: if disabling the capability would make the persona fundamentally *different* (voice → silent, avatar → invisible), it is a Faculty. If it is a discrete task the persona performs on request (compose music, set reminder, search web, send selfie), it is a Skill.
 
 ---
 

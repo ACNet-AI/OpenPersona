@@ -36,9 +36,6 @@
   "faculties": [
     {
       "name": "voice"
-    },
-    {
-      "name": "reminder"
     }
   ],
   "skills": [
@@ -50,6 +47,9 @@
       "name": "workspace-digest",
       "description": "Summarize workspace activity — tasks completed, patterns observed",
       "trigger": "Heartbeat or when user asks what's been happening"
+    },
+    {
+      "name": "reminder"
     }
   ],
   "social": {

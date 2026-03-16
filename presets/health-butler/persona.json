@@ -32,11 +32,6 @@
       "framework": "openclaw"
     }
   },
-  "faculties": [
-    {
-      "name": "reminder"
-    }
-  ],
   "skills": [
     {
       "name": "diet-tracker",
@@ -61,6 +56,9 @@
     {
       "name": "web-search",
       "description": "Look up nutrition facts and evidence-based health information"
+    },
+    {
+      "name": "reminder"
     }
   ],
   "social": {

@@ -192,7 +192,7 @@ describe('installAllExternal', () => {
     // Should not throw — entries without install are just declarations
     assert.doesNotThrow(() => installAllExternal({
       body: null,
-      faculties: [{ name: 'voice' }, { name: 'music' }],
+      faculties: [{ name: 'voice' }],
       skills: [{ name: 'weather', description: 'Weather' }],
     }));
   });

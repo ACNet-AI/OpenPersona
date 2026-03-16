@@ -34,7 +34,7 @@ describe('new grouped soul format (v0.17+)', () => {
         character: { personality: 'curious', speakingStyle: 'Direct', boundaries: 'Follows constitution' },
       },
       body: { runtime: { framework: 'openclaw' } },
-      faculties: [{ name: 'reminder' }],
+      skills: [{ name: 'reminder' }],
       evolution: { enabled: false },
     };
     const { skillDir } = await generate(persona, TMP);

@@ -1,0 +1,8 @@
+{
+  "name": "reminder",
+  "description": "Schedule reminders and daily task management",
+  "allowedTools": [],
+  "envVars": [],
+  "triggers": ["remind me", "set alarm", "today's tasks", "what's on my schedule"],
+  "files": ["SKILL.md"]
+}

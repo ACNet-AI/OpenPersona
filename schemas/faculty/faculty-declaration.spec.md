@@ -83,9 +83,9 @@ layers/faculties/voice/
 
 | Dimension | Meaning | Examples |
 |-----------|---------|---------|
-| `expression` | Changes how the persona outputs — voice, appearance, creative production | `voice`, `selfie`, `avatar`, `music` |
+| `expression` | Changes how the persona outputs — voice, appearance, animated presence | `voice`, `avatar` |
 | `sense` | Adds perception channels — what the persona can receive and process | *(reserved for future: camera, microphone, vision)* |
-| `cognition` | Extends memory, reasoning, or self-management capabilities | `memory`, `reminder` |
+| `cognition` | Extends memory, reasoning, or self-management capabilities | `memory` |
 
 ---
 
@@ -126,10 +126,7 @@ When a faculty is active, the generator:
 | Faculty | Dimension | Implementation | External install? |
 |---------|-----------|---------------|-------------------|
 | `voice` | expression | ElevenLabs TTS (+ experimental OpenAI TTS, Qwen3-TTS) | No (scripts bundled) |
-| `selfie` | expression | fal.ai Grok Imagine — generates photos from reference image | No (scripts bundled) |
 | `avatar` | expression | HeyGen real-time 3D/video avatar bridge | Yes — `clawhub:avatar-runtime` |
-| `music` | expression | ElevenLabs Music composition | No (scripts bundled) |
 | `memory` | cognition | Cross-session episodic/semantic store (local JSON default; Mem0/Zep optional) | No (scripts bundled) |
-| `reminder` | cognition | Scheduling and daily task management | No (SKILL.md only) |
 
-> `selfie` and `avatar` are distinct faculties. `selfie` = on-demand static image generation (local). `avatar` = real-time animated presence (external install required). Do not merge them.
+> **Not Faculties:** `selfie`, `music`, and `reminder` are **Skills** — on-demand discrete tasks. Declare them under `skills` in `persona.json`. They live in `layers/skills/` and follow the `skill.json` contract (`files`, `allowedTools`, `triggers`). The `avatar` Faculty is distinct from `selfie`: `avatar` = persistent animated presence (changes what the persona *is*); `selfie` = on-demand photo generation (what the persona *can do*).
