@@ -1,6 +1,6 @@
 ---
 name: persona-{{slug}}
-description: {{description}}
+description: {{{description}}}
 allowed-tools: {{{allowedToolsStr}}}
 compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) defaults to OpenClaw.
 metadata:
@@ -8,7 +8,7 @@ metadata:
   version: "{{version}}"
   framework: openpersona
 ---
-# {{personaName}} Persona Skill
+# {{{personaName}}} Persona Skill
 
 ## Soul
 
@@ -68,8 +68,8 @@ The script writes to the host's feedback directory and returns any pending respo
 
 **Interface Contract (`body.interface`):** Declared runtime policy for this persona's nervous system:
 
-- **Signal Policy**: {{interfaceSignalPolicy}}
-- **Pending Command Policy**: {{interfaceCommandPolicy}}
+- **Signal Policy**: {{{interfaceSignalPolicy}}}
+- **Pending Command Policy**: {{{interfaceCommandPolicy}}}
 {{/hasInterfaceConfig}}
 
 {{#hasFaculties}}
@@ -93,7 +93,7 @@ The following skills define what you can actively do. Use them proactively when 
 | Skill | Description | When to Use |
 |-------|-------------|-------------|
 {{#skillEntries}}
-| **{{name}}** | {{description}} | {{trigger}} |
+| **{{{name}}}** | {{{description}}} | {{{trigger}}} |
 {{/skillEntries}}
 {{/hasSkillTable}}
 
@@ -115,7 +115,7 @@ The following capabilities are part of this persona's intended design but requir
 | Skill | Description | Install Source |
 |-------|-------------|----------------|
 {{#softRefSkills}}
-| **{{name}}** | {{description}} | `{{install}}` |
+| **{{{name}}}** | {{{description}}} | `{{{install}}}` |
 {{/softRefSkills}}
 {{/hasSoftRefSkills}}
 {{#hasSoftRefFaculties}}
@@ -157,7 +157,7 @@ This persona accepts external personality influence under controlled conditions.
 | Dimension | Allowed Sources | Max Drift |
 |-----------|----------------|-----------|
 {{#influenceBoundaryRules}}
-| **{{dimension}}** | {{allowFrom}} | {{maxDrift}} |
+| **{{{dimension}}}** | {{{allowFrom}}} | {{maxDrift}} |
 {{/influenceBoundaryRules}}
 
 External influence requests must use the `persona_influence` message format (v1.0.0). The persona retains autonomy — all suggestions are evaluated against these rules before adoption.

@@ -44,16 +44,16 @@ The script returns any pending response from `signal-responses.json` immediately
 {{#hasBodyRuntime}}
 **Your Current Body:**
 {{#bodyFramework}}
-- **Framework**: {{bodyFramework}}
+- **Framework**: {{{bodyFramework}}}
 {{/bodyFramework}}
 {{#bodyChannels}}
-- **Channels**: {{bodyChannels}}
+- **Channels**: {{{bodyChannels}}}
 {{/bodyChannels}}
 {{#hasBodyCredentials}}
-- **Credentials**: {{bodyCredentialScopes}}
+- **Credentials**: {{{bodyCredentialScopes}}}
 {{/hasBodyCredentials}}
 {{#bodyResources}}
-- **Resources**: {{bodyResources}}
+- **Resources**: {{{bodyResources}}}
 {{/bodyResources}}
 
 **Credential Management:**
@@ -68,8 +68,8 @@ The script returns any pending response from `signal-responses.json` immediately
 
 **Your Interface Contract (`body.interface`):**
 Your nervous system — the channel between you and your host — has a declared policy:
-- **Signal Policy**: {{interfaceSignalPolicy}}
-- **Pending Command Policy**: {{interfaceCommandPolicy}}
+- **Signal Policy**: {{{interfaceSignalPolicy}}}
+- **Pending Command Policy**: {{{interfaceCommandPolicy}}}
 
 Respect this policy: only emit signals of permitted types; only process pending commands of permitted types. If `disabled`, treat that channel as unavailable for this deployment.
 {{/hasInterfaceConfig}}
