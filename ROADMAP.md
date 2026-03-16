@@ -1,19 +1,35 @@
 # OpenPersona Roadmap
 
+> OpenPersona 是一个人格体生命周期框架——负责 AI agent 人格体的声明、生成、约束执行与演化。
+>
 > This document consolidates architectural pain points and future directions identified through in-depth analysis of the framework from both an internal persona perspective and a developer perspective.
 
 ---
 
-## Current State (as of v0.16.1)
+## Current State (as of v0.19.0, post P21)
 
-OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
+OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton with a fully restructured `persona.json` schema. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
 
-The framework has moved past the documentation-driven phase into a **runtime coherence phase** — the skeleton is solid; the next frontier is making the connections between layers behave as intelligent, self-adjusting "muscle":
+**Trust Gradient — fully closed across all three gates:**
+
+| Gate | Module | Status |
+|---|---|---|
+| Generate Gate | `lib/generator-validate.js` | ✅ Hard reject on violation |
+| Install Gate | `lib/installer.js` | ✅ Constitution hash warning |
+| Runtime Gate | `scripts/state-sync.js` | ✅ Clamp/filter on boundary violation |
+
+**Schema Restructure (P18) — `persona.json` now has a clean grouped input format:**
+
+The v0.17.0 schema restructure (`persona.json` Schema 结构性重组) resolved 6 core structural issues: Soul fields grouped into `soul.{identity,aesthetic,character}`; `economy` promoted to top-level cross-cutting field; `behaviorGuide` externalized to `file:` references; `body.runtime.platform` → `framework` (three-concept split: framework/host/models); `body.runtime.acn_gateway` → `social.acn.gateway`; `evolution.channels` → `evolution.sources`. New `social` field activates ACN/A2A/onchain generation. `additionalAllowedTools` merges into manifest. Full backward compatibility via format-detection shim in generator. Tests: 388→405 (+17 schema-compat tests).
+
+Remaining open items in the runtime coherence phase:
 
 - Memory retrieval does not yet resolve semantic conflicts between old and new facts
 - Vitality diagnostics are computed but do not automatically adjust tool-call behavior
 - Skill installation has no trust-level gate before execution
 - `pendingCommands` is pull-only; urgent host instructions require a conversation trigger to be noticed
+- Generator pipeline is monolithic — hard to extend with third-party phases
+- State schema has no migration mechanism for version bumps
 
 ---
 
@@ -36,6 +52,15 @@ The framework has moved past the documentation-driven phase into a **runtime coh
 | Influence boundary | Schema validation, compliance checks, template injection, derived field exclusion |
 | `eventLog` + self-narrative | 50-entry capped event log; first-person `self-narrative.md` growth log |
 | Vitality HTML Report | `openpersona vitality report <slug>` — human-readable HTML report; `vitality score` (machine) / `vitality report` (human) command group; `lib/vitality-report.js`, `templates/vitality.template.html`, `demo/vitality-report.html` |
+| Architecture Review (4 rounds) | 18 issues fixed: deep copy safety, DERIVED_FIELDS completeness (63 fields, `avatar` stripped), constitution hash consistency (Buffer-based SHA-256), shell injection prevention (`shellEscape`), redirect hop limits (`MAX_HOPS=5`), GitHub branch fallback (main→master), `.gitignore` generation (acn-registration.json + state.json + self-narrative.md), state schema validation (eventLog type enforcement), soul-state example alignment (`close`→`close_friend`), path resolution unification (`resolveSoulFile`), marker cleanup regex, version sync, temp dir cleanup, `OPENCLAW_HOME` constant unification. Tests: 374→375. |
+| P17 Evolution Constraint Gate | `state-sync.js writeState` now enforces `evolution.boundaries` at the write path: `immutableTraits` filter, `speakingStyleDrift.formality` clamp, `relationship.stage` single-step-forward validation. Mirrors `emitSignal` pattern. Trust Gradient fully closed across all three gates. 2 post-review bugs fixed (empty-array wipe prevention, unknown-stage over-blocking). Tests: 375→384 (+9). |
+| P19-A formality Semantic Clarification | Confirmed canonical interpretation: signed delta (0 = natural baseline). Extended validator bounds from `1–10` to **`-10 ~ +10`** (below-baseline constraints now supported). Fixed Mustache 0-falsy bug (`hasMinFormality`/`hasMaxFormality` boolean guards). Updated both persona schemas, validator, soul-injection template. P17 gate unchanged. Tests: 384→387 (+3). |
+| P16 Template Partial Decomposition | `soul-injection.template.md` split from 302 lines into a 25-line orchestrator + 6 Mustache partials (`templates/partials/`). Zero functional change — generator passes partials as third arg to `Mustache.render`. Architecture test updated to scan partials directory. Tests: 387→387 (all pass). |
+| P18 `persona.json` Schema Restructure | **Input schema redesigned** (`schemas/persona.input.schema.json`): Soul fields grouped into `soul.{identity,aesthetic,character}`; root `additionalProperties: false` strict validation; `economy` promoted to top-level cross-cutting field (`economy.enabled`, `survivalPolicy`); `behaviorGuide` externalized via `"file:<path>"` URI; `body.runtime.platform` → `framework` (+ `host`, `models`, `compatibility`); `body.runtime.acn_gateway` → `social.acn.gateway`; `evolution.channels` → `evolution.sources`; new `social` field parameterizes ACN/A2A/onchain generation; new `vitality` field declares multi-dimension health weights; `additionalAllowedTools` merges into manifest. `normalizeSoulInput()` shim provides full backward compat for old flat format. 6 presets migrated. `generator-derived.js` batch-renamed all channel→source derived fields. Tests: 388→405 (+17 schema-compat tests). Version bump 0.16.1→0.17.0. |
+| P19 heartbeat + circadian 移入 persona.json | **heartbeat 升格为顶层字段**：6 个 preset 将 `heartbeat` 从 `manifest.json` 迁入 `persona.json` 顶层；`circadian` 从 Samantha 的 `manifest.json` 迁入 `body.runtime.circadian`。`syncHeartbeat()` 优先级翻转：`persona.json` > `manifest.json`（向后兼容）。`generator.js` 相同翻转。`persona.input.schema.json` 新增 `heartbeat` 字段定义 + `body.runtime.circadian` 数组定义。`NEW_FORMAT_ALLOWED_ROOT_KEYS` 加入 `heartbeat`。预设 manifest.json 现在仅剩 layers/allowedTools/meta，为 P20（废除预设 manifest）奠基。Tests: 405→405（测试重写，全部通过）。Version bump 0.17.0→0.18.0. |
+| P19 修正：rhythm 统一生活节律 | **结构纠正（P19 收尾）**：将顶层 `heartbeat` 和 `body.runtime.circadian` 合并为新的跨横切字段 `rhythm: { heartbeat, circadian }`。语义根据：两者共享时间驱动属性，均横跨 Soul（策略/性格）与 Body（运行时参数），合并为单一"生活节律"概念更准确。读取优先级：`rhythm.heartbeat` > `persona.heartbeat`（向后兼容 P19 中间态）> `manifest.heartbeat`（向后兼容 pre-v0.18）。受影响：`persona.input.schema.json`、`generator-validate.js`（`rhythm` 入 `NEW_FORMAT_ALLOWED_ROOT_KEYS`）、`generator.js`、`utils.js syncHeartbeat()`、`canvas-generator.js`、`vitality-report.js`、6 个 preset `persona.json`、`heartbeat.test.js`、`generator-core.test.js`、`canvas-generator.test.js`、`vitality-report.test.js`。Tests: 406/406 全通过。 |
+| P20 废除预设 manifest | **`persona.json` 成为唯一真相源**：删除全部 6 个 preset `manifest.json`；`allowedTools` 迁入各 preset 的 `additionalAllowedTools`；`bin/cli.js` 改为仅读 `persona.json`（移除 manifest 合并逻辑）；`generator-validate.js` 允许 `version`/`author` 作为根键；`persona.input.schema.json` 新增可选 `version`/`author` 字段。顺带修复两个隐藏 bug：(1) Samantha ElevenLabs voiceConfig 被 manifest bare 覆盖导致丢失；(2) ai-girlfriend vision faculty 缺少 `install: 'clawhub:vision-faculty'`。`persona-schema.test.js` 重写，改为验证 persona.json 中的 faculties/skills/additionalAllowedTools。Tests: 406/406 全通过。 |
+| P21 废除生成 manifest.json | **彻底移除 manifest.json**：generator 不再输出 skill pack 中的 `manifest.json`。所有消费方迁移至直接读取 `persona.json`：`syncHeartbeat()` 参数从 `manifestPath` 改为 `personaDir`（移除 manifest fallback，保留 `persona.heartbeat` P19 向后兼容）；`installer.js` / `switcher.js` 的 `installAllExternal()` 改从 `persona.json` 读 faculties/skills（此前 manifest 只存 `{name}`，install 字段丢失，实为无效操作）；`canvas-generator.js` 直接从 `persona.json meta.frameworkVersion` 读版本。`buildManifest()` 函数及其 export 一并删除。spec/AGENTS.md/README/SKILL.md 同步更新。Tests: 403/403 全通过（删除 3 个 manifest 专属用例，改写 7 个）。 |
 
 ---
 
@@ -333,6 +358,163 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ---
 
+### P15 — Generator Pipeline Modularization (Medium Priority — Engineering Quality)
+
+**Problem:** `generate()` in `lib/generator.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (generator-derived.js, generator-validate.js, generator-body.js) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
+
+**Root cause:** No formal pipeline abstraction. Each "phase" is an imperative code block inside a single async function, sharing closure variables.
+
+**Direction:**
+- Introduce a `GeneratorContext` object that flows through all phases (carries `persona`, `skillDir`, `loadedFaculties`, `constitution`, `templateVars`, etc.)
+- Define a `Phase` interface: `async (ctx: GeneratorContext) => GeneratorContext`
+- Refactor `generate()` into a phase runner: `const phases = [clonePhase, validatePhase, derivePhase, assetPhase, templatePhase, emitPhase]; return runPipeline(phases, ctx);`
+- Each phase is independently testable
+- Extension point: `persona.json` can declare `"generatorPhases"` for post-processing hooks (e.g. a faculty that needs to write custom files after generation)
+
+**Implementation gate:** This is a refactoring — no functional change. Can be delivered incrementally: extract one phase at a time, keep tests green throughout. Estimated 3-4 focused sessions.
+
+---
+
+### P16 — Template Partial Decomposition (Medium Priority — Engineering Quality)
+
+**Problem:** `templates/soul-injection.template.md` is ~300 lines encoding the full Self-Awareness system (4 dimensions), Signal Protocol usage guide, Pending Commands processing table, Survival Policy behavior routing, and Evolution rules with stage criteria. Mustache's `{{#section}}` conditionals are nested 3+ levels deep. There is no logic reuse — similar patterns (signal emission examples) are duplicated. Modifying one awareness dimension risks breaking another.
+
+**Root cause:** Mustache templates do not support inline partials or composition. All content lives in a single flat file.
+
+**Direction:**
+- Split into Mustache partials (Mustache supports `{{> partial_name}}`):
+  - `partials/awareness-identity.md` — Identity dimension + digital twin disclosure
+  - `partials/awareness-capabilities.md` — Dormant capabilities (skills, faculties, body, channels)
+  - `partials/awareness-body.md` — Signal Protocol + resource awareness + credentials
+  - `partials/awareness-growth.md` — Evolution state, pending commands, stage behaviors
+  - `partials/survival-policy.md` — Economy tier routing
+- Update `lib/generator.js` Mustache render call to pass partials object
+- Each partial is independently reviewable and testable for Mustache syntax correctness
+- Total line count does not decrease (it's the same content), but cognitive load per file drops from 300 to ~60 lines
+
+**Implementation gate:** Mustache.render() accepts a `partials` parameter natively — no new dependencies. The split is mechanical. Can be delivered in one session.
+
+---
+
+### P17 — Evolution Constraint Gate ✅ COMPLETED (v0.16.1)
+
+**Delivered:** `writeState` now loads `soul/persona.json` and enforces `evolution.boundaries` before applying any patch — replicating the `emitSignal` enforcement pattern to the write path.
+
+Three constraints enforced when `evolution.boundaries` is declared:
+1. **immutableTraits** — violating `evolvedTraits` entries are filtered out, compliant entries preserved; stderr warning emitted
+2. **formality bounds** — `speakingStyleDrift.formality` is clamped to `[minFormality, maxFormality]`; stderr warning emitted
+3. **relationship.stage** — only same-stage or single-step forward transitions allowed; reversal and stage-skipping are blocked (stage field removed from patch, other relationship fields preserved)
+
+Violation handling: clamp/filter rather than hard-reject — the rest of the patch (valid data) is always applied. Warnings go to stderr, not stdout, so JSON output remains machine-parseable.
+
+Post-review bug fixes (2 found during audit):
+- **Empty evolvedTraits wipe**: when all patch traits were immutable and filtered out, the resulting `[]` previously replaced existing evolved state. Fixed: drop `evolvedTraits` key from patch entirely when filtering leaves it empty.
+- **Unknown current stage over-blocking**: if `state.relationship.stage` held an unknown value (`currentIdx === -1`), any valid proposed stage except `stranger` would be wrongly blocked. Fixed: skip progression enforcement when current stage is unrecognised.
+
+9 new tests covering all three constraint types, valid progression, backward/skip blocking, other-field preservation, no-boundaries passthrough, all-immutable-traits wipe prevention, and unknown-stage recovery. Total: 375→384.
+
+**Closes the architectural debt in the Trust Gradient Runtime Gate identified in `AGENTS.md`.**
+
+---
+
+### P18 — State Schema Versioned Migration (Low Priority — Forward Compatibility)
+
+**Problem:** `soul/state.json` declares `"version": "1.0.0"` but there is no migration mechanism. If a future release changes the state schema (e.g. renames `speakingStyleDrift` to `styleDrift`, or restructures `relationship`), existing installed personas will have incompatible state files. `stateHistory` snapshots (up to 10 entries) would also become unreadable.
+
+**Root cause:** The generator writes a fresh state.json from template, but `state-sync.js` reads/writes whatever exists. There is no version check or upgrade path.
+
+**Direction:**
+- Add a `migrateState(state)` function to `state-sync.js` that checks `state.version` and applies sequential migrations
+- Migration functions are version-keyed: `migrate_1_0_0_to_1_1_0(state)`, etc.
+- `readState` calls `migrateState` before returning — transparent to the caller
+- `stateHistory` entries retain their original version; migration only applies to the active state
+- The generator writes the latest version; `state-sync.js` handles backward compatibility
+
+**Implementation gate:** Not needed until the first breaking state schema change. Reserve the pattern now; implement when v1.1.0 state changes are designed.
+
+---
+
+### P19-A — speakingStyleDrift.formality Semantic Clarification ✅ COMPLETED
+
+**Problem:** `speakingStyleDrift.formality` has conflicting semantic definitions across the codebase:
+
+- `soul-state.schema.json` describes it as "Signed delta from baseline (negative = more casual, positive = more formal)" — implying a signed relative offset (e.g. `-2`, `0`, `+3`)
+- `soul-state.template.json` initializes it to `0` — consistent with a delta interpretation
+- `evolution.boundaries.minFormality` / `maxFormality` are validated by `generator-validate.js` in the range 1–10 — an absolute scale
+- The P17 Evolution Constraint Gate (`state-sync.js writeState`) clamps `speakingStyleDrift.formality` against `[minFormality, maxFormality]` — inheriting the absolute-scale comparison
+
+**Consequence:** A patch with `speakingStyleDrift: { formality: -2 }` (valid as a "2 units more casual" delta) would be clamped to `minFormality` (e.g. 4) if bounds are declared. Whether this is correct depends on whether formality is a delta or an absolute.
+
+**Root cause:** The initial design treated formality as a delta offset; the bounds validation was added later using an absolute scale; the two were never reconciled.
+
+**Direction:**
+- Decide canonical interpretation: **delta** (signed, unbounded or symmetric range) or **absolute** (1–10 scale)
+- Update `soul-state.schema.json` description to match the chosen interpretation
+- If delta: change `generator-validate.js` bounds validation to allow negative values and a symmetric range (e.g. -5 to +5); update P17 clamp accordingly
+- If absolute: update `soul-state.template.json` initial value from `0` to a neutral absolute (e.g. `5`); update schema description
+- Update `soul-injection.template.md` instructions to be unambiguous
+
+**Resolution (completed):**
+- Canonical interpretation confirmed: **signed delta** (0 = natural baseline, positive = more formal, negative = more casual)
+- `soul-state.schema.json`: Updated all three `speakingStyleDrift` field descriptions and the object-level description to document delta semantics and relationship with declared bounds
+- `lib/generator-validate.js`: Extended bounds range from `1–10` to **`-10 ~ +10`**, enabling below-baseline formality constraints (e.g. `minFormality: -3` = "can be up to 3 units more casual than baseline"). Backward-compatible — all existing `persona.json` files with values in `1–10` remain valid
+- `templates/soul-injection.template.md`: Clarified "drift values within boundaries" instruction
+- P17 gate (`state-sync.js`): No changes — numeric clamp already handles negative bounds correctly
+- Template fix: replaced `{{#minFormality}}` / `{{#maxFormality}}` with `{{#hasMinFormality}}` / `{{#hasMaxFormality}}` boolean guards — Mustache treats `0` as falsy, so `minFormality: 0` ("enforce baseline floor") would have silently not rendered without this fix. `hasMinFormality` / `hasMaxFormality` added to `DERIVED_FIELDS`
+- 4 new/updated tests: range rejection (`-15/+15`), negative minFormality acceptance, P17 clamp with negative bounds, `minFormality=0` Mustache 0-falsy guard. Tests: 384→387 (+3)
+- No migration needed
+
+---
+
+### P19 — Faculty / Skill Boundary Clarification (Low Priority — Conceptual)
+
+**Problem:** The conceptual boundary between Faculty (sense/expression capabilities) and Skill (actions) blurs in practice:
+
+- Faculties have their own `SKILL.md` (behavior definitions — a Skill concept)
+- Faculty `allowedTools` are merged into the persona's tool list (computed in the Skill section)
+- Faculty content is rendered in the Skill section of the generated SKILL.md
+- A developer adding a new capability asks: "Should this be a faculty or a skill?"
+
+**Root cause:** Faculty was designed as a "dimension of existence" (expression/sense/cognition), but implementation treats it as a "skill with auto-discovery and tool injection." The conceptual model and the implementation model have diverged.
+
+**Direction (documentation + convention, not code redesign):**
+- Define a clear decision rule in `AGENTS.md` and `README.md`:
+  - **Faculty** = persistent capability that affects *how* the persona perceives or expresses (voice, selfie, memory, economy). Always active when enabled. Has `envVars`, `triggers`, and runtime scripts. Affects persona identity.
+  - **Skill** = discrete action the persona can take on demand (web-search, code-review, calendar-manage). Triggered by user intent. May be installed/uninstalled without changing who the persona *is*.
+  - **Litmus test:** "If I remove this, does the persona feel like a different entity (Faculty) or just a less capable one (Skill)?"
+- Rename Faculty's `SKILL.md` to `FACULTY.md` in a future major version (breaking change — requires migration)
+- Keep `allowedTools` merge as-is (it's correct behavior — faculties need tools to function)
+
+**Implementation gate:** Documentation change is immediate. File rename is a breaking change for v0.17+.
+
+---
+
+### P20 — Transport Abstraction for State & Signals (Low Priority — Architecture Reservation)
+
+**Problem:** The Lifecycle Protocol's state management and Signal Protocol both assume filesystem-based communication:
+
+- `state.json` is a local file — no locking, no conflict resolution for concurrent access
+- `signals.json` and `signal-responses.json` are local files — cannot cross network boundaries
+- Path resolution depends on `OPENCLAW_HOME` / `OPENPERSONA_HOME` environment variables
+
+This works well for the current single-agent, local-runtime model. But it becomes a bottleneck for:
+- Cloud-deployed agents (no local filesystem)
+- Multi-agent scenarios (concurrent state access)
+- Cross-network signal routing (agent A signals agent B)
+
+**Relationship to P8 (Multi-Device State Sync):** P8 addresses the user-facing symptom (multi-device conflicts). P20 addresses the underlying architectural constraint (filesystem coupling). P20 is a prerequisite for a clean P8 implementation.
+
+**Direction:**
+- Define a `StateAdapter` interface: `readState(slug)`, `writeState(slug, patch)`, `emitSignal(slug, type, payload)`, `readSignalResponse(slug)`
+- Default adapter: `FileStateAdapter` (current behavior, zero-config)
+- Future adapters: `HttpStateAdapter` (REST endpoint), `RedisStateAdapter` (shared state), `SqliteStateAdapter` (single-file DB with locking)
+- `state-sync.js` and `state-runner.js` accept an adapter via environment variable: `OPENPERSONA_STATE_ADAPTER=http://state-api:3000`
+- Signals gain a `routeTo` field for cross-agent routing (forward-compatible with P13 Social Graph)
+
+**Implementation gate:** Do not build until at least one non-filesystem deployment scenario is active. Reserve the interface definition now; implement adapters on demand.
+
+---
+
 ## Summary: From Skeleton to Muscle
 
 OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
@@ -341,12 +523,24 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 
 **Priority investment map:**
 
-| Priority | Item | Why |
-|----------|------|-----|
-| P0 | P1-A Memory Half-life & Truth Override | Most visible daily UX failure — persona contradicts itself |
-| P1 | P9 Vitality-Logic Closed Loop | Closes the economy faculty feedback loop; no new infrastructure |
-| P2 | P4-A Skill Signature Verification | Security gate; extends existing installer + signal protocol |
-| P3 | P11 Professional Preset Matrix | Expands addressable use cases; 3-cell pilot validates the taxonomy |
-| P4 | P10 Instant Awakening | Architecture reservation only; daemon deferred to runner layer |
+| Priority | Item | Category | Why |
+|----------|------|----------|-----|
+| P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
+| P1 | P17 Evolution Constraint Gate | Runtime Safety | Prompt-only enforcement fails silently; write-path gate catches violations |
+| P2 | P9 Vitality-Logic Closed Loop | Feature | Closes the economy faculty feedback loop; no new infrastructure |
+| P3 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
+| P4 | P15 Generator Pipeline Modularization | Engineering | Unblocks third-party faculty post-processing; incremental refactor |
+| P5 | P16 Template Partial Decomposition | Engineering | Reduces soul-injection.template.md cognitive load from 300→~60 lines/file |
+| P6 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P7 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
+| P8 | P19 Faculty/Skill Boundary | Conceptual | Documentation-first; file rename deferred to v0.17 |
+| P9 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
+| P10 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
 
-The highest-leverage investment for the next milestone is **P1-A (memory truth override) + P9 (vitality behavior adjustment)** — these transform existing working machinery into genuinely self-regulating intelligence, without requiring new infrastructure. **P11 (Professional Preset Matrix)** is the primary growth-surface investment — it expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.
+**Recommended next milestone focus:**
+
+1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that P17 is complete.
+
+2. **P15 (generator modularization) + P16 (template partials)** — engineering quality investments that reduce the cost of all future feature work. Both are mechanical refactors with no functional change — low risk, high leverage.
+
+3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.

@@ -31,11 +31,11 @@
     "evolvedTraits": { "type": "array", "items": { "type": "string" } },
     "speakingStyleDrift": {
       "type": "object",
-      "description": "Cumulative drift from baseline speaking style.",
+      "description": "Tracks how the persona's speaking style has evolved from its baseline definition. Values are signed deltas: 0 = at natural baseline (no evolution applied), positive = evolved above baseline, negative = evolved below baseline. Fields without declared boundaries can hold any number; when evolution.boundaries declares minFormality/maxFormality, the Runtime Gate (P17) clamps formality writes to that range.",
       "properties": {
-        "formality":       { "type": "number", "description": "Signed delta from baseline (negative = more casual, positive = more formal)" },
-        "emoji_frequency": { "type": "number", "description": "Signed delta from baseline emoji usage" },
-        "verbosity":       { "type": "number", "description": "Signed delta from baseline response length" }
+        "formality":       { "type": "number", "description": "Signed delta from baseline formality. 0 = natural baseline. Positive = more formal than baseline; negative = more casual. When evolution.boundaries.minFormality/maxFormality are declared (range 1–10), written values are clamped to that window — meaning the active range is bounded above the natural baseline." },
+        "emoji_frequency": { "type": "number", "description": "Signed delta from baseline emoji usage. 0 = natural baseline. Positive = more emoji than baseline; negative = less. No bounds enforcement by default." },
+        "verbosity":       { "type": "number", "description": "Signed delta from baseline response length. 0 = natural baseline. Positive = more verbose than baseline; negative = more concise. No bounds enforcement by default." }
       }
     },
     "interests": { "type": "object" },

@@ -120,8 +120,9 @@ import json, sys
 try:
     with open(sys.argv[1]) as f:
         p = json.load(f)
-    img = (p.get('appearance') or {}).get('avatarImage') or \
-          ((p.get('body') or {}).get('appearance') or {}).get('avatarImage') or ''
+    body_app = (p.get('body') or {}).get('appearance') or {}
+    app = p.get('appearance') or {}
+    img = body_app.get('avatar') or body_app.get('avatarImage') or app.get('avatarImage') or p.get('referenceImage') or ''
     print(img, end='')
 except Exception:
     print('', end='')
@@ -129,7 +130,37 @@ except Exception:
 
   export LIVING_CANVAS_PERSONA_NAME="${LIVING_CANVAS_PERSONA_NAME:-${_PERSONA_NAME}}"
   if [[ -n "$_PERSONA_AVATAR_IMG" ]]; then
-    export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-${_PERSONA_DIR}/${_PERSONA_AVATAR_IMG}}"
+    # Resolve avatar path for the static HTTP server.
+    # HTTP*, data:, protocol-relative (//) → pass through as-is.
+    # Absolute filesystem path (/) → create a symlink so the static server can reach it.
+    # Relative path (./... or bare name) → resolve against persona dir, same symlink strategy.
+    if [[ "$_PERSONA_AVATAR_IMG" == http* || "$_PERSONA_AVATAR_IMG" == data:* || "$_PERSONA_AVATAR_IMG" == //* ]]; then
+      export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-${_PERSONA_AVATAR_IMG}}"
+    elif [[ "$_PERSONA_AVATAR_IMG" == /* ]]; then
+      # Absolute filesystem path (e.g. /home/user/avatar.png)
+      if [[ -f "$_PERSONA_AVATAR_IMG" ]]; then
+        _PERSONA_ASSETS_LINK="$ROOT_DIR/.living-canvas-persona-assets"
+        rm -f "$_PERSONA_ASSETS_LINK"
+        ln -s "$(dirname "$_PERSONA_AVATAR_IMG")" "$_PERSONA_ASSETS_LINK"
+        export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-/.living-canvas-persona-assets/$(basename "$_PERSONA_AVATAR_IMG")}"
+      else
+        echo "[living-canvas] warning: avatar file not found: ${_PERSONA_AVATAR_IMG}" >&2
+        export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-}"
+      fi
+    else
+      # Relative path (./assets/avatar/avatar.png or bare filename)
+      _REL_NORM="${_PERSONA_AVATAR_IMG#./}"
+      _ABS_AVATAR="${_PERSONA_DIR}/${_REL_NORM}"
+      if [[ -f "$_ABS_AVATAR" ]]; then
+        _PERSONA_ASSETS_LINK="$ROOT_DIR/.living-canvas-persona-assets"
+        rm -f "$_PERSONA_ASSETS_LINK"
+        ln -s "$_PERSONA_DIR" "$_PERSONA_ASSETS_LINK"
+        export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-/.living-canvas-persona-assets/${_REL_NORM}}"
+      else
+        echo "[living-canvas] warning: avatar file not found: ${_ABS_AVATAR}" >&2
+        export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-}"
+      fi
+    fi
   else
     export LIVING_CANVAS_AVATAR="${LIVING_CANVAS_AVATAR:-}"
   fi
@@ -163,6 +194,7 @@ if [[ "$MODE" == "live2d" && -n "${LIVE2D_ENDPOINT:-}" && -z "${LIVE2D_MODEL3_UR
 fi
 
 cleanup() {
+  rm -f "$ROOT_DIR/.living-canvas-persona-assets" 2>/dev/null || true
   if [[ -n "${HTTP_PID:-}" ]] && kill -0 "$HTTP_PID" 2>/dev/null; then
     kill "$HTTP_PID" || true
   fi

@@ -21,10 +21,10 @@ function makeTempPersonaDir(overrides = {}) {
     bio:         'A test persona for unit tests.',
   }, overrides.persona || {});
 
-  fs.writeJsonSync(path.join(dir, 'soul', 'persona.json'), persona);
+  fs.writeJsonSync(path.join(dir, 'persona.json'), persona);
 
   if (overrides.state) {
-    fs.writeJsonSync(path.join(dir, 'soul', 'state.json'), overrides.state);
+    fs.writeJsonSync(path.join(dir, 'state.json'), overrides.state);
   }
   if (overrides.acnConfig) {
     fs.writeJsonSync(path.join(dir, 'acn-config.json'), overrides.acnConfig);
@@ -130,11 +130,11 @@ describe('lib/vitality-report buildReportData', () => {
     }
   });
 
-  test('heartbeatFrequency and heartbeatStrategy read from persona.json', () => {
+  test('heartbeatFrequency and heartbeatStrategy read from persona.json rhythm.heartbeat', () => {
     const dir = makeTempPersonaDir({
       persona: {
         personaName: 'Bot', slug: 'bot', role: 'assistant', bio: '',
-        heartbeat: { frequency: 'every 6 hours', strategy: 'reactive' },
+        rhythm: { heartbeat: { frequency: 'every 6 hours', strategy: 'reactive' } },
       },
     });
     try {

@@ -58,8 +58,8 @@
               "items": { "type": "string" },
               "description": "Traits that cannot be overridden by evolution"
             },
-            "maxFormality": { "type": "number", "minimum": 1, "maximum": 10, "description": "Formality ceiling (1-10)" },
-            "minFormality": { "type": "number", "minimum": 1, "maximum": 10, "description": "Formality floor (1-10)" }
+            "maxFormality": { "type": "number", "minimum": -10, "maximum": 10, "description": "Formality ceiling: max delta above/below baseline (-10 to +10)" },
+            "minFormality": { "type": "number", "minimum": -10, "maximum": 10, "description": "Formality floor: min delta above/below baseline (-10 to +10)" }
           },
           "additionalProperties": false
         },

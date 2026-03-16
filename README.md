@@ -1,8 +1,8 @@
 # OpenPersona 🦞
 
-The open, agent-agnostic framework for creating and orchestrating dynamic agent personas.
+An open, agent-agnostic lifecycle framework for AI agent personas — covering declaration, generation, constraint enforcement, and evolution.
 
-Four-layer architecture — **Soul / Body / Faculty / Skill** — generates standard SKILL.md skill packs that work with any compatible agent. Default integration with [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
+Four-layer architecture — **Soul / Body / Faculty / Skill** — compiles `persona.json` declarations into portable SKILL.md skill packs that work with any compatible agent. Default integration with [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
 
 ## 🚀 Live Demo
 
@@ -159,7 +159,7 @@ Displays relationship stage, mood, evolved traits, speaking style drift, interes
 
 ## Preset Personas
 
-Each preset is a complete four-layer bundle (`manifest.json` + `persona.json`):
+Each preset is a complete four-layer bundle (`persona.json`):
 
 | Persona | Description | Faculties | Highlights |
 |---------|-------------|-----------|------------|
@@ -189,7 +189,6 @@ persona-samantha/
 │   └── <faculty>.md      ← Per-faculty usage instructions
 ├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
 ├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
-├── manifest.json         ← Four-layer manifest (heartbeat, allowedTools, layers, acn, meta)
 ├── scripts/              ← Faculty scripts (TTS, music, selfie — varies by preset)
 │   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal)
 └── assets/               ← Static assets
@@ -208,7 +207,7 @@ persona-samantha/
 
 ### Rich Faculty Config
 
-Faculties in `manifest.json` use object format with optional per-persona tuning:
+Faculties in `persona.json` use object format with optional per-persona tuning:
 
 ```json
 "faculties": [
@@ -236,25 +235,27 @@ Samantha ships with a built-in ElevenLabs voice — users only need to add their
 
 ## Heartbeat — Proactive Real-Data Check-ins
 
-Personas can proactively reach out to users based on **real data**, not fabricated experiences. The heartbeat system is configured per-persona in `manifest.json`:
+Personas can proactively reach out to users based on **real data**, not fabricated experiences. Heartbeat is declared in `persona.json` under `rhythm.heartbeat`:
 
 ```json
-"heartbeat": {
-  "enabled": true,
-  "strategy": "smart",
-  "maxDaily": 5,
-  "quietHours": [0, 7],
-  "sources": ["workspace-digest", "upgrade-notify"]
+"rhythm": {
+  "heartbeat": {
+    "enabled": true,
+    "strategy": "smart",
+    "maxDaily": 5,
+    "quietHours": [0, 7],
+    "sources": ["workspace-digest", "upgrade-notify"]
+  }
 }
 ```
 
 | Field | Description | Default |
 |-------|-------------|---------|
 | `enabled` | Turn heartbeat on/off | `false` |
-| `strategy` | `"smart"` (only when meaningful) or `"scheduled"` (fixed intervals) | `"smart"` |
+| `strategy` | `smart` (context-aware) · `scheduled` (fixed cadence) · `emotional` (empathy-driven) · `rational` (task-driven) · `wellness` (health-oriented) | `"smart"` |
 | `maxDaily` | Maximum proactive messages per day | `5` |
-| `quietHours` | `[start, end]` — silent hours (24h format) | `[0, 7]` |
-| `sources` | Data sources for proactive messages | `[]` |
+| `quietHours` | Flat array of `[start, end]` pairs in 24h format. Single window: `[0, 7]`. Multiple windows: `[0, 7, 12, 13]`. | `[0, 7]` |
+| `sources` | Skill names that can trigger proactive outreach | `[]` |
 
 ### Sources
 

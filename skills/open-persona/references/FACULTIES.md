@@ -21,7 +21,7 @@
 
 ## Rich Faculty Config
 
-Each faculty in manifest.json is an object with optional config:
+Each faculty in persona.json is an object with optional config:
 
 ```json
 { "name": "voice", "provider": "elevenlabs", "voiceId": "...", "stability": 0.4, "similarity_boost": 0.8 }

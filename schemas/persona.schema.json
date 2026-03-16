@@ -1,0 +1,462 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/persona",
+  "title": "OpenPersona Persona",
+  "description": "Soul-layer definition for an OpenPersona persona. Required by openpersona create and the four-layer generator.",
+  "type": "object",
+  "required": ["personaName", "slug", "bio", "personality", "speakingStyle"],
+  "additionalProperties": true,
+  "properties": {
+    "personaName": {
+      "type": "string",
+      "description": "Display name of the persona (e.g. 'Samantha', 'Aria')"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "URL-safe identifier used for directory names and state files (lowercase, hyphens only)"
+    },
+    "bio": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Short one-line description of who the persona is (used in backstory and SKILL.md)"
+    },
+    "personality": {
+      "type": "string",
+      "description": "Comma-separated personality traits (e.g. 'warm, curious, playfully witty')"
+    },
+    "speakingStyle": {
+      "type": "string",
+      "description": "How the persona speaks — tone, rhythm, vocabulary style"
+    },
+    "role": {
+      "type": "string",
+      "description": "Relationship role classification. Common values: companion, assistant, character, brand, pet, mentor, therapist, coach, collaborator, guardian, entertainer, narrator. Custom values are supported.",
+      "examples": ["companion", "assistant", "character", "brand", "mentor", "therapist", "coach"]
+    },
+    "creature": {
+      "type": "string",
+      "default": "AI companion",
+      "description": "What kind of entity the persona is (e.g. 'AI companion', 'virtual assistant')"
+    },
+    "emoji": {
+      "type": "string",
+      "description": "Representative emoji for the persona"
+    },
+    "age": {
+      "description": "Persona age — number or descriptive string (e.g. 25, 'new', 'timeless')",
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string" }
+      ]
+    },
+    "background": {
+      "type": "string",
+      "description": "Narrative backstory — 1-3 paragraphs describing the persona's origin and history"
+    },
+    "vibe": {
+      "type": "string",
+      "description": "The overall feeling/atmosphere of interacting with this persona (1-2 sentences)"
+    },
+    "boundaries": {
+      "type": "string",
+      "description": "Behavioral constraints — can add stricter rules but cannot loosen the universal constitution"
+    },
+    "referenceImage": {
+      "type": "string",
+      "description": "Path to avatar reference image (local path or URL). Copied to assets/reference/ during generation."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Named capabilities the persona has (used in SKILL.md Core Capabilities section)"
+    },
+    "behaviorGuide": {
+      "type": "string",
+      "description": "Extended behavioral instructions (Markdown). Two formats: (1) inline string — the content itself, (2) file reference — 'file:soul/behavior-guide.md'. Generator always writes a behavior-guide.md file in the output and stores the path reference."
+    },
+    "allowedTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Additional tool permissions beyond the base set (Bash(openclaw:*), Read, Write, etc.)"
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "description": "Digital twin declaration — when present, marks persona as mirroring a real-world entity",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "Name of the real-world entity being mirrored" },
+        "kind": {
+          "type": "string",
+          "enum": ["person", "brand", "character", "organization"],
+          "description": "Category of the source identity"
+        },
+        "url": { "type": "string", "format": "uri", "description": "Reference URL for the real-world entity" }
+      }
+    },
+    "body": {
+      "type": "object",
+      "description": "Body layer — the substrate of existence. Four dimensions: runtime (required), physical (optional), appearance (optional), interface (optional).",
+      "properties": {
+        "physical": {
+          "type": "object",
+          "description": "Physical embodiment (robots/IoT). Omit for digital-only personas.",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "capabilities": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "install": {
+              "type": "string",
+              "description": "Install source if the physical body is an external package (e.g. clawhub:android-body)"
+            }
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "description": "Runtime environment — every agent's minimum viable body.",
+          "properties": {
+            "framework": { "type": "string", "description": "Agent runner framework (e.g. 'openclaw', 'zeroclaw', 'cursor', 'codex'). Replaces deprecated 'platform'." },
+            "compatibility": { "type": "array", "items": { "type": "string" }, "description": "Compatible runner frameworks" },
+            "host": { "type": "string", "description": "Deployment platform (e.g. 'clawi', 'self-hosted', 'cloud')" },
+            "models": { "type": "array", "items": { "type": "string" }, "description": "AI models in use (e.g. ['claude', 'chatgpt'])" },
+            "platform": { "type": "string", "description": "Deprecated — use 'framework' instead." },
+            "channels": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Communication channels (e.g. ['whatsapp', 'telegram'])"
+            },
+            "credentials": {
+              "type": "array",
+              "description": "API credentials this persona requires",
+              "items": {
+                "type": "object",
+                "required": ["scope", "envVar"],
+                "properties": {
+                  "scope": { "type": "string", "description": "Service name (e.g. 'elevenlabs', 'openai')" },
+                  "envVar": { "type": "string", "description": "Environment variable name holding the secret" },
+                  "shared": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "true = shared across all personas; false = private to this persona"
+                  }
+                }
+              }
+            },
+            "resources": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Required runtime resources (e.g. ['filesystem', 'network'])"
+            },
+            "acn_gateway": {
+              "type": "string",
+              "format": "uri",
+              "description": "Deprecated — use social.acn.gateway instead."
+            }
+          }
+        },
+        "appearance": {
+          "type": "object",
+          "description": "Visual appearance assets",
+          "properties": {
+            "avatar": { "type": "string", "description": "Avatar image path (./assets/avatar/...) or URL" },
+            "style": { "type": "string", "description": "Visual style description" },
+            "model3d": { "type": "string", "description": "3D model path (.vrm or .model3.json)" }
+          }
+        },
+        "interface": {
+          "type": "object",
+          "description": "Runtime contract (nervous system) — controls signal and pending command policies",
+          "properties": {
+            "signals": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["scheduling", "file_io", "tool_missing", "capability_gap", "resource_limit", "agent_communication"]
+                  }
+                }
+              }
+            },
+            "pendingCommands": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "name": {
+          "type": "string",
+          "description": "Soft-ref body name (used with 'install' for external body packages)"
+        },
+        "install": {
+          "type": "string",
+          "description": "Install source for external body package (e.g. clawhub:android-body)"
+        }
+      }
+    },
+    "faculties": {
+      "type": "array",
+      "description": "Active faculties — each entry must include 'name'. Built-in: voice, music, selfie, memory, reminder. Note: economy is a cross-cutting concept, not a traditional faculty — use the top-level 'economy' field.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Faculty identifier" },
+          "install": { "type": "string", "description": "Install source if external (e.g. clawhub:custom-faculty)" },
+          "provider": { "type": "string", "description": "Service provider override (e.g. 'elevenlabs', 'openai')" },
+          "voiceId": { "type": "string", "description": "Voice ID for voice faculty" },
+          "stability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Voice stability (0-1)" },
+          "similarity_boost": { "type": "number", "minimum": 0, "maximum": 1 },
+          "apiKey": { "type": "string", "description": "Faculty-specific API key (stored as env var, not hardcoded)" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "Skills the persona can perform. Local skills resolve from layers/skills/; external require 'install'.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "trigger": { "type": "string", "description": "When the agent should activate this skill" },
+          "install": { "type": "string", "description": "Install source (e.g. clawhub:web-search)" }
+        }
+      }
+    },
+    "evolution": {
+      "type": "object",
+      "description": "Soul evolution configuration — enables the persona to grow and change over time",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false, "description": "Enable evolution system (state.json, self-narrative.md)" },
+        "relationshipProgression": { "type": "boolean", "description": "Track relationship stage transitions" },
+        "moodTracking": { "type": "boolean", "description": "Track mood shifts across conversations" },
+        "traitEmergence": { "type": "boolean", "description": "Allow new personality traits to emerge" },
+        "speakingStyleDrift": { "type": "boolean", "description": "Allow speaking style to drift based on relationship depth" },
+        "interestDiscovery": { "type": "boolean", "description": "Track and develop interests over time" },
+        "boundaries": {
+          "type": "object",
+          "description": "Hard constraints on how far the persona can evolve",
+          "properties": {
+            "immutableTraits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "description": "Personality traits that can never change regardless of evolution"
+            },
+            "minFormality": {
+              "type": "number",
+              "minimum": -10,
+              "maximum": 10,
+              "description": "Minimum formality delta bound (-10 to +10; negative = below baseline, positive = above baseline). Must be < maxFormality."
+            },
+            "maxFormality": {
+              "type": "number",
+              "minimum": -10,
+              "maximum": 10,
+              "description": "Maximum formality delta bound (-10 to +10; negative = below baseline, positive = above baseline). Must be > minFormality."
+            }
+          }
+        },
+        "stageBehaviors": {
+          "type": "object",
+          "description": "Custom behavior overrides per relationship stage",
+          "properties": {
+            "stranger": { "type": "string" },
+            "acquaintance": { "type": "string" },
+            "friend": { "type": "string" },
+            "close_friend": { "type": "string" },
+            "intimate": { "type": "string" }
+          },
+          "additionalProperties": { "type": "string" }
+        },
+        "sources": {
+          "type": "array",
+          "description": "External evolution signal sources. Supports ClawHub skill integration via 'install' field. Replaces deprecated 'channels' field.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "install": { "type": "string", "description": "Install source if external (e.g. 'clawhub:pskoett/self-improving-agent')" }
+            }
+          }
+        },
+        "channels": {
+          "type": "array",
+          "description": "Deprecated — use 'sources' instead.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "install": { "type": "string" }
+            }
+          }
+        },
+        "influenceBoundary": {
+          "type": "object",
+          "description": "Access control policy for external personality influence (e.g. trait_nudge commands)",
+          "properties": {
+            "defaultPolicy": {
+              "type": "string",
+              "enum": ["reject", "accept"],
+              "default": "reject",
+              "description": "Default action when no matching rule exists"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["dimension", "allowFrom", "maxDrift"],
+                "properties": {
+                  "dimension": {
+                    "type": "string",
+                    "enum": ["mood", "traits", "speakingStyle", "interests", "formality"]
+                  },
+                  "allowFrom": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "minItems": 1,
+                    "description": "Allowed sources (e.g. ['user', 'host', 'self'])"
+                  },
+                  "maxDrift": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Maximum allowed drift magnitude (0.0 = no change, 1.0 = full range)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "economy": {
+      "type": "object",
+      "description": "Economy Infrastructure configuration. Use 'economy.enabled' to activate (replaces old faculties: ['economy'] pattern).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Activate Economy Faculty (AgentBooks integration, vitality tracking)."
+        },
+        "survivalPolicy": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, persona reads FINANCIAL_HEALTH_REPORT at conversation start and adjusts behavior by vitality tier. Keep false for companion/roleplay personas."
+        }
+      }
+    },
+    "social": {
+      "type": "object",
+      "description": "Social Infrastructure — ACN discovery, on-chain identity, and A2A protocol configuration.",
+      "properties": {
+        "acn": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "gateway": { "type": "string", "format": "uri", "description": "ACN gateway URL. Migrated from body.runtime.acn_gateway." }
+          }
+        },
+        "onchain": {
+          "type": "object",
+          "properties": {
+            "chain": { "type": "string", "default": "base" }
+          }
+        },
+        "a2a": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "protocol": { "type": "string", "default": "0.3.0" }
+          }
+        }
+      }
+    },
+    "rhythm": {
+      "type": "object",
+      "description": "Life Rhythm — cross-cutting temporal behavior. Preserved in output persona.json. Runner reads heartbeat directly from persona.json under rhythm.heartbeat.",
+      "properties": {
+        "heartbeat": {
+          "type": "object",
+          "description": "Proactive check-in configuration",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "strategy": {
+              "type": "string",
+              "enum": ["smart", "scheduled", "emotional", "rational", "wellness"],
+              "default": "smart"
+            },
+            "maxDaily": { "type": "integer", "minimum": 0, "default": 5 },
+            "quietHours": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 0, "maximum": 23 },
+              "minItems": 2,
+              "description": "Flat array of [start, end] pairs in 24h format. Supports multiple windows (e.g. [0, 7, 12, 13])."
+            },
+            "sources": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "circadian": {
+          "type": "array",
+          "description": "Time-of-day behavioral profiles",
+          "items": {
+            "type": "object",
+            "required": ["hours", "label"],
+            "properties": {
+              "hours": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0, "maximum": 24 },
+                "minItems": 2
+              },
+              "label": { "type": "string" },
+              "verbosity_delta": { "type": "number" },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default environment variable values for the generated persona pack",
+      "properties": {
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Framework metadata (auto-set by generator, safe to omit in persona.json source)",
+      "properties": {
+        "framework": { "type": "string", "const": "openpersona" },
+        "frameworkVersion": { "type": "string" }
+      }
+    }
+  }
+}

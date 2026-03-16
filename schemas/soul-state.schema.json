@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/soul-state",
+  "title": "OpenPersona Soul State",
+  "description": "Cross-conversation evolution state persisted in soul/state.json. Written by state-sync.js; read at conversation start to restore mood, relationship, and evolved traits.",
+  "type": "object",
+  "required": ["$schema", "version", "personaSlug", "createdAt", "relationship", "mood"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "openpersona/soul-state"
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version (semver). Immutable after creation."
+    },
+    "personaSlug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Slug of the persona this state belongs to. Immutable after creation."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of initial state creation. Immutable after creation."
+    },
+    "lastUpdatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the most recent write."
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["stage"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": ["stranger", "acquaintance", "friend", "close_friend", "intimate"],
+          "description": "Current relationship stage between persona and user."
+        },
+        "stageHistory": {
+          "type": "array",
+          "description": "History of stage transitions."
+        },
+        "interactionCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "firstInteraction": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "lastInteraction": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "mood": {
+      "type": "object",
+      "required": ["current", "intensity"],
+      "properties": {
+        "current": {
+          "type": "string",
+          "description": "Current mood label (e.g. 'happy', 'reflective', 'anxious')."
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mood intensity between 0 (minimal) and 1 (maximal)."
+        },
+        "baseline": {
+          "type": "string",
+          "description": "Resting mood derived from the first personality trait."
+        }
+      }
+    },
+    "evolvedTraits": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Traits that emerged or strengthened through interactions."
+    },
+    "speakingStyleDrift": {
+      "type": "object",
+      "properties": {
+        "formality": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Drift from baseline formality (-1 = much more casual, +1 = much more formal)."
+        },
+        "emoji_frequency": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "verbosity": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        }
+      }
+    },
+    "interests": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Map of interest label → engagement score."
+    },
+    "milestones": {
+      "type": "array",
+      "description": "Significant relationship or growth milestones."
+    },
+    "pendingCommands": {
+      "type": "array",
+      "description": "Host-queued async instructions to process at next conversation start.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Command type: capability_unlock, context_inject, trait_nudge, relationship_update, system_message, or custom."
+          },
+          "payload": { "type": "object" },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "stateHistory": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "Rolling snapshots of previous states (up to 10). Excludes eventLog and pendingCommands."
+    },
+    "eventLog": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "Append-only log of significant events (capped at 50).",
+      "items": {
+        "type": "object",
+        "required": ["type", "trigger", "delta", "source"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "relationship_signal",
+              "mood_shift",
+              "trait_emergence",
+              "interest_discovery",
+              "milestone",
+              "speaking_style_drift"
+            ]
+          },
+          "trigger": {
+            "type": "string",
+            "description": "One-sentence description of what triggered the event."
+          },
+          "delta": {
+            "type": "string",
+            "description": "What changed as a result."
+          },
+          "source": {
+            "type": "string",
+            "description": "Attribution (e.g. 'conversation', 'host')."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

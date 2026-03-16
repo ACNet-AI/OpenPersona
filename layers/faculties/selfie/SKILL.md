@@ -16,7 +16,7 @@ Generate selfie images using xAI's Grok Imagine model and optionally send them t
 
 Check for a reference image in this order:
 
-1. Local file: `~/.openclaw/skills/persona-{{slug}}/assets/reference.png`
+1. Local file: `assets/reference/avatar.png` (relative to your skill pack root)
 2. `referenceImage` URL from persona.json
 
 **If a reference image exists → use Edit Mode** (consistent appearance based on reference)

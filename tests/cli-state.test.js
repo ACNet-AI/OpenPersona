@@ -112,7 +112,7 @@ describe('openpersona state commands', () => {
     const writeResult = cli(['state', 'write', SLUG, patch], env());
     assert.strictEqual(writeResult.status, 0, 'write must succeed even with immutable field attempt');
 
-    const statePath = path.join(skillDir, 'soul', 'state.json');
+    const statePath = path.join(skillDir, 'state.json');
     const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
     assert.strictEqual(state.personaSlug, SLUG, 'personaSlug must not be overwritten');
     assert.strictEqual(state.version, '1.0.0', 'version must not be overwritten');
@@ -136,7 +136,7 @@ describe('openpersona state commands', () => {
     assert.ok(result.stderr.includes('Invalid signal type'), 'error must mention invalid type');
   });
 
-  it('state read returns exists:false for persona without evolution', async () => {
+  it('state read returns exists:true for all personas (state.json is unconditional)', async () => {
     const noEvoSlug = 'cli-no-evo-test';
     const noEvoPersona = {
       personaName: 'NoEvoTest',
@@ -153,7 +153,7 @@ describe('openpersona state commands', () => {
     const result = cli(['state', 'read', noEvoSlug], env());
     assert.strictEqual(result.status, 0, `read failed: ${result.stderr}`);
     const out = JSON.parse(result.stdout);
-    assert.strictEqual(out.exists, false, 'exists must be false for persona without evolution');
+    assert.strictEqual(out.exists, true, 'state.json is generated for all personas — exists must always be true');
   });
 
   it('state read fails gracefully for unknown slug', () => {
@@ -204,7 +204,7 @@ describe('openpersona update command — state preservation', () => {
     await fs.remove(stagingDir);
 
     // Inject meaningful evolution state before update
-    const statePath = path.join(fakeInstallDir, 'soul', 'state.json');
+    const statePath = path.join(fakeInstallDir, 'state.json');
     const state = JSON.parse(await fs.readFile(statePath, 'utf-8'));
     state.mood.current = 'nostalgic';
     state.relationship.interactionCount = 42;
@@ -221,14 +221,14 @@ describe('openpersona update command — state preservation', () => {
     await fs.remove(TMP_DIR);
   });
 
-  it('update preserves soul/state.json evolution data', async () => {
+  it('update preserves state.json evolution data', async () => {
     const updateResult = spawnSync(process.execPath, [CLI, 'update', SLUG], {
       encoding: 'utf-8',
       env: { ...process.env, OPENPERSONA_HOME: fakeOpHome },
     });
     assert.strictEqual(updateResult.status, 0, `update failed:\n${updateResult.stderr}`);
 
-    const statePath = path.join(fakeInstallDir, 'soul', 'state.json');
+    const statePath = path.join(fakeInstallDir, 'state.json');
     const state = JSON.parse(await fs.readFile(statePath, 'utf-8'));
     assert.strictEqual(state.mood.current, 'nostalgic', 'mood.current must be preserved after update');
     assert.strictEqual(state.relationship.interactionCount, 42, 'interactionCount must be preserved after update');

@@ -21,10 +21,10 @@ function makeTempPersonaDir(overrides = {}) {
     bio:         'A test persona for unit tests.',
   }, overrides.persona || {});
 
-  fs.writeJsonSync(path.join(dir, 'soul', 'persona.json'), persona);
+  fs.writeJsonSync(path.join(dir, 'persona.json'), persona);
 
   if (overrides.state) {
-    fs.writeJsonSync(path.join(dir, 'soul', 'state.json'), overrides.state);
+    fs.writeJsonSync(path.join(dir, 'state.json'), overrides.state);
   }
   if (overrides.agentCard) {
     fs.writeJsonSync(path.join(dir, 'agent-card.json'), overrides.agentCard);
@@ -32,10 +32,6 @@ function makeTempPersonaDir(overrides = {}) {
   if (overrides.acnConfig) {
     fs.writeJsonSync(path.join(dir, 'acn-config.json'), overrides.acnConfig);
   }
-  if (overrides.manifest) {
-    fs.writeJsonSync(path.join(dir, 'manifest.json'), overrides.manifest);
-  }
-
   return dir;
 }
 
@@ -181,7 +177,7 @@ describe('lib/canvas-generator buildCanvasData — missing files graceful', () =
     }
   });
 
-  test('no manifest.json → frameworkVersion from package.json', () => {
+  test('frameworkVersion falls back to package.json when not in persona.json meta', () => {
     const dir = makeTempPersonaDir();
     try {
       const data = buildCanvasData(dir, 'testbot');
@@ -364,12 +360,12 @@ describe('lib/canvas-generator buildCanvasData — body layer', () => {
     }
   });
 
-  test('heartbeat.enabled true → heartbeatEnabled true', () => {
+  test('rhythm.heartbeat.enabled true → heartbeatEnabled true', () => {
     const dir = makeTempPersonaDir({
       persona: {
         personaName: 'Bot', slug: 'bot', role: 'assistant', bio: '',
         body: { runtime: { platform: 'openclaw' } },
-        heartbeat: { enabled: true, strategy: 'smart' },
+        rhythm: { heartbeat: { enabled: true, strategy: 'smart' } },
       },
     });
     try {

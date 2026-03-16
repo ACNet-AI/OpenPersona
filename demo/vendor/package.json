@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "live2d-widget": "^3.1.4",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^6.5.10"
+  }
+}

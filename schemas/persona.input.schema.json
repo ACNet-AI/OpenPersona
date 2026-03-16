@@ -1,0 +1,528 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/persona-input",
+  "title": "OpenPersona Persona Input",
+  "description": "Creator-facing input schema for persona.json. Strict at root level (additionalProperties: false). Nested objects are open (additionalProperties: true) to allow arbitrary faculty configs, skill definitions, and custom extensions.",
+  "type": "object",
+  "required": ["soul"],
+  "additionalProperties": false,
+  "properties": {
+    "soul": {
+      "type": "object",
+      "description": "Soul layer container — identity, aesthetic character traits, and behavioral character. Symmetric with the body: {} container.",
+      "required": ["identity", "character"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "Core identity: who the persona IS. Required fields define the minimum viable persona.",
+          "required": ["personaName", "slug", "bio"],
+          "additionalProperties": true,
+          "properties": {
+            "personaName": {
+              "type": "string",
+              "description": "Display name (e.g. 'Samantha', 'Marcus')"
+            },
+            "slug": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$",
+              "description": "URL-safe identifier — lowercase, hyphens only (e.g. 'samantha', 'stoic-mentor')"
+            },
+            "role": {
+              "type": "string",
+              "description": "Relationship role. Common values: companion, assistant, character, brand, pet, mentor, therapist, coach, collaborator, guardian, entertainer, narrator. Custom values supported.",
+              "examples": ["companion", "assistant", "character", "mentor"]
+            },
+            "bio": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Short one-line description of who the persona is"
+            },
+            "sourceIdentity": {
+              "type": "object",
+              "description": "Digital twin declaration — marks persona as mirroring a real-world entity",
+              "required": ["name"],
+              "additionalProperties": true,
+              "properties": {
+                "name": { "type": "string" },
+                "kind": {
+                  "type": "string",
+                  "enum": ["person", "brand", "character", "organization", "historical-figure"],
+                  "description": "Category of the source identity"
+                },
+                "url": { "type": "string", "format": "uri" }
+              }
+            }
+          }
+        },
+        "aesthetic": {
+          "type": "object",
+          "description": "Aesthetic character traits — conceptual / declarative (creature type, visual vibe, emoji). Distinct from body.appearance which holds actual asset files.",
+          "additionalProperties": true,
+          "properties": {
+            "creature": {
+              "type": "string",
+              "description": "Entity type description (e.g. 'AI companion', 'virtual assistant', 'digital twin')"
+            },
+            "emoji": {
+              "type": "string",
+              "description": "Representative emoji for the persona"
+            },
+            "age": {
+              "description": "Persona age — number or descriptive string (e.g. 25, 'new', 'timeless', 'ancient')",
+              "oneOf": [
+                { "type": "integer", "minimum": 0 },
+                { "type": "string" }
+              ]
+            },
+            "vibe": {
+              "type": "string",
+              "description": "The overall feeling of interacting with this persona (1-2 sentences)"
+            },
+            "referenceImage": {
+              "type": "string",
+              "description": "Path to avatar reference image (local path or URL). Copied to assets/reference/ during generation."
+            }
+          }
+        },
+        "character": {
+          "type": "object",
+          "description": "Behavioral character — personality traits, speaking style, constraints, and behavioral guide.",
+          "required": ["personality", "speakingStyle"],
+          "additionalProperties": true,
+          "properties": {
+            "personality": {
+              "type": "string",
+              "description": "Comma-separated personality traits (e.g. 'warm, curious, playfully witty')"
+            },
+            "speakingStyle": {
+              "type": "string",
+              "description": "How the persona speaks — tone, rhythm, vocabulary style"
+            },
+            "boundaries": {
+              "type": "string",
+              "description": "Behavioral constraints — can add stricter rules but cannot loosen the universal constitution"
+            },
+            "background": {
+              "type": "string",
+              "description": "Narrative backstory — 1-3 paragraphs"
+            },
+            "behaviorGuide": {
+              "type": "string",
+              "description": "Extended behavioral instructions (Markdown). Two formats: (1) inline string, (2) file reference 'file:soul/behavior-guide.md'. Long guides (>1000 chars) should use the file format for readability."
+            },
+            "capabilities": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Named capabilities listed in SKILL.md Core Capabilities section"
+            }
+          }
+        }
+      }
+    },
+
+    "body": {
+      "type": "object",
+      "description": "Body layer — the substrate of existence. Four dimensions: runtime (required), physical (optional), appearance (optional), interface (optional).",
+      "additionalProperties": true,
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "description": "Runtime environment — every agent's minimum viable body.",
+          "additionalProperties": true,
+          "properties": {
+            "framework": {
+              "type": "string",
+              "description": "Agent runner framework (e.g. 'openclaw', 'zeroclaw', 'cursor', 'codex', 'any'). Replaces deprecated 'platform' field."
+            },
+            "compatibility": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Other frameworks this persona is compatible with (e.g. ['zeroclaw', 'cursor'])"
+            },
+            "host": {
+              "type": "string",
+              "description": "Deployment platform where the agent runs (e.g. 'clawi', 'self-hosted', 'cloud', 'local', 'desktop')"
+            },
+            "models": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "AI models this persona is intended to use (e.g. ['claude', 'chatgpt', 'gemini'])"
+            },
+            "channels": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Communication channels (e.g. ['whatsapp', 'telegram', 'slack'])"
+            },
+            "credentials": {
+              "type": "array",
+              "description": "API credentials this persona requires",
+              "items": {
+                "type": "object",
+                "required": ["scope", "envVar"],
+                "additionalProperties": true,
+                "properties": {
+                  "scope": { "type": "string" },
+                  "envVar": { "type": "string" },
+                  "shared": { "type": "boolean", "default": false }
+                }
+              }
+            },
+            "resources": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Required runtime resources (e.g. ['filesystem', 'network'])"
+            }
+          }
+        },
+        "physical": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Physical embodiment (robots/IoT). Omit for digital-only personas.",
+          "properties": {
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "capabilities": { "type": "array", "items": { "type": "string" } },
+            "install": { "type": "string" }
+          }
+        },
+        "appearance": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Visual appearance asset files (avatar images, 3D models). For conceptual aesthetic traits, see soul.aesthetic.",
+          "properties": {
+            "avatar": { "type": "string" },
+            "style": { "type": "string" },
+            "model3d": { "type": "string" }
+          }
+        },
+        "interface": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Runtime contract (nervous system) — signal and pending command policies",
+          "properties": {
+            "signals": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "pendingCommands": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "allowedTypes": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "faculties": {
+      "type": "array",
+      "description": "Active capability faculties. Each entry must include 'name'. All faculty-specific config (voiceId, provider, etc.) is allowed via additionalProperties. Note: 'economy' is NOT a traditional faculty — use the top-level 'economy' field instead.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Faculty identifier (e.g. 'voice', 'memory', 'selfie', 'reminder', 'music', or custom)"
+          },
+          "install": {
+            "type": "string",
+            "description": "Install source for external faculties (e.g. 'clawhub:vision-faculty')"
+          }
+        }
+      }
+    },
+
+    "skills": {
+      "type": "array",
+      "description": "On-demand skills. Local skills resolve from layers/skills/; external require 'install'.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "trigger": { "type": "string" },
+          "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "External install source: 'clawhub:<slug>' or 'skillssh:<owner/repo>'" }
+        }
+      }
+    },
+
+    "evolution": {
+      "type": "object",
+      "description": "Growth and state evolution configuration — the creator-configurable part of the Lifecycle Protocol. The runtime parts (body.interface, scripts/state-sync.js) are auto-generated.",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "relationshipProgression": { "type": "boolean" },
+        "moodTracking": { "type": "boolean" },
+        "traitEmergence": { "type": "boolean" },
+        "speakingStyleDrift": { "type": "boolean" },
+        "interestDiscovery": { "type": "boolean" },
+        "boundaries": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "immutableTraits": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
+            "minFormality": { "type": "number", "minimum": -10, "maximum": 10 },
+            "maxFormality": { "type": "number", "minimum": -10, "maximum": 10 }
+          }
+        },
+        "stageBehaviors": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "properties": {
+            "stranger": { "type": "string" },
+            "acquaintance": { "type": "string" },
+            "friend": { "type": "string" },
+            "close_friend": { "type": "string" },
+            "intimate": { "type": "string" }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "description": "External evolution signal sources. install field supports ClawHub skill integration (e.g. 'clawhub:pskoett/self-improving-agent'). Replaces deprecated 'channels' field.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "install": { "type": "string", "description": "Install source — generator detects as soft-ref if present" }
+            }
+          }
+        },
+        "influenceBoundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "defaultPolicy": { "type": "string", "enum": ["reject", "accept"], "default": "reject" },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["dimension", "allowFrom", "maxDrift"],
+                "additionalProperties": true,
+                "properties": {
+                  "dimension": { "type": "string", "enum": ["mood", "traits", "speakingStyle", "interests", "formality"] },
+                  "allowFrom": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                  "maxDrift": { "type": "number", "minimum": 0, "maximum": 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "economy": {
+      "type": "object",
+      "description": "Economy Infrastructure — cross-cutting concept, NOT a traditional Faculty. Activates the Economy Faculty and its Vitality tracking. Keep survivalPolicy false for companion/roleplay personas to prevent financial concerns breaking immersion.",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Activate Economy Faculty (AgentBooks integration, vitality tracking). Replaces old faculties: [{ name: 'economy' }] activation."
+        },
+        "survivalPolicy": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, persona reads FINANCIAL_HEALTH_REPORT at conversation start and adjusts behavior by vitality tier."
+        }
+      }
+    },
+
+    "vitality": {
+      "type": "object",
+      "description": "Vitality multi-dimension aggregation config. Schema structure is ready; financial dimension is implemented (activated by economy.enabled). Other dimensions (memory, social, reputation) are reserved for future implementation. Dimension weights control contribution to the aggregate Vitality score.",
+      "additionalProperties": true,
+      "properties": {
+        "dimensions": {
+          "type": "object",
+          "description": "Per-dimension configuration. Each dimension is activated automatically when its backing feature is enabled — no manual 'enabled' flag needed.",
+          "additionalProperties": true,
+          "properties": {
+            "financial": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Financial health dimension. Activated by economy.enabled. Backed by AgentBooks.",
+              "properties": {
+                "weight": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 }
+              }
+            },
+            "memory": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Memory health dimension (future). Activated by memory faculty.",
+              "properties": {
+                "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            },
+            "social": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Social presence dimension (future). Activated by social.acn.enabled.",
+              "properties": {
+                "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            },
+            "reputation": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Reputation dimension (reserved for future).",
+              "properties": {
+                "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "social": {
+      "type": "object",
+      "description": "Social Infrastructure — three independent sub-systems for agent discovery and interoperability. All sub-systems are enabled by default; set enabled: false to opt out.",
+      "additionalProperties": true,
+      "properties": {
+        "acn": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "ACN (Agent Communication Network) — off-chain agent discovery and HTTP registration.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Generate acn-config.json and emit ACN wallet address"
+            },
+            "gateway": {
+              "type": "string",
+              "format": "uri",
+              "description": "ACN gateway URL. Migrated from body.runtime.acn_gateway."
+            }
+          }
+        },
+        "onchain": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "On-chain identity via ERC-8004. Embedded in acn-config.json — only generated when social.acn.enabled is true.",
+          "properties": {
+            "chain": {
+              "type": "string",
+              "default": "base",
+              "description": "Target blockchain (default: 'base'). Maps to acn-config.json → onchain.erc8004.chain."
+            }
+          }
+        },
+        "a2a": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "A2A (Agent-to-Agent) protocol — generates agent-card.json for cross-agent interoperability.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Generate agent-card.json"
+            },
+            "protocol": {
+              "type": "string",
+              "default": "0.3.0",
+              "description": "A2A protocol version (default: '0.3.0')"
+            }
+          }
+        }
+      }
+    },
+
+    "rhythm": {
+      "type": "object",
+      "description": "Life Rhythm — cross-cutting temporal behavior. Declares how the persona's activity and expression vary over time: proactive outreach cadence (heartbeat) and time-of-day behavioral modulation (circadian). Both dimensions cross Soul (strategy/character) and Body (runtime parameters).",
+      "additionalProperties": true,
+      "properties": {
+        "heartbeat": {
+          "type": "object",
+          "description": "Proactive check-in configuration — whether and how the persona initiates contact with the user.",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether proactive check-ins are active"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": ["smart", "scheduled", "emotional", "rational", "wellness"],
+              "default": "smart",
+              "description": "Outreach strategy: smart (context-aware), scheduled (fixed cadence), emotional (empathy-driven), rational (task-driven), wellness (health-oriented)"
+            },
+            "maxDaily": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 5,
+              "description": "Maximum proactive outreaches per day"
+            },
+            "quietHours": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 0, "maximum": 23 },
+              "minItems": 2,
+              "description": "Flat array of [start, end] pairs in 24h format — supports multiple quiet windows. Single window: [0, 7]. Multiple windows: [0, 7, 12, 13] (overnight + noon). Must contain an even number of integers."
+            },
+            "sources": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Skill names that can trigger proactive outreach (e.g. ['workspace-digest', 'context-aware'])"
+            }
+          }
+        },
+        "circadian": {
+          "type": "array",
+          "description": "Time-of-day behavioral profiles — how voice, verbosity, and tone modulate based on hour range. Consumed by the runner at conversation start.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["hours", "label"],
+            "properties": {
+              "hours": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 0, "maximum": 24 },
+                "minItems": 2,
+                "description": "Active hour range(s) in 24h format. Flat array of [start, end] pairs — supports wraparound via multiple pairs (e.g. [22, 24, 0, 7] for night). Must contain an even number of integers."
+              },
+              "label": { "type": "string", "description": "Profile name (e.g. 'night', 'morning', 'daytime', 'evening')" },
+              "verbosity_delta": { "type": "number", "description": "Verbosity adjustment (+/- from baseline)" },
+              "note": { "type": "string", "description": "Human-readable explanation of this profile" }
+            }
+          }
+        }
+      }
+    },
+
+    "additionalAllowedTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tool permissions granted beyond the base set. Merged with faculty-contributed tools and written to SKILL.md frontmatter allowed-tools. Canonical source of truth."
+    },
+
+    "version": {
+      "type": "string",
+      "description": "Persona pack version (semver). Defaults to '0.1.0' if omitted.",
+      "default": "0.1.0"
+    },
+
+    "author": {
+      "type": "string",
+      "description": "Persona pack author. Defaults to 'openpersona' if omitted."
+    }
+  }
+}

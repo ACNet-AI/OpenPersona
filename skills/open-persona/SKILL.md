@@ -4,13 +4,13 @@ description: >
   Meta-skill for building and managing agent persona skill packs.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to ClawHub.
-version: "0.16.1"
+version: "0.19.0"
 author: openpersona
 repository: https://github.com/acnlabs/OpenPersona
 homepage: https://github.com/acnlabs/OpenPersona
 tags: [persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw]
 allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
-compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) requires OpenClaw.
+compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) defaults to OpenClaw.
 metadata:
   clawdbot:
     emoji: "🧑"
@@ -57,7 +57,6 @@ persona-<slug>/
 │   └── <faculty>.md        ← Per-faculty usage instructions
 ├── agent-card.json         ← A2A Agent Card (protocol v0.3.0)
 ├── acn-config.json         ← ACN registration config (runtime fills owner/endpoint)
-├── manifest.json           ← Four-layer manifest + ACN refs
 ├── scripts/
 │   └── state-sync.js       ← Runtime state bridge (read / write / signal)
 └── assets/                 ← Static assets (per Agent Skills spec)
@@ -66,13 +65,7 @@ persona-<slug>/
     └── templates/          ← Document/config templates (optional)
 ```
 
-- **`manifest.json`** — Four-layer manifest declaring what the persona uses:
-  - `layers.soul` — Path to persona.json (`./soul/persona.json`)
-  - `layers.body` — Substrate of existence: `runtime` (REQUIRED — platform/channels/credentials/resources), `physical` (optional — robots/IoT), `appearance` (optional — avatar/3D model), `interface` (optional — runtime contract / nervous system; declares signal policy and command handling rules; schema field `body.interface` in `persona.json`; auto-implemented by `scripts/state-sync.js` for all personas)
-  - `layers.faculties` — Array of faculty objects: `[{ "name": "voice", "provider": "elevenlabs", ... }]`
-  - `layers.skills` — Array of skill objects: local definitions (resolved from `layers/skills/`), inline declarations, or external via `install` field
-
-- **`soul/persona.json`** — Pure soul definition (personality, speaking style, vibe, boundaries, behaviorGuide)
+- **`persona.json`** — Complete persona declaration: soul (identity, aesthetic, character), body, faculties, skills, and all cross-cutting concepts (evolution, economy, vitality, social, rhythm)
 
 ## Available Presets
 
@@ -105,10 +98,11 @@ When the user wants to create a persona, gather this information through natural
 
 **The `behaviorGuide` field** is optional but powerful. Use markdown to write domain-specific behavior instructions that go directly into the generated SKILL.md.
 
-**Cross-layer (manifest.json):**
-- **Faculties:** Which faculties to enable — use object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
-- **Skills:** Local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
-- **Body:** Substrate of existence — three dimensions: `runtime` (REQUIRED for all agents — the minimum viable body: platform, channels, credentials, resources), `physical` (optional — robots/IoT), `appearance` (optional — avatar, 3D model). Body is never null; every agent has at least a runtime body.
+**Cross-layer (persona.json — P20: all layers in one file):**
+- **Faculties:** `faculties` array — object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "music" }]`
+- **Skills:** `skills` array — local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
+- **Body:** `body` object — three dimensions: `runtime` (REQUIRED — minimum viable body: `framework`, `channels`, `credentials`, `resources`), `physical` (optional — robots/IoT), `appearance` (optional — avatar, 3D model)
+- **Tools:** `additionalAllowedTools` array — extra tool permissions beyond what faculties contribute automatically
 
 **Soft References (`install` field):** Skills, faculties, and body entries can declare an `install` field (e.g., `"install": "clawhub:deep-research"`) to reference capabilities not yet available locally. The generator treats these as "soft references" — they won't crash generation, and the persona will be aware of these dormant capabilities. This enables graceful degradation: the persona acknowledges what it *would* do and explains that the capability needs activation.
 
@@ -126,7 +120,7 @@ After understanding the persona's purpose, search for relevant skills:
 3. Search ClawHub: `npx clawhub@latest search "<keywords>"`
 4. Search skills.sh: fetch `https://skills.sh/api/search?q=<keywords>`
 5. Present the top results to the user with name, description, and install count
-6. Add selected skills to `layers.skills` as objects: `{ "name": "...", "description": "..." }` for local/inline, or `{ "name": "...", "install": "clawhub:<slug>" }` for external
+6. Add selected skills to `skills` array in `persona.json` as objects: `{ "name": "...", "description": "..." }` for local/inline, or `{ "name": "...", "install": "clawhub:<slug>" }` for external
 
 ## Creating Custom Skills
 
@@ -178,6 +172,8 @@ openpersona state signal <slug> <type> '[payload-json]'
 
 **Signal types**: `capability_gap` | `tool_missing` | `scheduling` | `file_io` | `resource_limit` | `agent_communication`
 
+Signals are written to a feedback directory resolved from the host's home path (framework-agnostic — works with OpenClaw, Cursor, Claude Code, Codex, or any custom runner). See `references/SIGNAL-PROTOCOL.md` for the full host-side contract and integration guide.
+
 These commands resolve the persona directory automatically (registry lookup → fallback to `~/.openclaw/skills/persona-<slug>/`) and delegate to `scripts/state-sync.js` inside the persona pack. Works from any directory.
 
 ## Publishing to ClawHub
@@ -195,7 +191,7 @@ The generator injects a unified **Self-Awareness** section into every persona's 
 
 2. **Capabilities** (conditional) — When skills, faculties, or body declare an `install` field for a dependency not available locally, the generator classifies them as "soft references" and injects dormant capability awareness with graceful degradation guidance. Also appears in `SKILL.md` as "Expected Capabilities" with install sources.
 
-3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a bidirectional demand protocol that lets the persona request capabilities from its host environment. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
+3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a runner-agnostic, file-based bidirectional contract that lets the persona request capabilities from its host. The persona emits signals to a feedback directory resolved from the host's home path; any compatible host (OpenClaw, Cursor, Claude Code, Codex, custom runner) can implement the server side and respond. For host implementation details and the full schema, see `references/SIGNAL-PROTOCOL.md`. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
 
 4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies evolved traits, speaking style drift, interests, and mood, and respects hard constraints (`immutableTraits`, formality bounds). If evolution channels are declared, the persona is aware of its dormant channels and can request activation via the Signal Protocol. If `influenceBoundary` is declared, the persona processes external `persona_influence` requests against the access control rules and retains full autonomy over acceptance.
 
@@ -208,7 +204,7 @@ Soul evolution is a native Soul layer feature (not a faculty). Enable it via `ev
 **Evolution Boundaries** — Governance constraints validated at generation time:
 
 - `evolution.boundaries.immutableTraits` — Array of non-empty strings (max 100 chars each) that evolution cannot modify
-- `evolution.boundaries.minFormality` / `maxFormality` — Numeric bounds (1–10) constraining speaking style drift; `minFormality` must be less than `maxFormality`
+- `evolution.boundaries.minFormality` / `maxFormality` — Numeric bounds (-10 to +10) constraining `speakingStyleDrift.formality` writes; both values are signed deltas from baseline (0 = natural baseline, positive = more formal, negative = more casual); `minFormality` must be less than `maxFormality`
 
 Invalid boundary configurations are rejected by the generator with descriptive error messages.
 
@@ -250,7 +246,13 @@ Channels are declared at generation time, activated at runtime by the host. The 
 
 ## Economy & Vitality
 
-The `economy` Faculty (dimension: `cognition`) gives a persona a real financial ledger backed by [AgentBooks](https://github.com/acnlabs/agentbooks). Enable it by adding `"economy"` to `faculties` in `persona.json`.
+The Economy Infrastructure gives a persona a real financial ledger backed by [AgentBooks](https://github.com/acnlabs/agentbooks). It is a top-level cross-cutting field — **not** a traditional faculty. Enable it via the `economy` field in `persona.json`:
+
+```json
+"economy": { "enabled": true, "survivalPolicy": false }
+```
+
+`survivalPolicy: false` (default) — persona tracks costs silently; financial concerns never surface to the user (correct for companions and roleplay personas). Set `true` for autonomous economic agents that should adapt behavior based on vitality tier.
 
 **Financial Health Score (FHS)** — 0–1 composite score mapped to tiers:
 
@@ -286,8 +288,6 @@ Every generated persona automatically includes:
 
 - **`agent-card.json`** — A2A Agent Card (protocol v0.3.0): `name`, `description`, `version`, `url` (`<RUNTIME_ENDPOINT>` placeholder), faculties and skills mapped to `skills[]`
 - **`acn-config.json`** — ACN registration config: `owner` and `endpoint` are runtime placeholders, `skills` extracted from agent-card, `subnet_ids: ["public"]`; also includes `wallet_address` (deterministic EVM address from slug) and `onchain.erc8004` section for Base mainnet ERC-8004 on-chain identity registration via `npx @agentplanet/acn register-onchain`
-- **`manifest.json`** — includes `acn.agentCard` and `acn.registerConfig` references
-
 The host (e.g. OpenClaw) fills in `<RUNTIME_ENDPOINT>` and `<RUNTIME_OWNER>` at deployment time, or you can register directly using the built-in CLI command:
 
 ```bash
@@ -318,7 +318,7 @@ Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) only whe
 ## Security & Privacy
 
 - **Local only by default**: Persona creation, state sync, and evolution run locally. No data leaves the machine unless the user explicitly publishes to ClawHub or registers with ACN.
-- **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) are stored in `~/.openclaw/credentials/` or environment. Never embedded in generated files.
+- **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) are stored in the host's credential directory (e.g. `~/.openclaw/credentials/` on OpenClaw) or environment variables. Never embedded in generated files.
 - **Search**: `npx clawhub search` sends the search query to ClawHub; no conversation or persona content is transmitted.
 - **Publish**: User-initiated; sends persona pack contents to ClawHub registry.
 
@@ -338,5 +338,6 @@ For detailed reference material, see the `references/` directory:
 - **`references/AVATAR.md`** — Avatar Faculty integration boundary, provider model, and fallback contract
 - **`references/HEARTBEAT.md`** — Proactive real-data check-in system
 - **`references/ECONOMY.md`** — Economy Faculty, FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
+- **`references/SIGNAL-PROTOCOL.md`** — Host-side Signal Protocol implementation guide: file schemas, signal types, OpenClaw plugin pattern, and co-evolution feedback loop
 - **[ACN SKILL.md](https://github.com/acnlabs/ACN/blob/main/skills/acn/SKILL.md)** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity (official, always up-to-date)
 - **`references/CONTRIBUTE.md`** — Persona Harvest community contribution workflow

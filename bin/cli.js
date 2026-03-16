@@ -18,15 +18,20 @@ const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/contributor');
 const { switchPersona, listPersonas } = require('../lib/switcher');
 const { registerWithAcn } = require('../lib/registrar');
-const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry } = require('../lib/utils');
+const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry, shellEscape } = require('../lib/utils');
+const { resolvePersonaDir, runStateSyncCommand } = require('../lib/state-runner');
+const { forkPersona } = require('../lib/forker');
+const { exportPersona, importPersona } = require('../lib/porter');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
 
+const { version: CLI_VERSION } = require('../package.json');
+
 program
   .name('openpersona')
   .description('OpenPersona - Create, manage, and orchestrate agent personas')
-  .version('0.16.1');
+  .version(CLI_VERSION);
 
 if (process.argv.length === 2) {
   process.argv.push('create');
@@ -44,23 +49,12 @@ program
     let persona = {};
     if (options.preset) {
       const presetDir = path.join(PRESETS_DIR, options.preset);
-      const manifestPath = path.join(presetDir, 'manifest.json');
       const presetPath = path.join(presetDir, 'persona.json');
-      if (!fs.existsSync(manifestPath) || !fs.existsSync(presetPath)) {
+      if (!fs.existsSync(presetPath)) {
         printError(`Preset not found: ${options.preset}`);
         process.exit(1);
       }
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
       persona = JSON.parse(fs.readFileSync(presetPath, 'utf-8'));
-      // Merge cross-layer fields from manifest into persona for generator
-      persona.faculties = manifest.layers.faculties || [];
-      persona.skills = manifest.layers.skills || [];
-      persona.body = manifest.layers.body || null;
-      persona.allowedTools = manifest.allowedTools || [];
-      persona.version = manifest.version;
-      persona.author = manifest.author;
-      persona.meta = manifest.meta;
-      if (manifest.heartbeat) persona.heartbeat = manifest.heartbeat;
     } else if (options.config) {
       const configPath = path.resolve(options.config);
       if (!fs.existsSync(configPath)) {
@@ -81,17 +75,7 @@ program
 
       if (mode === 'base') {
         options.preset = 'base';
-        const presetDir = path.join(PRESETS_DIR, 'base');
-        const manifest = JSON.parse(fs.readFileSync(path.join(presetDir, 'manifest.json'), 'utf-8'));
-        persona = JSON.parse(fs.readFileSync(path.join(presetDir, 'persona.json'), 'utf-8'));
-        persona.faculties = manifest.layers.faculties || [];
-        persona.skills = manifest.layers.skills || [];
-        persona.body = manifest.layers.body || null;
-        persona.allowedTools = manifest.allowedTools || [];
-        persona.version = manifest.version;
-        persona.author = manifest.author;
-        persona.meta = manifest.meta;
-        if (manifest.heartbeat) persona.heartbeat = manifest.heartbeat;
+        persona = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, 'base', 'persona.json'), 'utf-8'));
       } else {
         const answers = await inquirer.prompt([
           { type: 'input', name: 'personaName', message: 'Persona name:', default: 'Luna' },
@@ -115,7 +99,7 @@ program
       if (options.dryRun) {
         printInfo('Dry run — preview only, no files written.');
         printInfo(`Would generate: persona-${persona.slug || require('../lib/utils').slugify(persona.personaName)}/`);
-        printInfo(`  SKILL.md, soul/, references/, manifest.json, scripts/`);
+        printInfo(`  SKILL.md, soul/, references/, agent-card.json, acn-config.json, scripts/`);
         if (persona.evolution?.enabled) {
           printInfo(`  soul/state.json (★Experimental)`);
         }
@@ -200,15 +184,19 @@ program
     await fs.ensureDir(tmpDir);
     const { skillDir: newDir } = await generate(persona, tmpDir);
     // Preserve runtime evolution artifacts — these represent accumulated persona growth
-    const narrativeSrc = path.join(skillDir, 'soul', 'self-narrative.md');
-    const narrativeDst = path.join(newDir, 'soul', 'self-narrative.md');
-    if (fs.existsSync(narrativeSrc)) {
-      await fs.copy(narrativeSrc, narrativeDst);
-    }
-    const stateSrc = path.join(skillDir, 'soul', 'state.json');
-    const stateDst = path.join(newDir, 'soul', 'state.json');
-    if (fs.existsSync(stateSrc)) {
-      await fs.copy(stateSrc, stateDst);
+    const runtimeArtifacts = [
+      'state.json',
+      'soul/self-narrative.md',
+      // lineage.json records fork parentage + constitution hash — must survive updates
+      // so trust chain verification (installer.js verifyConstitutionHash) keeps working
+      'soul/lineage.json',
+    ];
+    for (const rel of runtimeArtifacts) {
+      const src = path.join(skillDir, rel);
+      const dst = path.join(newDir, rel);
+      if (fs.existsSync(src)) {
+        await fs.copy(src, dst);
+      }
     }
     await fs.remove(skillDir);
     await fs.move(newDir, skillDir);
@@ -228,76 +216,20 @@ program
   .option('--output <dir>', 'Output directory', process.cwd())
   .option('--install', 'Install to OpenClaw after generation')
   .action(async (parentSlug, options) => {
-    const { createHash } = require('crypto');
-    const parentDir = resolvePersonaDir(parentSlug);
-    if (!parentDir) {
-      printError(`Persona not found: "${parentSlug}". Install it first with: openpersona install <source>`);
-      process.exit(1);
-    }
-    const parentPersonaPath = path.join(parentDir, 'soul', 'persona.json');
-    if (!fs.existsSync(parentPersonaPath)) {
-      printError(`Persona not found: "${parentSlug}". Install it first with: openpersona install <source>`);
-      process.exit(1);
-    }
-
-    const newSlug = options.as;
-    const childDir = path.join(OP_SKILLS_DIR, `persona-${newSlug}`);
-    if (fs.existsSync(childDir)) {
-      printError(`Persona already exists: persona-${newSlug}. Choose a different slug.`);
-      process.exit(1);
-    }
-
-    const parentPersona = JSON.parse(fs.readFileSync(parentPersonaPath, 'utf-8'));
-
-    // Read parent lineage for generation depth
-    const parentLineagePath = path.join(parentDir, 'soul', 'lineage.json');
-    const parentLineage = fs.existsSync(parentLineagePath)
-      ? JSON.parse(fs.readFileSync(parentLineagePath, 'utf-8'))
-      : null;
-    const generation = parentLineage ? (parentLineage.generation || 0) + 1 : 1;
-
-    // Build forked persona
-    const forkedPersona = JSON.parse(JSON.stringify(parentPersona));
-    forkedPersona.slug = newSlug;
-    forkedPersona.personaName = options.name || `${parentPersona.personaName}-${newSlug}`;
-    forkedPersona.forkOf = parentSlug;
-    if (options.bio) forkedPersona.bio = options.bio;
-    if (options.personality) forkedPersona.personality = options.personality;
-
     try {
-      const outputDir = path.resolve(options.output);
-      const { skillDir } = await generate(forkedPersona, outputDir);
-
-      // Write lineage.json
-      const constitutionPath = path.join(skillDir, 'soul', 'constitution.md');
-      let constitutionHash = '';
-      if (fs.existsSync(constitutionPath)) {
-        constitutionHash = createHash('sha256')
-          .update(fs.readFileSync(constitutionPath, 'utf-8'), 'utf-8')
-          .digest('hex');
-      }
-      const lineage = {
-        generation,
-        parentSlug,
-        parentEndpoint: null,
-        parentAddress: null,
-        forkReason: options.reason,
-        forkedAt: new Date().toISOString(),
-        constitutionHash,
-        children: [],
-      };
-      await fs.writeFile(
-        path.join(skillDir, 'soul', 'lineage.json'),
-        JSON.stringify(lineage, null, 2)
-      );
-
+      const { skillDir, lineage } = await forkPersona(parentSlug, {
+        as: options.as,
+        name: options.name,
+        bio: options.bio,
+        personality: options.personality,
+        reason: options.reason,
+        output: options.output,
+        install: options.install,
+      });
       printSuccess(`Forked: ${skillDir}`);
-      printInfo(`  Parent: persona-${parentSlug}  →  Child: persona-${newSlug} (generation ${generation})`);
-      printInfo(`  Constitution hash: ${constitutionHash.slice(0, 16)}...`);
-
-      if (options.install) {
-        await install(skillDir);
-      } else {
+      printInfo(`  Parent: persona-${parentSlug}  →  Child: persona-${options.as} (generation ${lineage.generation})`);
+      printInfo(`  Constitution hash: ${lineage.constitutionHash.slice(0, 16)}...`);
+      if (!options.install) {
         printInfo(`To install: npx openpersona install ${skillDir}`);
       }
     } catch (e) {
@@ -335,14 +267,11 @@ program
   });
 
 program
-  .command('publish')
-  .description('Publish persona to registry')
-  .option('--target <registry>', 'Target registry', 'clawhub')
-  .option('--path <dir>', 'Persona directory', process.cwd())
-  .action(async (options) => {
+  .command('publish <owner/repo>')
+  .description('Validate a GitHub repo as a persona pack and register it with the OpenPersona directory (e.g. alice/my-persona)')
+  .action(async (ownerRepo) => {
     try {
-      const dir = path.resolve(options.path);
-      await publishAdapter.publish(dir, options.target);
+      await publishAdapter.publish(ownerRepo);
     } catch (e) {
       printError(e.message);
       process.exit(1);
@@ -460,50 +389,24 @@ program
       printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
       process.exit(1);
     }
-    const AdmZip = require('adm-zip');
-    const zip = new AdmZip();
-    const addDir = (dir, zipPath) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        const zp = zipPath ? `${zipPath}/${entry.name}` : entry.name;
-        if (entry.isDirectory()) addDir(full, zp);
-        else zip.addLocalFile(full, zipPath || '');
-      }
-    };
-    addDir(skillDir, '');
-    const outPath = options.output || `persona-${slug}.zip`;
-    zip.writeZip(outPath);
-    printSuccess(`Exported to ${outPath}`);
+    try {
+      const outPath = exportPersona(skillDir, options.output);
+      printSuccess(`Exported to ${outPath}`);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
   });
 
 program
   .command('import <file>')
   .description('Import persona pack from a zip archive and install')
-  .option('-o, --output <dir>', 'Extract directory', path.join(require('os').tmpdir(), 'openpersona-import-' + Date.now()))
+  .option('-o, --output <dir>', 'Extract directory (temp, auto-cleaned)')
   .action(async (file, options) => {
-    if (!fs.existsSync(file)) {
-      printError(`File not found: ${file}`);
-      process.exit(1);
-    }
-    const AdmZip = require('adm-zip');
-    const zip = new AdmZip(file);
-    const extractDir = options.output;
-    await fs.ensureDir(extractDir);
-    zip.extractAllTo(extractDir, true);
-
-    const personaPath = resolveSoulFile(extractDir, 'persona.json');
-    if (!fs.existsSync(personaPath)) {
-      printError('Not a valid persona archive: persona.json not found');
-      await fs.remove(extractDir);
-      process.exit(1);
-    }
-
     try {
-      const destDir = await install(extractDir);
+      const destDir = await importPersona(file, { extractDir: options.output });
       printSuccess(`Imported and installed from ${file}`);
-      if (extractDir.startsWith(require('os').tmpdir())) {
-        await fs.remove(extractDir);
-      }
+      printInfo(`  Installed to: ${destDir}`);
     } catch (e) {
       printError(e.message);
       process.exit(1);
@@ -519,44 +422,7 @@ program
 // Lookup priority: registry path → default OP_SKILLS_DIR/persona-<slug>
 // Delegates to scripts/state-sync.js inside the persona pack (no logic duplication).
 
-function resolvePersonaDir(slug) {
-  // 1. Registry-stored path (most reliable — survives path changes)
-  const reg = loadRegistry();
-  const entry = reg.personas && reg.personas[slug];
-  if (entry && entry.path && fs.existsSync(entry.path)) return entry.path;
-  // 2. New neutral path ~/.openpersona/personas/
-  const defaultDir = path.join(OP_SKILLS_DIR, `persona-${slug}`);
-  if (fs.existsSync(defaultDir)) return defaultDir;
-  // 3. Legacy OpenClaw path ~/.openclaw/skills/ (backward compat)
-  const legacyDir = path.join(OPENCLAW_HOME, 'skills', `persona-${slug}`);
-  if (fs.existsSync(legacyDir)) return legacyDir;
-  return null;
-}
-
-function runStateSyncCommand(slug, args) {
-  const personaDir = resolvePersonaDir(slug);
-  if (!personaDir) {
-    printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
-    process.exit(1);
-  }
-  const syncScript = path.join(personaDir, 'scripts', 'state-sync.js');
-  if (!fs.existsSync(syncScript)) {
-    printError(`state-sync.js not found in persona-${slug}. Update the persona: openpersona update ${slug}`);
-    process.exit(1);
-  }
-  const { spawnSync } = require('child_process');
-  const result = spawnSync(process.execPath, [syncScript, ...args], {
-    cwd: personaDir,
-    encoding: 'utf-8',
-  });
-  if (result.error) {
-    printError(`Failed to run state-sync.js: ${result.error.message}`);
-    process.exit(1);
-  }
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-  if (result.status !== 0) process.exit(result.status || 1);
-}
+// resolvePersonaDir and runStateSyncCommand are imported from lib/state-runner.js
 
 const stateCmd = program
   .command('state')
@@ -597,10 +463,9 @@ vitalityCmd
   .action((slug) => {
     const { calcVitality }    = require('../lib/vitality');
     const { JsonFileAdapter } = require('agentbooks/adapters/json-file');
-    const OPENCLAW_HOME_DIR   = process.env.OPENCLAW_HOME || path.join(os.homedir(), '.openclaw');
 
     const dataPath = process.env.AGENTBOOKS_DATA_PATH
-      || path.join(OPENCLAW_HOME_DIR, 'economy', `persona-${slug}`);
+      || path.join(OPENCLAW_HOME, 'economy', `persona-${slug}`);
 
     const adapter = new JsonFileAdapter(dataPath);
     let report;

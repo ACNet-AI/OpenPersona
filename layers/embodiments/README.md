@@ -49,8 +49,8 @@ Declares the digital substrate the persona expects. When present, the generator 
 ```
 
 **Credential sharing model:**
-- `shared: true` — stored in `~/.openclaw/credentials/shared/`, accessible by all personas
-- `shared: false` — stored in `~/.openclaw/credentials/persona-<slug>/`, private to this persona
+- `shared: true` — accessible by all personas (e.g. `~/.openclaw/credentials/shared/` on OpenClaw)
+- `shared: false` — private to this persona (e.g. `~/.openclaw/credentials/persona-<slug>/` on OpenClaw)
 
 ### Appearance (Optional)
 
