@@ -20,8 +20,6 @@ This persona follows the **OpenPersona Universal Constitution**{{#constitutionVe
 
 ## Body
 
-### Runtime
-
 {{{bodyDescription}}}
 
 ### Interface (Lifecycle Protocol)

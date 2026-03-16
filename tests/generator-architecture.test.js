@@ -28,10 +28,13 @@ describe('generated persona.json output', () => {
 
     const forbidden = ['backstory', 'facultySummary',
       'skillContent', 'description', 'evolutionEnabled', 'allowedToolsStr',
-      'author', 'version', 'facultyConfigs', 'avatar'];
+      'facultyConfigs', 'avatar'];
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
+    // author and version are utility fields preserved in output (with defaults when not declared)
+    assert.ok(output.author !== undefined, 'author must be preserved in output persona.json');
+    assert.ok(output.version !== undefined, 'version must be preserved in output persona.json');
     assert.ok(output.personaName === 'Clean', 'original fields must be preserved');
     // behaviorGuide: inline strings are externalized to soul/behavior-guide.md during generation;
     // the output persona.json stores the file reference path, not the inline content.
