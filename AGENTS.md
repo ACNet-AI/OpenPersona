@@ -55,7 +55,7 @@ layers/
     soul-state.template.json ← Evolution state template
   faculties/            ← Faculty implementations (voice, selfie, avatar, music, reminder, memory)
   skills/               ← Local skill definitions (skill.json + SKILL.md per skill)
-  embodiments/          ← Body layer definitions
+  body/                 ← Body layer definitions
 schemas/                ← JSON schemas for validation (signal.schema.json, persona.schema.json, persona.input.schema.json)
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
 tests/                  ← Node.js native test runner (node:test)
@@ -67,6 +67,11 @@ skills/open-persona/    ← Meta-skill for AI agents using the framework
 ### Architectural Kernel
 
 **OpenPersona 是一个人格体生命周期框架**——负责 AI agent 人格体的声明、生成、约束执行与演化。
+
+完整架构用 **4+5+3** 表达：
+- **4 Layers** — Soul / Body / Faculty / Skill：人格体的结构组成（它**是什么**）
+- **5 Concepts** — Evolution / Economy / Vitality / Social / Rhythm：横跨所有层的系统行为（它**如何运作**）
+- **3 Gates** — Generate / Install / Runtime：约束执行机制（它**如何被保护**）
 
 其架构内核可以用一句话表达：**一份声明，三重执行。**
 
@@ -84,9 +89,9 @@ The same `persona.json` declaration is enforced at three progressive gates, each
 
 **Runtime Gate — full coverage (P17 complete):**
 
-`emitSignal` reads `soul/persona.json` and enforces `body.interface.signals` policy (enabled flag + allowedTypes whitelist) — hard reject on violation.
+`emitSignal` reads `persona.json` (pack root) and enforces `body.interface.signals` policy (enabled flag + allowedTypes whitelist) — hard reject on violation.
 
-`writeState` enforces two layers of constraints, both reading `soul/persona.json`:
+`writeState` enforces two layers of constraints, both reading `persona.json` (pack root):
 1. **Structural invariants** (always-on): IMMUTABLE identity fields (`$schema`, `version`, `personaSlug`, `createdAt`) are never overwritten; eventLog entry format is validated (hard reject on invalid type/missing fields)
 2. **Evolution boundaries** (when `evolution.boundaries` is declared): `immutableTraits` entries are filtered from the `evolvedTraits` patch; `speakingStyleDrift.formality` is clamped to `[minFormality, maxFormality]`; `relationship.stage` is validated for single-step forward-only progression — reversals and skips are blocked. Violations produce `[evolution-gate]` stderr warnings and a corrected patch (not hard-rejected, to preserve co-located valid data).
 
@@ -282,7 +287,7 @@ The `economy` faculty (`layers/faculties/economy/`) is a thin OpenPersona wrappe
 
 Note: `economy` is a top-level cross-cutting field, **not** a `faculties` entry. It does not follow the Faculty contract. The generator auto-activates the economy faculty scripts when `economy.enabled: true`.
 
-### Five Systemic Cross-Cutting Concepts
+### Five Systemic Cross-Cutting Concepts (the "5" in 4+5+3)
 
 Orthogonal to the four-layer static structure, five concepts span across all layers and are declared as top-level fields in `persona.json`:
 

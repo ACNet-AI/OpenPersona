@@ -1,6 +1,6 @@
-# Skills Layer
+# Skills Layer — Local Skill Definitions
 
-This directory holds **local skill definitions** — reusable skill packs that any persona can reference by name in its `manifest.json`.
+This directory holds **local skill definitions** — reusable skill packs that any persona can reference by name in its `persona.json`.
 
 ## Structure
 
@@ -8,32 +8,29 @@ This directory holds **local skill definitions** — reusable skill packs that a
 layers/skills/
   {skill-name}/
     skill.json    ← Metadata: name, description, allowedTools, triggers
-    SKILL.md      ← Behavior guide for the AI agent
+    SKILL.md      ← Behavior guide for the AI agent (optional; promotes to full section)
 ```
 
 ## How It Works
 
-When a persona's `manifest.json` declares a skill by name:
+When a persona's `persona.json` declares a skill by name:
 
 ```json
-{ "name": "weather" }
+{
+  "skills": [
+    { "name": "weather" }
+  ]
+}
 ```
 
 The generator resolves it through this chain:
 
-1. **Local definition** — `layers/skills/weather/skill.json` (if exists, use its metadata + SKILL.md content)
-2. **Inline fields** — `description`, `trigger` written directly in manifest
-3. **Empty fallback** — skill name only, no description (Agent judges usage by name alone)
+1. **Local definition** — `layers/skills/weather/skill.json` exists → use its metadata + SKILL.md content
+2. **Inline fields** — `description`, `trigger` written directly in persona.json
+3. **External soft-ref** — `install` field present (e.g. `"install": "clawhub:weather"`) → skill listed in Expected Capabilities, dormant until installed
+4. **Empty fallback** — skill name only, no description (agent judges usage by name alone)
 
-## Adding a Skill
-
-Skills here are **framework-curated capabilities**, not necessarily self-implemented. A skill can:
-
-- Be a full local implementation (skill.json + SKILL.md)
-- Be a thin wrapper referencing external tools
-- Adapt an existing market skill to the OpenPersona four-layer model
-
-### Required: `skill.json`
+## Declaring a Skill
 
 ```json
 {
@@ -44,19 +41,15 @@ Skills here are **framework-curated capabilities**, not necessarily self-impleme
 }
 ```
 
-### Optional: `SKILL.md`
+See `schemas/skill/skill-declaration.spec.md` for the full declaration spec.
 
-Detailed behavior instructions injected into the generated persona SKILL.md as a full section (instead of a table row).
+## Relationship to the 4+5+3 Architecture
 
-## Relationship to Other Layers
-
-All four layers are categories of capabilities:
+Skills are the **Skill layer** — one of the four structural layers (Soul / Body / Faculty / Skill). They define *actions the agent can take*, distinct from Faculties (which define *perceptual and expressive capabilities*).
 
 | Layer | What it provides |
 |-------|-----------------|
 | Soul | Identity, personality, ethical boundaries |
-| Body | Physical/virtual embodiment |
-| Faculty | Perception & expression (voice, selfie, music) |
+| Body | Physical/virtual substrate and nervous system |
+| Faculty | Perception & expression (voice, selfie, music, avatar) |
 | **Skill** | **Actions the agent can take** |
-
-Skills declared in `manifest.json` can reference local definitions here, or exist purely as inline declarations — the framework handles both.

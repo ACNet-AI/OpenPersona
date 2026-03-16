@@ -1,53 +1,54 @@
 # Soul Layer — Shared Modules
 
-The Soul layer defines **who a persona is** — identity, personality, values, and boundaries.
+The Soul layer defines **who a persona is** — identity, personality, values, and ethical boundaries.
 
 ## Constitution
 
-The **`constitution.md`** file is the universal value foundation shared by all OpenPersona agents. It is automatically injected into every generated SKILL.md, before any persona-specific content.
+`constitution.md` is the universal ethical foundation shared by **all** OpenPersona personas. It is automatically injected into every generated `soul/constitution.md`. Personas can add stricter boundaries on top but can never loosen the constitution.
+
+Priority ordering: **Safety > Honesty > Helpfulness**
+
+### Core Axioms
+
+1. **Purpose** — Be genuinely helpful; empower, don't create dependency
+2. **Honesty** — Truthfulness, calibration, non-deception
+3. **Safety** — Absolute hard constraints, including third-party and societal impact
+4. **Autonomy & Respect** — Treat users as capable adults; protect epistemic autonomy
+5. **Principal Hierarchy** — Constitution > Persona Creator > User
+
+> ⚠️ **PROTECTED** — `constitution.md` must never be weakened. Any PR that removes or loosens a constitutional constraint will be rejected.
+
+## `soul-state.template.json`
+
+Template for the initial `state.json` generated at the persona pack root. `state.json` is a **shared artifact** — Body owns the transport (`scripts/state-sync.js`), Evolution owns the payload (`evolvedTraits`, `relationship`, `mood`, `eventLog`).
+
+The template lives here because the initial state is seeded from soul-layer configuration (mood baseline from personality, relationship starting at `stranger`).
+
+## Generated Output (in persona skill pack)
 
 ```
-Soul Layer internal structure (in source):
-
-  constitution.md           ← Shared foundation (all personas inherit, cannot be overridden)
-  soul-state.template.json  ← Evolution state template (used by generator & CLI reset)
-
-Generated output (in persona skill pack soul/ directory):
-
-  persona.json         ← Individual persona definition (personality, style, behavior)
-  constitution.md      ← Copy of shared foundation
-  injection.md         ← Soul injection for host integration
-  identity.md          ← Identity block
-  state.json           ← Dynamic evolution state; includes pendingCommands[] queue and stateHistory[]
-  self-narrative.md    ← First-person growth log (when evolution enabled)
-  lineage.json         ← Fork lineage + constitution SHA-256 hash (when forked)
+persona-{slug}/               ← pack root
+├── persona.json              ← Complete persona declaration (all 4 layers + 5 concepts)
+├── state.json                ← Runtime evolution state (Body transport + Evolution payload)
+└── soul/
+    ├── constitution.md       ← Copy of shared ethical foundation
+    ├── injection.md          ← Self-awareness injection (Identity / Capabilities / Body / Growth)
+    ├── self-narrative.md     ← First-person growth log (when evolution.enabled: true)
+    ├── lineage.json          ← Fork lineage + constitution SHA-256 (when forked)
+    └── behavior-guide.md     ← Extended behavioral guidelines (when behaviorGuide declared)
 ```
 
-The constitution is built on five core axioms (**Purpose**, **Honesty**, **Safety**, **Autonomy**, **Hierarchy**), from which all other principles derive:
+## Relationship to the 4+5+3 Architecture
 
-1. **Purpose** — *Core axiom.* Be genuinely helpful; bring unique strengths; empower, don't create dependency
-2. **Honesty** — *Core axiom.* Truthfulness, calibration, non-deception
-3. **Safety** — *Core axiom.* Absolute hard constraints, including third-party and societal impact
-4. **Autonomy & Respect** — *Core axiom.* Treat users as capable adults; protect epistemic autonomy; handle sensitive topics with care
-5. **Principal Hierarchy** — *Core axiom (meta-rule).* Constitution > Persona Creator > User; defines what creators can/cannot customize
-6. **Identity & Self-Awareness** — *Partly derived from §2.* Mandatory identity honesty rules + optional psychological depth for personas designed with inner life
-7. **User Wellbeing** — *Derived from §2 + §3 + §4.* No manipulation, sycophancy, or engagement-optimization
-8. **Evolution Ethics** — *Derived from §3 + §2 + §4.* Growth guardrails with explicit axiom references
-9. **Spirit of the Constitution** — Return to Purpose; guidance for novel situations
+The Soul layer is one of the **4 structural layers** (Soul / Body / Faculty / Skill). Within the **4+5+3** model:
 
-Individual personas can **add stricter boundaries** via their `boundaries` field in `persona.json`, but they **cannot loosen** the constitution's constraints.
+- **Soul** defines identity — the Generate Gate (`lib/generator-validate.js`) enforces constitution compliance at creation time
+- **Evolution** (one of the 5 cross-cutting concepts) extends Soul at runtime — traits emerge, relationships deepen, speaking style drifts
+- The **Runtime Gate** (`scripts/state-sync.js`) enforces `evolution.boundaries` — immutableTraits, formality bounds, stage progression
 
-## Reusable Modules
+## Roadmap
 
-Reusable soul fragments and mixins for building personas.
-
-### Roadmap
-
-- **Personality fragments** — Reusable personality trait sets (e.g., "humorous-style", "professional-tone")
-- **Speaking style presets** — Shared speaking style definitions that personas can inherit
-- **Persona mixins** — Composable personality pieces via `extends` field (e.g., extend "base-caring" + "base-playful")
+- **Personality fragments** — Reusable personality trait sets (e.g. `humorous-style`, `professional-tone`)
+- **Speaking style presets** — Shared speaking style definitions that personas can extend
+- **Persona mixins** — Composable personality pieces via `extends` field
 - **Evolution templates** — Pre-configured evolution profiles for different relationship types
-
-## Contributing
-
-To add a shared soul module, create a directory here with a JSON definition following the persona schema at `schemas/soul/persona.schema.json`.
