@@ -4,8 +4,11 @@
   "description": "External avatar runtime bridge (image/3D/motion/voice) with graceful fallback when not installed.",
   "provider": "heygen",
   "fallback": "text_only",
-  "install": "npx skills add avatar-runtime",
-  "allowedTools": ["Bash(node scripts/avatar-runtime.js:*)"],
+  "install": "clawhub:avatar-runtime",
+  "allowedTools": [
+    "Bash(node scripts/avatar-runtime.js:*)",
+    "Bash(node scripts/avatar-control.js:*)"
+  ],
   "envVars": ["AVATAR_RUNTIME_URL", "AVATAR_API_KEY"],
   "triggers": [
     "show your avatar",
@@ -14,5 +17,11 @@
     "talk with voice avatar",
     "open your visual mode"
   ],
-  "files": ["SKILL.md", "scripts/avatar-runtime.js"]
+  "files": [
+    "SKILL.md",
+    "scripts/avatar-runtime.js",
+    "scripts/avatar-control.js",
+    "references/AVATAR-CONTROL.md",
+    "references/VISUAL-MANIFEST.md"
+  ]
 }

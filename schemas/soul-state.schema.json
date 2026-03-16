@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "openpersona/soul-state",
   "title": "OpenPersona Soul State",
-  "description": "Cross-conversation evolution state persisted in soul/state.json. Written by state-sync.js; read at conversation start to restore mood, relationship, and evolved traits.",
+  "description": "Cross-conversation evolution state persisted in state.json (pack root). Written by state-sync.js; read at conversation start to restore mood, relationship, and evolved traits.",
   "type": "object",
   "required": ["$schema", "version", "personaSlug", "createdAt", "relationship", "mood"],
   "additionalProperties": true,
@@ -87,9 +87,9 @@
       "properties": {
         "formality": {
           "type": "number",
-          "minimum": -1,
-          "maximum": 1,
-          "description": "Drift from baseline formality (-1 = much more casual, +1 = much more formal)."
+          "minimum": -10,
+          "maximum": 10,
+          "description": "Drift from baseline formality (0 = baseline; positive = more formal; negative = more casual). Scale matches evolution.boundaries.minFormality/maxFormality (-10 to +10)."
         },
         "emoji_frequency": {
           "type": "number",
