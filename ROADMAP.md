@@ -579,7 +579,7 @@ Expand `evolution` in `persona.json` to distinguish instance vs. pack levels and
 
 **Problem:** A persona skill pack (`SKILL.md` + `soul/behavior-guide.md`) is generated once and never updated. Over time, real usage reveals patterns that would make the pack better — behavioral rules that resonate, phrasing that the persona handles awkwardly, context gaps in the behavior guide — but there is no mechanism to distill those insights back into the pack artifact. Every new installation gets the original v0.1.0, regardless of how much has been learned.
 
-This is the **skill pack as static snapshot** problem. By contrast, XSkill's cross-rollout critique and AutoSkill's versioned skill merging show that skill artifacts should evolve through real usage — accumulating experience, distilling patterns, and publishing refined versions that benefit all future users.
+This is the **skill pack as static snapshot** problem. AutoSkill's experience-driven lifelong learning model demonstrates that skill artifacts should evolve through real usage — accumulating experience, distilling patterns, and publishing refined versions that benefit all future users. AutoSkill already provides this for general skills; OpenPersona's contribution is governance: Trust Gradient compliance, persona-specific constraints, and publisher integration.
 
 **Root cause:** OpenPersona's `evolution` aspect models instance-level growth (one persona's personal history). There is no concept of **pack-level evolution** — the skill pack as a distributable product that gets better across many deployments.
 
@@ -596,34 +596,68 @@ This is the **skill pack as static snapshot** problem. By contrast, XSkill's cro
 
 **Direction:**
 
-**1. New Lifecycle Protocol command:**
+**1. Distillation engine: pluggable, not embedded**
 
-```bash
-openpersona evolve <slug>
+`evolution.pack.engine` (introduced in P23) selects the distillation backend:
+
+```json
+{
+  "evolution": {
+    "pack": {
+      "enabled": true,
+      "engine": "autoskill",       // "signal" (default) | "autoskill"
+      "triggerAfterEvents": 10,
+      "autoPublish": false
+    }
+  }
+}
 ```
 
-Called by the runner at conversation end (alongside `openpersona state write`). Idempotent — skips silently if `evolution.pack.triggerAfterEvents` threshold not yet reached.
+Two paths share the same orchestration command and compliance layer; only the extraction step differs:
 
-Internally:
+| Step | `engine: "signal"` (built-in) | `engine: "autoskill"` (recommended) |
+|---|---|---|
+| Experience accumulation | OpenPersona `eventLog` | OpenPersona `eventLog` |
+| Extraction | `openpersona evolve` builds prompt → Signal Protocol → host LLM | `POST /v1/autoskill/openclaw/hooks/agent_end` → AutoSkill extracts + versions |
+| Merge / dedup | Manual (single-instance) | AutoSkill Maintainer (add / merge / discard logic) |
+| Versioning | `behavior-guide.meta.json` | AutoSkill SkillBank (`SKILL.md` v0.1.N) |
+| **Compliance gate** | **OpenPersona Generate Gate** | **OpenPersona Generate Gate** |
+| Publish | `lib/publisher/` → ClawHub | `lib/publisher/` → ClawHub |
+
+**2. AutoSkill integration path (`engine: "autoskill"`):**
+
+[AutoSkill](https://github.com/ECNU-ICALK/AutoSkill) is an experience-driven lifelong learning system that already provides `AutoSkill4OpenClaw` — an embedded integration plugin for the OpenClaw ecosystem, using the same `SKILL.md` artifact format as OpenPersona. Rather than re-implementing skill extraction, OpenPersona delegates to AutoSkill and contributes what it uniquely provides: Trust Gradient governance.
+
+Role boundary:
+
+| Responsibility | Owner |
+|---|---|
+| Decide when to distill (event threshold) | OpenPersona (`openpersona evolve`) |
+| Extract conversation experience → skill draft | **AutoSkill** (`agent_end` hook) |
+| Merge / version management | **AutoSkill** SkillBank |
+| Constitution + `evolution.instance.boundaries` compliance | **OpenPersona** Generate Gate |
+| Publish versioned pack to ClawHub | **OpenPersona** publisher |
+
+`lib/lifecycle/evolve.js` is an orchestration shim (~100 lines): check threshold → call AutoSkill hook → receive updated `SKILL.md` → run Generate Gate → write `behavior-guide.meta.json` → optionally trigger publisher.
+
+**3. Built-in Signal Protocol path (`engine: "signal"`, default):**
+
+For deployments without AutoSkill, OpenPersona falls back to its existing Signal Protocol:
+
 1. Count `eventLog` entries since last distillation (`behavior-guide.meta.json`)
-2. If below threshold → exit (no-op)
-3. Generate a distillation prompt from `eventLog` + `soul/self-narrative.md` + current `behavior-guide.md`
-4. Emit prompt via Signal Protocol → host LLM executes → result in `signal-responses.json`
-5. Run Generate Gate compliance check (constitution + `evolution.instance.boundaries`)
+2. If below `triggerAfterEvents` → exit (no-op)
+3. Build distillation prompt from `eventLog` + `soul/self-narrative.md` + current `behavior-guide.md`
+4. Emit via Signal Protocol → host LLM executes → result in `signal-responses.json`
+5. Run Generate Gate compliance check
 6. Write versioned `soul/behavior-guide.md` (v0.1.N → v0.1.N+1)
-7. Update `soul/behavior-guide.meta.json` (version, lastDistilledAt, eventsDistilled)
+7. Update `soul/behavior-guide.meta.json`
 
-**2. LLM provider: host-provided, not CLI-embedded**
-
-`openpersona evolve` is a framework orchestration command — it produces the distillation prompt and validates the result, but it does not embed an LLM client. The host runner's LLM executes the prompt via Signal Protocol (same pattern as existing signal emission). OpenPersona stays dependency-free.
-
-**3. Pack versioning:**
-
-`soul/behavior-guide.md` gets its own version tracked in `soul/behavior-guide.meta.json`:
+**4. Pack versioning (both paths):**
 
 ```json
 {
   "version": "0.1.4",
+  "engine": "autoskill",
   "lastDistilledAt": "2026-03-17T12:00:00Z",
   "eventsDistilled": 42,
   "changeLog": [
@@ -632,19 +666,19 @@ Internally:
 }
 ```
 
-**4. Multi-instance aggregation (opt-in):**
+**5. Multi-instance aggregation (opt-in, AutoSkill path only):**
 
-When `evolution.pack.aggregation: "opt-in"`, `lib/lifecycle/contributor.js` (Persona Harvest) gains a new export mode: anonymized `eventLog` entries are contributed to a shared distillation pool. The pack maintainer runs `openpersona evolve <slug> --from-pool` to distill aggregate experience into a new published version.
+When `evolution.pack.aggregation: "opt-in"`, anonymized `eventLog` entries are contributed to AutoSkill's shared SkillBank (Common pool). The pack maintainer runs `openpersona evolve <slug> --from-pool` to pull aggregate distillation into a new published version. This is AutoSkill's native capability — OpenPersona only adds the publish + compliance step.
 
-**5. Publisher integration:**
+**6. Publisher integration:**
 
-When `evolution.pack.autoPublish: true`, a successful distillation automatically triggers `lib/publisher/` to publish the updated skill pack version to ClawHub. This closes the loop: usage → experience → distillation → new version → all future installations benefit.
+When `evolution.pack.autoPublish: true`, a successful distillation automatically triggers `lib/publisher/` → ClawHub. Usage → experience → distillation → new version → all future installations benefit.
 
-**Distillation scope:** Only `soul/behavior-guide.md` is distilled — not the full SKILL.md. The structural layer sections (Soul identity, Body, Faculty, Skill declarations) reflect `persona.json` and remain stable. Only behavioral learning content evolves.
+**Distillation scope:** Only `soul/behavior-guide.md` is distilled — not the full SKILL.md. Structural layer sections (Soul identity, Body, Faculty, Skill declarations) reflect `persona.json` and remain stable.
 
-**Generate Gate role:** Distilled content must pass the same compliance check as generated content — no distillation can introduce constitution violations or exceed `evolution.instance.boundaries`. This ensures pack evolution respects the same Trust Gradient as the original generation.
+**Generate Gate role:** Distilled content must pass the same compliance check as generated content — no distillation can introduce constitution violations or exceed `evolution.instance.boundaries`. This is OpenPersona's non-negotiable contribution regardless of which engine is used.
 
-**Implementation gate:** Requires P23 (`evolution.pack` schema field) to be in place. Signal Protocol and publisher module already provide the integration points.
+**Implementation gate:** Requires P23 (`evolution.pack` schema with `engine` field). AutoSkill4OpenClaw hook endpoint already exists; Signal Protocol already exists. `lib/lifecycle/evolve.js` is the only new file required.
 
 ---
 
