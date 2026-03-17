@@ -519,6 +519,135 @@ This works well for the current single-agent, local-runtime model. But it become
 
 ---
 
+### P23 — Evolution Aspect Multi-dimensional Expansion (Medium Priority — Architecture)
+
+**Problem:** The `evolution` aspect in `persona.json` currently governs only **Soul layer evolution** — traits, mood, relationship stage, speaking style drift, and influence boundaries. Despite being declared as a cross-cutting systemic concept spanning all 4 layers, its implementation is Soul-only. There is also no architectural distinction between two fundamentally different types of evolution:
+
+- **Instance evolution** — one deployed persona growing through its own conversations (what `state.json` tracks today)
+- **Pack evolution** — the skill pack artifact itself being refined as a distributable product across many deployments
+
+This conflation means developers cannot declare evolution policies for Body, Faculty, or Skill layers, and the framework has no concept of the skill pack as a versioned, improvable product.
+
+**Root cause:** The `evolution` aspect was designed when OpenPersona's scope was a single persona instance. The 4+5+3 architecture formalization exposed that evolution must be multi-dimensional — but the declaration model was never updated to match.
+
+**Direction:**
+
+Expand `evolution` in `persona.json` to distinguish instance vs. pack levels and cover all 4 layers:
+
+```json
+{
+  "evolution": {
+    "instance": {
+      "enabled": true,
+      "boundaries": { "immutableTraits": [], "speakingStyleDrift": {} },
+      "sources": [],
+      "influenceBoundary": {}
+    },
+    "pack": {
+      "enabled": false,
+      "aggregation": "opt-in",
+      "distillationModel": "host-provided",
+      "triggerAfterEvents": 10,
+      "autoPublish": false
+    },
+    "faculty": {
+      "allowActivation": true,
+      "activatableFrom": ["pendingCommands"]
+    },
+    "body": {
+      "allowChannelExpansion": false,
+      "allowModelUpgrade": true
+    },
+    "skill": {
+      "allowNewInstall": true
+    }
+  }
+}
+```
+
+- Current `evolution.*` flat fields (`enabled`, `boundaries`, `sources`, `influenceBoundary`) move under `evolution.instance` — backward compat shim in generator for old flat format
+- `evolution.pack` is the gateway for P24 (Skill Pack Distillation)
+- `evolution.faculty.allowActivation` formalizes what `capability_unlock` pendingCommand does today
+- `evolution.body` and `evolution.skill` are reservation declarations — implementation follows demand
+- `lib/generator/validate.js` validates each sub-object independently
+
+**Implementation gate:** Schema + validate.js + generator normalization only. No new runtime behavior. P24 depends on this being in place first.
+
+---
+
+### P24 — Skill Pack Distillation (Medium Priority — Product Quality)
+
+**Problem:** A persona skill pack (`SKILL.md` + `soul/behavior-guide.md`) is generated once and never updated. Over time, real usage reveals patterns that would make the pack better — behavioral rules that resonate, phrasing that the persona handles awkwardly, context gaps in the behavior guide — but there is no mechanism to distill those insights back into the pack artifact. Every new installation gets the original v0.1.0, regardless of how much has been learned.
+
+This is the **skill pack as static snapshot** problem. By contrast, XSkill's cross-rollout critique and AutoSkill's versioned skill merging show that skill artifacts should evolve through real usage — accumulating experience, distilling patterns, and publishing refined versions that benefit all future users.
+
+**Root cause:** OpenPersona's `evolution` aspect models instance-level growth (one persona's personal history). There is no concept of **pack-level evolution** — the skill pack as a distributable product that gets better across many deployments.
+
+**The two-level distinction:**
+
+| Dimension | Instance Evolution (existing) | Pack Evolution (this item) |
+|---|---|---|
+| Unit | One deployed persona | The skill pack artifact |
+| State storage | `state.json` (private to deployment) | `behavior-guide.md` (versioned, publishable) |
+| Trigger | Per conversation | N events accumulated, then batch distillation |
+| Beneficiary | That instance only | All future installations |
+| Mechanism | `openpersona state write` | `openpersona evolve` → distill → publish |
+| Analogy | Personal diary | Textbook new edition |
+
+**Direction:**
+
+**1. New Lifecycle Protocol command:**
+
+```bash
+openpersona evolve <slug>
+```
+
+Called by the runner at conversation end (alongside `openpersona state write`). Idempotent — skips silently if `evolution.pack.triggerAfterEvents` threshold not yet reached.
+
+Internally:
+1. Count `eventLog` entries since last distillation (`behavior-guide.meta.json`)
+2. If below threshold → exit (no-op)
+3. Generate a distillation prompt from `eventLog` + `soul/self-narrative.md` + current `behavior-guide.md`
+4. Emit prompt via Signal Protocol → host LLM executes → result in `signal-responses.json`
+5. Run Generate Gate compliance check (constitution + `evolution.instance.boundaries`)
+6. Write versioned `soul/behavior-guide.md` (v0.1.N → v0.1.N+1)
+7. Update `soul/behavior-guide.meta.json` (version, lastDistilledAt, eventsDistilled)
+
+**2. LLM provider: host-provided, not CLI-embedded**
+
+`openpersona evolve` is a framework orchestration command — it produces the distillation prompt and validates the result, but it does not embed an LLM client. The host runner's LLM executes the prompt via Signal Protocol (same pattern as existing signal emission). OpenPersona stays dependency-free.
+
+**3. Pack versioning:**
+
+`soul/behavior-guide.md` gets its own version tracked in `soul/behavior-guide.meta.json`:
+
+```json
+{
+  "version": "0.1.4",
+  "lastDistilledAt": "2026-03-17T12:00:00Z",
+  "eventsDistilled": 42,
+  "changeLog": [
+    { "version": "0.1.4", "summary": "Added boundary for overly technical explanations" }
+  ]
+}
+```
+
+**4. Multi-instance aggregation (opt-in):**
+
+When `evolution.pack.aggregation: "opt-in"`, `lib/lifecycle/contributor.js` (Persona Harvest) gains a new export mode: anonymized `eventLog` entries are contributed to a shared distillation pool. The pack maintainer runs `openpersona evolve <slug> --from-pool` to distill aggregate experience into a new published version.
+
+**5. Publisher integration:**
+
+When `evolution.pack.autoPublish: true`, a successful distillation automatically triggers `lib/publisher/` to publish the updated skill pack version to ClawHub. This closes the loop: usage → experience → distillation → new version → all future installations benefit.
+
+**Distillation scope:** Only `soul/behavior-guide.md` is distilled — not the full SKILL.md. The structural layer sections (Soul identity, Body, Faculty, Skill declarations) reflect `persona.json` and remain stable. Only behavioral learning content evolves.
+
+**Generate Gate role:** Distilled content must pass the same compliance check as generated content — no distillation can introduce constitution violations or exceed `evolution.instance.boundaries`. This ensures pack evolution respects the same Trust Gradient as the original generation.
+
+**Implementation gate:** Requires P23 (`evolution.pack` schema field) to be in place. Signal Protocol and publisher module already provide the integration points.
+
+---
+
 ## Summary: From Skeleton to Muscle
 
 OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successfully standardizes persona composition, lifecycle, evolution, economy, and on-chain identity. The remaining gap has shifted:
@@ -531,12 +660,14 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 |----------|------|----------|-----|
 | P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
 | P1 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
-| P2 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
-| P3 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
-| P4 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
-| P5 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
+| P2 | P23 Evolution Aspect Multi-dimensional Expansion | Architecture | Foundation for pack-level evolution; schema-only, no new runtime |
+| P3 | P24 Skill Pack Distillation | Product Quality | Skill pack as evolving product; integrates existing publisher + Signal Protocol |
+| P4 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P5 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
+| P6 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
+| P7 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
 | ✅ | P9 Vitality-Logic Closed Loop | Completed | Economy survivalPolicy opt-in; tier-driven behavior. |
-| ✅ | P15 Generator Pipeline Modularization | Completed | 6-phase pipeline + GeneratorContext; phases exported for independent testing. |
+| ✅ | P15 Generator Pipeline Modularization | Completed | 7-phase pipeline + GeneratorContext; load/derived/prepare/render separation. |
 | ✅ | P16 Template Partial Decomposition | Completed | soul-injection split into 6 partials; 300→25-line orchestrator. |
 | ✅ | P17 Evolution Constraint Gate | Completed | Trust Gradient fully closed — all three gates active. |
 | ✅ | P19 Faculty/Skill Boundary | Completed | Code + spec + docs fully aligned; selfie/music/reminder → Skills; economy → Aspect. |
@@ -545,6 +676,6 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 
 1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that the architecture foundation is solid.
 
-2. **P4-A (skill signature verification)** — security gate; pure extension of existing installer + evolution.boundaries + Signal Protocol, no new infrastructure.
+2. **P23 (evolution multi-dimensional expansion)** — schema-only, low-risk; unblocks P24 and formalizes what the `evolution` aspect was always meant to cover architecturally.
 
-3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.
+3. **P24 (skill pack distillation)** — closes the loop between usage experience and published product quality; integrates existing Signal Protocol + publisher with no new infrastructure dependencies.
