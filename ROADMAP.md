@@ -364,18 +364,27 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ### P15 — Generator Pipeline Modularization ✅ COMPLETED
 
-**Delivered:** `generate()` refactored from a 440-line monolithic async function into a 6-phase pipeline driven by a shared `GeneratorContext` object. Each phase is an exported, independently-testable async function:
+**Delivered (v2 — 7-phase, 4+5+3 aligned):** `generate()` refactored from a ~440-line monolithic async function into a 7-phase pipeline driven by a shared `GeneratorContext` object. Each phase is an exported, independently-testable async function.
 
-| Phase | Responsibility |
-|---|---|
-| `clonePhase` | Read/clone persona from path or object; resolve `inputDir` |
-| `validatePhase` | Generate Gate (hard-reject) + format normalization + deprecation warnings |
-| `derivePhase` | Load faculties/economy; compute initial derived fields (backstory, allowedTools, skillContent) |
-| `assetPhase` | Create output dirs; copy local assets (rewrite paths); write `state-sync.js` |
-| `templatePhase` | Resolve skills; `computeDerivedFields`; render soul-injection + SKILL.md |
-| `emitPhase` | Write all output artifacts (SKILL.md, soul/, refs/, persona.json, agent-card, state.json, …) |
+The v2 design enforces strict separation by operation type (I/O read / pure compute / I/O write) and maps directly to the production model (Layers + Aspects = raw materials; Templates = molds; Skill Pack = product):
 
-`createContext()`, all 6 phases, and the existing helpers are exported from `lib/generator/index.js`. `generate()` public API is unchanged — existing callers require no updates. Extension point: replace or insert phases to support third-party post-processing hooks. Tests: 404/404 pass.
+| Phase | Type | Responsibility |
+|---|---|---|
+| `clonePhase` | I/O read | Read/clone persona from path or object; resolve `inputDir` |
+| `validatePhase` | compute + I/O stderr | Generate Gate (hard-reject) + format normalization + deprecation warnings |
+| `loadPhase` | I/O read | Load ALL raw materials — Soul (constitution, behaviorGuide file), Body (rawBody), Faculty layer (faculty.json × N), Skill layer (skill.json × N), Economy aspect, Evolution sources; load molds (templates/) |
+| `derivedPhase` | pure compute | ALL derived field computation — zero I/O; `computeDerivedFields`, body section, faculty index, skill merges |
+| `preparePhase` | I/O write + compute | Create output dir tree; copy local assets + rewrite paths; set `persona.avatar` (after path rewrite — must follow asset copy) |
+| `renderPhase` | pure compute | Render Mustache templates (soul-injection + SKILL.md) — zero I/O |
+| `emitPhase` | I/O write | Write ALL output artifacts (SKILL.md, soul/, refs/, persona.json, agent-card, acn-config, state.json, state-sync.js, .gitignore, faculty refs, economy scripts) |
+
+**Key design constraints observed:**
+- `persona.avatar` is set at the end of `preparePhase` (not `derivedPhase`) because it depends on `persona.referenceImage` which may be rewritten to `./assets/...` during asset copying.
+- `buildAgentCard` / `buildAcnConfig` are compute-then-write composites kept in `emitPhase` — they do not use path-rewritten fields, and no current extension point requires separating their computation.
+- `ctx.rawBody` is cached in `loadPhase` to avoid re-computing `persona.body || embodiments[0] || null`.
+- `behaviorGuide` file content is pre-loaded in `loadPhase` so `buildSkillContent` (`derivedPhase`) remains a pure function.
+
+`createContext()`, all 7 phases, and the existing helpers are exported from `lib/generator/index.js`. `generate()` public API is unchanged — existing callers require no updates. Extension point: insert or replace phases for third-party post-processing hooks. Tests: 404/404 pass.
 
 ---
 
