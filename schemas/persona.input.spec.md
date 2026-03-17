@@ -238,7 +238,7 @@ All three sub-systems are enabled by default. Set `enabled: false` to opt out of
 
 ## Validation
 
-The input schema is enforced by the generator's Generate Gate (`lib/generator-validate.js`). Failures produce a hard `throw` and abort generation.
+The input schema is enforced by the generator's Generate Gate (`lib/generator/validate.js`). Failures produce a hard `throw` and abort generation.
 
 Hard rejections:
 - Missing required soul fields

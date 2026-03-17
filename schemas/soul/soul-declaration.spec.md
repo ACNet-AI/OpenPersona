@@ -188,7 +188,7 @@ Both formats produce identical generated output. New personas should use the v0.
 
 ## Constitutional Compliance
 
-The Soul layer is the only layer subject to **constitutional validation** at the Generate Gate (`lib/generator-validate.js`).
+The Soul layer is the only layer subject to **constitutional validation** at the Generate Gate (`lib/generator/validate.js`).
 
 Rules:
 - `character.boundaries` cannot loosen or override `layers/soul/constitution.md` constraints
