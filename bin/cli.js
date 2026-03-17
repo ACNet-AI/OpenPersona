@@ -86,27 +86,33 @@ program
           { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
           { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
           { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
-          { type: 'checkbox', name: 'faculties', message: 'Select faculties:', choices: ['selfie', 'voice', 'music', 'reminder'] },
+          { type: 'checkbox', name: 'faculties', message: 'Select faculties (persistent capabilities):', choices: ['voice', 'memory'] },
+          { type: 'checkbox', name: 'skills', message: 'Select built-in skills (on-demand actions):', choices: ['selfie', 'music', 'reminder'] },
           { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
         ]);
         persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
         persona.faculties = (answers.faculties || []).map((name) => ({ name }));
+        persona.skills = (answers.skills || []).map((name) => ({ name }));
       }
     }
 
     try {
       const outputDir = path.resolve(options.output);
       if (options.dryRun) {
+        // Resolve grouped soul format before accessing top-level fields
+        const flatName = persona.personaName || persona.soul?.identity?.personaName;
+        const flatSlug = persona.slug || persona.soul?.identity?.slug;
+        const { slugify } = require('../lib/utils');
         printInfo('Dry run — preview only, no files written.');
-        printInfo(`Would generate: persona-${persona.slug || require('../lib/utils').slugify(persona.personaName)}/`);
-        printInfo(`  SKILL.md, soul/, references/, agent-card.json, acn-config.json, scripts/`);
+        printInfo(`Would generate: persona-${flatSlug || slugify(flatName)}/`);
+        printInfo(`  SKILL.md, soul/, references/, agent-card.json, acn-config.json, scripts/, state.json`);
         if (persona.evolution?.enabled) {
-          printInfo(`  state.json (★Experimental)`);
+          printInfo(`  soul/self-narrative.md (★Experimental — evolution enabled)`);
         }
-        const faculties = persona.faculties || [];
-        if (faculties.length) {
-          printInfo(`  Faculties: ${faculties.join(', ')}`);
-        }
+        const faculties = (persona.faculties || []).map((f) => (typeof f === 'string' ? f : f.name));
+        const skills = (persona.skills || []).map((s) => (typeof s === 'string' ? s : s.name));
+        if (faculties.length) printInfo(`  Faculties: ${faculties.join(', ')}`);
+        if (skills.length) printInfo(`  Skills: ${skills.join(', ')}`);
         return;
       }
       const { skillDir } = await generate(persona, outputDir);
