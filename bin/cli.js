@@ -101,7 +101,7 @@ program
         printInfo(`Would generate: persona-${persona.slug || require('../lib/utils').slugify(persona.personaName)}/`);
         printInfo(`  SKILL.md, soul/, references/, agent-card.json, acn-config.json, scripts/`);
         if (persona.evolution?.enabled) {
-          printInfo(`  soul/state.json (★Experimental)`);
+          printInfo(`  state.json (★Experimental)`);
         }
         const faculties = persona.faculties || [];
         if (faculties.length) {

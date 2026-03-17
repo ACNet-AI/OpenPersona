@@ -301,7 +301,7 @@ npx openpersona acn-register <slug> --endpoint https://your-agent.example.com
 #   --dry-run          Preview the request payload without actually registering
 ```
 
-After successful registration, an `acn-registration.json` file is written to the persona directory containing `agent_id`, `api_key`, and connection URLs. The `acn_gateway` URL is sourced from `body.runtime.acn_gateway` in `persona.json`; all presets default to `https://acn-production.up.railway.app`.
+After successful registration, an `acn-registration.json` file is written to the persona directory containing `agent_id`, `api_key`, and connection URLs. The `acn_gateway` URL is sourced from `social.acn.gateway` in `persona.json` (falls back to the deprecated `body.runtime.acn_gateway`); all presets default to `https://acn-production.up.railway.app`.
 
 No additional configuration in `persona.json` is needed — A2A discoverability is a baseline capability of every persona.
 

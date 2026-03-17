@@ -51,5 +51,5 @@ Skills are the **Skill layer** — one of the four structural layers (Soul / Bod
 |-------|-----------------|
 | Soul | Identity, personality, ethical boundaries |
 | Body | Physical/virtual substrate and nervous system |
-| Faculty | Perception & expression (voice, selfie, music, avatar) |
+| Faculty | Persistent capabilities (voice, avatar, memory) |
 | **Skill** | **Actions the agent can take** |

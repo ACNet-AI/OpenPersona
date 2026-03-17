@@ -4,7 +4,7 @@
  *
  * Commands:
  *   read                         — Print current evolution state summary (last 5 events)
- *   write <json-patch>           — Merge JSON patch into soul/state.json
+ *   write <json-patch>           — Merge JSON patch into state.json (pack root)
  *   signal <type> [payload-json] — Emit signal to host via ~/.openclaw/feedback/
  *
  * Signal types: scheduling, file_io, tool_missing, capability_gap, resource_limit, agent_communication
@@ -270,7 +270,7 @@ switch (command) {
     console.error([
       'Usage: node scripts/state-sync.js <command>',
       '  read                         — Print evolution state summary',
-      '  write <json-patch>           — Persist state changes to soul/state.json',
+      '  write <json-patch>           — Persist state changes to state.json (pack root)',
       '  signal <type> [payload-json] — Emit signal to host runtime',
     ].join('\n'));
     process.exit(1);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenPersona Music Faculty — ElevenLabs Music API (music_v1)
+ * OpenPersona Music Skill — ElevenLabs Music API (music_v1)
  *
  * Usage:
  *   node compose.js "a soft piano piece about starlight"

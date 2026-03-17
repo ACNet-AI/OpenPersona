@@ -336,8 +336,9 @@ Living Canvas      →  how humans discover and interact with this persona
 - Heartbeat status (online / last seen)
 
 **Faculty layer** (capability badges, conditional):
-- Each active faculty renders a live widget: `voice` → play audio sample button, `selfie` → image gallery, `memory` → knowledge count, `economy` → vitality tier badge
-- Dormant (soft-ref) faculties shown as "coming soon" in muted style
+- Each active faculty renders a live widget: `voice` → play audio sample button, `memory` → knowledge count; each active skill renders as a card: `selfie` → image gallery, `music` → composition samples
+- Economy aspect → vitality tier badge (when economy enabled)
+- Dormant (soft-ref) capabilities shown as "coming soon" in muted style
 
 **Skill layer** (interaction entry points):
 - Skill cards with description; "Talk to me" button → opens agent's A2A endpoint or runner deep-link
