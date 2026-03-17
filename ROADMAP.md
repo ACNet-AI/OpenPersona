@@ -362,20 +362,20 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ---
 
-### P15 — Generator Pipeline Modularization (Medium Priority — Engineering Quality)
+### P15 — Generator Pipeline Modularization ✅ COMPLETED
 
-**Problem:** `generate()` in `lib/generator/index.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (`lib/generator/derived.js`, `lib/generator/validate.js`, `lib/generator/body.js`) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
+**Delivered:** `generate()` refactored from a 440-line monolithic async function into a 6-phase pipeline driven by a shared `GeneratorContext` object. Each phase is an exported, independently-testable async function:
 
-**Root cause:** No formal pipeline abstraction. Each "phase" is an imperative code block inside a single async function, sharing closure variables.
+| Phase | Responsibility |
+|---|---|
+| `clonePhase` | Read/clone persona from path or object; resolve `inputDir` |
+| `validatePhase` | Generate Gate (hard-reject) + format normalization + deprecation warnings |
+| `derivePhase` | Load faculties/economy; compute initial derived fields (backstory, allowedTools, skillContent) |
+| `assetPhase` | Create output dirs; copy local assets (rewrite paths); write `state-sync.js` |
+| `templatePhase` | Resolve skills; `computeDerivedFields`; render soul-injection + SKILL.md |
+| `emitPhase` | Write all output artifacts (SKILL.md, soul/, refs/, persona.json, agent-card, state.json, …) |
 
-**Direction:**
-- Introduce a `GeneratorContext` object that flows through all phases (carries `persona`, `skillDir`, `loadedFaculties`, `constitution`, `templateVars`, etc.)
-- Define a `Phase` interface: `async (ctx: GeneratorContext) => GeneratorContext`
-- Refactor `generate()` into a phase runner: `const phases = [clonePhase, validatePhase, derivePhase, assetPhase, templatePhase, emitPhase]; return runPipeline(phases, ctx);`
-- Each phase is independently testable
-- Extension point: `persona.json` can declare `"generatorPhases"` for post-processing hooks (e.g. a faculty that needs to write custom files after generation)
-
-**Implementation gate:** This is a refactoring — no functional change. Can be delivered incrementally: extract one phase at a time, keep tests green throughout. Estimated 3-4 focused sessions.
+`createContext()`, all 6 phases, and the existing helpers are exported from `lib/generator/index.js`. `generate()` public API is unchanged — existing callers require no updates. Extension point: replace or insert phases to support third-party post-processing hooks. Tests: 404/404 pass.
 
 ---
 
@@ -522,12 +522,12 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 |----------|------|----------|-----|
 | P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
 | P1 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
-| P2 | P15 Generator Pipeline Modularization | Engineering | Unblocks third-party faculty post-processing; incremental refactor |
-| P3 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
-| P4 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
-| P5 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
-| P6 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
+| P2 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P3 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
+| P4 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
+| P5 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
 | ✅ | P9 Vitality-Logic Closed Loop | Completed | Economy survivalPolicy opt-in; tier-driven behavior. |
+| ✅ | P15 Generator Pipeline Modularization | Completed | 6-phase pipeline + GeneratorContext; phases exported for independent testing. |
 | ✅ | P16 Template Partial Decomposition | Completed | soul-injection split into 6 partials; 300→25-line orchestrator. |
 | ✅ | P17 Evolution Constraint Gate | Completed | Trust Gradient fully closed — all three gates active. |
 | ✅ | P19 Faculty/Skill Boundary | Completed | Code + spec + docs fully aligned; selfie/music/reminder → Skills; economy → Aspect. |
@@ -536,6 +536,6 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 
 1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that the architecture foundation is solid.
 
-2. **P15 (generator modularization)** — engineering quality investment that enables third-party post-processing hooks; incremental refactor, no functional change.
+2. **P4-A (skill signature verification)** — security gate; pure extension of existing installer + evolution.boundaries + Signal Protocol, no new infrastructure.
 
 3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.
