@@ -3,7 +3,7 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { calcVitality }    = require('../lib/vitality');
+const { calcVitality }    = require('../lib/report/vitality');
 const { InMemoryAdapter } = require('agentbooks/adapters/in-memory');
 const { createIdentityInitialState } = require('agentbooks');
 

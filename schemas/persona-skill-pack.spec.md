@@ -2,7 +2,7 @@
 
 A persona skill pack is the output artifact of the OpenPersona generator. It is a self-contained directory that encodes a complete agent persona — identity, behavior, capabilities, and runtime infrastructure — in a form that any SKILL.md-compatible agent runner can consume.
 
-This document is the **single source of truth** for the output directory structure. The generator (`lib/generator.js`) must produce a layout conforming to this spec.
+This document is the **single source of truth** for the output directory structure. The generator (`lib/generator/index.js`) must produce a layout conforming to this spec.
 
 ---
 
@@ -25,7 +25,7 @@ These concepts operate across layers. They do not have their own directories —
 
 | Concept | Role | Files in pack |
 |---------|------|---------------|
-| **Evolution** | Persona growth and change over time — trait emergence, relationship progression, speaking style drift, interest discovery, mood tracking. Declared via `evolution.*` in `persona.json`; enforced at Generate Gate (`generator-validate.js`) and Runtime Gate (`state-sync.js`). Manages the *content* of `state.json`; Body manages the *transport mechanism*. | `soul/self-narrative.md` (when `evolution.enabled`); evolution fields in `state.json` (`evolvedTraits`, `speakingStyleDrift`, `interests`, `mood`, `relationship`, `eventLog`, `stateHistory`) |
+| **Evolution** | Persona growth and change over time — trait emergence, relationship progression, speaking style drift, interest discovery, mood tracking. Declared via `evolution.*` in `persona.json`; enforced at Generate Gate (`lib/generator/validate.js`) and Runtime Gate (`state-sync.js`). Manages the *content* of `state.json`; Body manages the *transport mechanism*. | `soul/self-narrative.md` (when `evolution.enabled`); evolution fields in `state.json` (`evolvedTraits`, `speakingStyleDrift`, `interests`, `mood`, `relationship`, `eventLog`, `stateHistory`) |
 | **Vitality** | Aggregate health monitoring — currently financial dimension only; memory and social dimensions are reserved for future milestones | No dedicated file in pack (framework-level aggregation); Economy adds `scripts/economy-guard.js` |
 | **Economy Infrastructure** | Economic identity and optional financial operations | `acn-config.json` (`wallet_address`, `onchain.erc8004`); optional `economy/economic-identity.json`, `economy/economic-state.json`, `scripts/economy*.js` |
 | **Social Infrastructure** | Network identity and agent discoverability | `agent-card.json`, `acn-config.json` |
@@ -306,7 +306,7 @@ A concept qualifies as systemic when it: (a) genuinely spans multiple layers wit
 
 Steps:
 1. Document the concept in this spec (name, role, files in pack)
-2. Add derived fields to `DERIVED_FIELDS` in `lib/generator-derived.js` if needed
+2. Add derived fields to `DERIVED_FIELDS` in `lib/generator/derived.js` if needed
 3. Add self-awareness injection to `soul-injection.template.md` if the persona should know about it
 4. Update `AGENTS.md` architecture section
 

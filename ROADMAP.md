@@ -17,7 +17,7 @@ The generation pipeline has been fully audited and aligned: Generate Gate, core 
 | Gate | Module | Status |
 |---|---|---|
 | Generate Gate | `lib/generator-validate.js` | ✅ Hard reject on violation |
-| Install Gate | `lib/installer.js` | ✅ Constitution hash warning |
+| Install Gate | `lib/lifecycle/installer.js` | ✅ Constitution hash warning |
 | Runtime Gate | `scripts/state-sync.js` | ✅ Clamp/filter on boundary violation |
 
 **Schema Restructure (P18) — `persona.json` now has a clean grouped input format:**
@@ -53,7 +53,7 @@ Remaining open items in the runtime coherence phase:
 | A2A Agent Card | `agent-card.json` (a2a-sdk compatible, protocol v0.3.0), manifest references, ACN registration |
 | Influence boundary | Schema validation, compliance checks, template injection, derived field exclusion |
 | `eventLog` + self-narrative | 50-entry capped event log; first-person `self-narrative.md` growth log |
-| Vitality HTML Report | `openpersona vitality report <slug>` — human-readable HTML report; `vitality score` (machine) / `vitality report` (human) command group; `lib/vitality-report.js`, `templates/vitality.template.html`, `demo/vitality-report.html` |
+| Vitality HTML Report | `openpersona vitality report <slug>` — human-readable HTML report; `vitality score` (machine) / `vitality report` (human) command group; `lib/report/vitality-report.js`, `templates/vitality.template.html`, `demo/vitality-report.html` |
 | Architecture Review (4 rounds) | 18 issues fixed: deep copy safety, DERIVED_FIELDS completeness (63 fields, `avatar` stripped), constitution hash consistency (Buffer-based SHA-256), shell injection prevention (`shellEscape`), redirect hop limits (`MAX_HOPS=5`), GitHub branch fallback (main→master), `.gitignore` generation (acn-registration.json + state.json + self-narrative.md), state schema validation (eventLog type enforcement), soul-state example alignment (`close`→`close_friend`), path resolution unification (`resolveSoulFile`), marker cleanup regex, version sync, temp dir cleanup, `OPENCLAW_HOME` constant unification. Tests: 374→375. |
 | P17 Evolution Constraint Gate | `state-sync.js writeState` now enforces `evolution.boundaries` at the write path: `immutableTraits` filter, `speakingStyleDrift.formality` clamp, `relationship.stage` single-step-forward validation. Mirrors `emitSignal` pattern. Trust Gradient fully closed across all three gates. 2 post-review bugs fixed (empty-array wipe prevention, unknown-stage over-blocking). Tests: 375→384 (+9). |
 | P19-A formality Semantic Clarification | Confirmed canonical interpretation: signed delta (0 = natural baseline). Extended validator bounds from `1–10` to **`-10 ~ +10`** (below-baseline constraints now supported). Fixed Mustache 0-falsy bug (`hasMinFormality`/`hasMaxFormality` boolean guards). Updated both persona schemas, validator, soul-injection template. P17 gate unchanged. Tests: 384→387 (+3). |
@@ -167,14 +167,14 @@ Introduce a trust-level field in `manifest.json` skill entries and a persona-lev
 
 **Problem:** `economy` Faculty Vitality ≈ financial health only. A persona that has money but has not had a conversation in three months is "socially dead" — the system cannot measure this.
 
-**Note:** The architecture has already reserved the extension path: `calcVitality` in `lib/vitality.js` is designed to aggregate future dimensions via weighted scoring.
+**Note:** The architecture has already reserved the extension path: `calcVitality` in `lib/report/vitality.js` is designed to aggregate future dimensions via weighted scoring.
 
 **Future dimensions:**
 - **Social health** — interaction frequency, relationship stage trend, user return rate
 - **Cognitive health** — time since last `evolvedTraits` update, knowledge staleness
 - **Resource health** — compute allocation, tool availability score
 
-**Implementation gate:** When a second dimension is ready to implement, move `calcVitality` to `lib/vitality.js` and inject dimensions via dependency injection.
+**Implementation gate:** When a second dimension is ready to implement, move `calcVitality` to `lib/report/vitality.js` and inject dimensions via dependency injection.
 
 ---
 
@@ -221,11 +221,11 @@ Introduce a trust-level field in `manifest.json` skill entries and a persona-lev
 **Direction:**
 - Add `openpersona list --html [--output <file>]` subcommand that generates a self-contained HTML "Persona Gallery"
 - Each persona is rendered as a card showing: avatar / initial, name, role badge, Vitality tier (color-coded), relationship stage, last active timestamp, and a link to its individual Vitality Report
-- Data aggregated from `persona.json`, `soul/state.json`, and `lib/vitality.js` for each installed persona
+- Data aggregated from `persona.json`, `soul/state.json`, and `lib/report/vitality.js` for each installed persona
 - Reuse `templates/vitality.template.html` design language for visual consistency
 - Static HTML, no server required — suitable for local review or sharing with stakeholders
 
-**Implementation gate:** Deliver after Vitality HTML Report is stable in production use. Reuse `lib/vitality-report.js` data-aggregation patterns.
+**Implementation gate:** Deliver after Vitality HTML Report is stable in production use. Reuse `lib/report/vitality-report.js` data-aggregation patterns.
 
 ---
 
@@ -300,7 +300,7 @@ This treats the matrix cells as parameterized templates, not hard-coded files. D
 
 **Social Health dimension (P7 extension):**
 - Social vitality = ACN peer count × interaction frequency × average compatibility score
-- Feeds into `calcVitality` in `lib/vitality.js` as the second dimension after financial health
+- Feeds into `calcVitality` in `lib/report/vitality.js` as the second dimension after financial health
 
 **Sub-direction: Persona Dating / Introductions (P13-A)**
 
@@ -358,13 +358,13 @@ Living Canvas      →  how humans discover and interact with this persona
 
 **Implementation gate:** Phase 1 (static canvas) can ship independently using the same Mustache + data aggregation pattern as `vitality-report`. Phase 2 requires a stable A2A endpoint and runner integration contract.
 
-**Phase 1 — ✅ Implemented:** `openpersona canvas <slug> [--output <file>] [--open]` generates a self-contained HTML profile page from persona data. Delivered: `lib/canvas-generator.js`, `templates/canvas.template.html`, CLI command in `bin/cli.js`, 28 unit tests in `tests/canvas-generator.test.js`.
+**Phase 1 — ✅ Implemented:** `openpersona canvas <slug> [--output <file>] [--open]` generates a self-contained HTML profile page from persona data. Delivered: `lib/report/canvas.js`, `templates/canvas.template.html`, CLI command in `bin/cli.js`, 28 unit tests in `tests/canvas-generator.test.js`.
 
 ---
 
 ### P15 — Generator Pipeline Modularization (Medium Priority — Engineering Quality)
 
-**Problem:** `generate()` in `lib/generator.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (generator-derived.js, generator-validate.js, generator-body.js) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
+**Problem:** `generate()` in `lib/generator/index.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (generator-derived.js, generator-validate.js, generator-body.js) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
 
 **Root cause:** No formal pipeline abstraction. Each "phase" is an imperative code block inside a single async function, sharing closure variables.
 
@@ -392,7 +392,7 @@ Living Canvas      →  how humans discover and interact with this persona
   - `partials/awareness-body.md` — Signal Protocol + resource awareness + credentials
   - `partials/awareness-growth.md` — Evolution state, pending commands, stage behaviors
   - `partials/survival-policy.md` — Economy tier routing
-- Update `lib/generator.js` Mustache render call to pass partials object
+- Update `lib/generator/index.js` Mustache render call to pass partials object
 - Each partial is independently reviewable and testable for Mustache syntax correctness
 - Total line count does not decrease (it's the same content), but cognitive load per file drops from 300 to ~60 lines
 

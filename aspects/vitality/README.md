@@ -26,8 +26,8 @@ Access via CLI: `openpersona vitality score <slug>` (machine-readable) or `openp
 
 | File | Location | Role |
 |------|----------|------|
-| `lib/vitality.js` | `lib/` | `calcVitality()` — aggregator, delegates to AgentBooks |
-| `lib/vitality-report.js` | `lib/` | HTML report builder |
+| `lib/report/vitality.js` | `lib/report/` | `calcVitality()` — aggregator, delegates to AgentBooks |
+| `lib/report/vitality-report.js` | `lib/report/` | HTML report builder |
 | `vitality.template.html` | `templates/reports/` | Report rendering template |
 
 ## Future

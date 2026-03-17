@@ -17,7 +17,7 @@ const os = require('os');
 const fs = require('fs-extra');
 
 const { generate } = require('../lib/generator');
-const { validatePersona } = require('../lib/generator-validate');
+const { validatePersona } = require('../lib/generator/validate');
 
 const TMP = path.join(os.tmpdir(), 'openpersona-schema-compat-' + Date.now());
 

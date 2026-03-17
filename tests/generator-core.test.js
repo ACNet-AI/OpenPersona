@@ -6,8 +6,8 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
-const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
-const { generateHandoff, renderHandoff } = require('../lib/switcher');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/registry');
+const { generateHandoff, renderHandoff } = require('../lib/lifecycle/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-core-' + Date.now());
 
@@ -871,7 +871,7 @@ describe('generated soul-injection quality', () => {
   });
 
   it('signal schema includes agent_communication category', () => {
-    const schemaPath = path.join(__dirname, '..', 'schemas', 'signal.schema.json');
+    const schemaPath = path.join(__dirname, '..', 'schemas', 'body', 'signal.schema.json');
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
     const categories = schema.definitions.request.properties.category.enum;
     assert.ok(categories.includes('agent_communication'), 'signal schema must include agent_communication category');

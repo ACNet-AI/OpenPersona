@@ -150,7 +150,7 @@ If the user needs a capability that doesn't exist in any ecosystem:
 
 When multiple personas are installed, only one is **active** at a time. Switching replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in SOUL.md and the corresponding block in IDENTITY.md, preserving any user-written content outside those markers. **Context Handoff:** On switch, a `handoff.json` is generated containing the outgoing persona's conversation summary, pending tasks, and emotional context — the incoming persona reads it to continue seamlessly.
 
-All install/uninstall/switch operations automatically maintain a local registry at `~/.openclaw/persona-registry.json`, tracking installed personas, active status, and timestamps. The `export` and `import` commands enable cross-device persona transfer — export a zip, move it to another machine, and import to restore the full persona including soul state.
+All install/uninstall/switch operations automatically maintain a local registry at `~/.openpersona/persona-registry.json`, tracking installed personas, active status, and timestamps. The `export` and `import` commands enable cross-device persona transfer — export a zip, move it to another machine, and import to restore the full persona including soul state.
 
 ## Runner Integration Protocol
 
@@ -173,9 +173,9 @@ openpersona state signal <slug> <type> '[payload-json]'
 
 **Signal types**: `capability_gap` | `tool_missing` | `scheduling` | `file_io` | `resource_limit` | `agent_communication`
 
-Signals are written to a feedback directory resolved from the host's home path (framework-agnostic — works with OpenClaw, Cursor, Claude Code, Codex, or any custom runner). See `references/SIGNAL-PROTOCOL.md` for the full host-side contract and integration guide.
+Signals are written to a feedback directory resolved from the host's home path (framework-agnostic — works with OpenClaw, Cursor, Claude Code, Codex, or any custom runner). See `layers/body/SIGNAL-PROTOCOL.md` in the framework source for the full host-side contract and integration guide.
 
-These commands resolve the persona directory automatically (registry lookup → fallback to `~/.openclaw/skills/persona-<slug>/`) and delegate to `scripts/state-sync.js` inside the persona pack. Works from any directory.
+These commands resolve the persona directory automatically (registry lookup → `~/.openpersona/personas/persona-<slug>/` → legacy `~/.openclaw/skills/persona-<slug>/`) and delegate to `scripts/state-sync.js` inside the persona pack. Works from any directory.
 
 ## Publishing to ClawHub
 
@@ -192,7 +192,7 @@ The generator injects a unified **Self-Awareness** section into every persona's 
 
 2. **Capabilities** (conditional) — When skills, faculties, or body declare an `install` field for a dependency not available locally, the generator classifies them as "soft references" and injects dormant capability awareness with graceful degradation guidance. Also appears in `SKILL.md` as "Expected Capabilities" with install sources.
 
-3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a runner-agnostic, file-based bidirectional contract that lets the persona request capabilities from its host. The persona emits signals to a feedback directory resolved from the host's home path; any compatible host (OpenClaw, Cursor, Claude Code, Codex, custom runner) can implement the server side and respond. For host implementation details and the full schema, see `references/SIGNAL-PROTOCOL.md`. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
+3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a runner-agnostic, file-based bidirectional contract that lets the persona request capabilities from its host. The persona emits signals to a feedback directory resolved from the host's home path; any compatible host (OpenClaw, Cursor, Claude Code, Codex, custom runner) can implement the server side and respond. For host implementation details and the full schema, see `layers/body/SIGNAL-PROTOCOL.md` in the framework source. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
 
 4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies evolved traits, speaking style drift, interests, and mood, and respects hard constraints (`immutableTraits`, formality bounds). If evolution sources are declared, the persona is aware of its dormant sources and can request activation via the Signal Protocol. If `influenceBoundary` is declared, the persona processes external `persona_influence` requests against the access control rules and retains full autonomy over acceptance.
 
@@ -265,7 +265,7 @@ The Economy Infrastructure gives a persona a real financial ledger backed by [Ag
 | `optimizing` | FHS < 0.50 or runway < 14 days |
 | `normal` | Healthy, operating sustainably |
 
-**Vitality** — OpenPersona-level aggregator (`lib/vitality.js`) combining financial health with future dimensions (social, cognitive, resource). Currently single-dimension (financial pass-through); multi-dimension reserved in ROADMAP P7.
+**Vitality** — OpenPersona-level aggregator (`lib/report/vitality.js`) combining financial health with future dimensions (social, cognitive, resource). Currently single-dimension (financial pass-through); multi-dimension reserved in ROADMAP P7.
 
 **Survival Policy** — Opt-in via `economy.survivalPolicy: true` in `persona.json`. When enabled, the persona reads `VITALITY_REPORT` at conversation start and routes behavior per tier. Default `false` — companion/roleplay personas track costs silently.
 
@@ -339,6 +339,6 @@ For detailed reference material, see the `references/` directory:
 - **`references/AVATAR.md`** — Avatar Faculty integration boundary, provider model, and fallback contract
 - **`references/HEARTBEAT.md`** — Proactive real-data check-in system
 - **`references/ECONOMY.md`** — Economy Aspect (Infrastructure), FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
-- **`references/SIGNAL-PROTOCOL.md`** — Host-side Signal Protocol implementation guide: file schemas, signal types, OpenClaw plugin pattern, and co-evolution feedback loop
+- **`layers/body/SIGNAL-PROTOCOL.md`** (framework source) — Host-side Signal Protocol implementation guide: file schemas, signal types, OpenClaw plugin pattern, and co-evolution feedback loop
 - **[ACN SKILL.md](https://github.com/acnlabs/ACN/blob/main/skills/acn/SKILL.md)** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity (official, always up-to-date)
 - **`references/CONTRIBUTE.md`** — Persona Harvest community contribution workflow

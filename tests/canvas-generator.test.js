@@ -6,7 +6,7 @@ const path   = require('path');
 const os     = require('os');
 const fs     = require('fs-extra');
 
-const { buildCanvasData, renderCanvasHtml } = require('../lib/canvas-generator');
+const { buildCanvasData, renderCanvasHtml } = require('../lib/report/canvas');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

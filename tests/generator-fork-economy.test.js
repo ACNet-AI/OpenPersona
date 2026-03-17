@@ -6,8 +6,8 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
-const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
-const { generateHandoff, renderHandoff } = require('../lib/switcher');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/registry');
+const { generateHandoff, renderHandoff } = require('../lib/lifecycle/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-fork-' + Date.now());
 
@@ -441,7 +441,7 @@ describe('economy faculty', () => {
   });
 
   it('evolveReport returns economicState and handles v2 schema', async () => {
-    const { evolveReport } = require('../lib/evolution');
+    const { evolveReport } = require('../lib/state/evolution');
     const EVOLVE_TMP = path.join(os.tmpdir(), 'openpersona-econ-evolve-' + Date.now());
     await fs.ensureDir(EVOLVE_TMP);
     const persona = {

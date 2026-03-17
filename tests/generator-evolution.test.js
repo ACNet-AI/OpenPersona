@@ -6,8 +6,8 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
-const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
-const { generateHandoff, renderHandoff } = require('../lib/switcher');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/registry');
+const { generateHandoff, renderHandoff } = require('../lib/lifecycle/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-evo-' + Date.now());
 
@@ -403,7 +403,7 @@ describe('evolution governance — stateHistory', () => {
 
 describe('evolution report', () => {
   const EVO_TMP = path.join(require('os').tmpdir(), 'openpersona-evo-test-' + Date.now());
-  const { evolveReport } = require('../lib/evolution');
+  const { evolveReport } = require('../lib/state/evolution');
 
   it('returns state for persona with evolution', async () => {
     const personaDir = path.join(EVO_TMP, 'persona-evo-report');

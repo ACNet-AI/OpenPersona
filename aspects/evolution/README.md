@@ -32,12 +32,12 @@ Evolution's source files are distributed across the framework:
 
 | File | Location | Role |
 |------|----------|------|
-| `soul-state.template.json` | `layers/soul/` | Template for `state.json` (pack root) |
-| `state-sync.template.js` | `templates/` | Mustache template → `scripts/state-sync.js` (Runtime Gate) |
-| `soul-awareness-growth.partial.md` | `templates/partials/` | Self-Awareness › Growth injection |
-| `soul-how-you-grow.partial.md` | `templates/partials/` | Growth behavior guidance |
-| Evolution validation logic | `lib/generator-validate.js` | Generate Gate — boundaries format enforcement |
-| Evolution governance | `lib/evolution.js` | `evolve-report` CLI command |
+| `soul-state.template.json` | `templates/soul/` | Template for `state.json` (pack root) |
+| `state-sync.template.js` | `templates/body/` | Mustache template → `scripts/state-sync.js` (Runtime Gate) |
+| `soul-awareness-growth.partial.md` | `templates/soul/partials/` | Self-Awareness › Growth injection |
+| `soul-how-you-grow.partial.md` | `templates/soul/partials/` | Growth behavior guidance |
+| Evolution validation logic | `lib/generator/validate.js` | Generate Gate — boundaries format enforcement |
+| Evolution governance | `lib/state/evolution.js` | `evolve-report` CLI command |
 
 ## Future
 

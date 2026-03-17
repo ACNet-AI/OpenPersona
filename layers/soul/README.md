@@ -18,11 +18,11 @@ Priority ordering: **Safety > Honesty > Helpfulness**
 
 > ⚠️ **PROTECTED** — `constitution.md` must never be weakened. Any PR that removes or loosens a constitutional constraint will be rejected.
 
-## `soul-state.template.json`
+## Initial State Template
 
-Template for the initial `state.json` generated at the persona pack root. `state.json` is a **shared artifact** — Body owns the transport (`scripts/state-sync.js`), Evolution owns the payload (`evolvedTraits`, `relationship`, `mood`, `eventLog`).
+The initial `state.json` mold lives at `templates/soul/soul-state.template.json`. It is a Mustache template rendered at generation time with soul-layer config (mood baseline from personality, relationship starting at `stranger`).
 
-The template lives here because the initial state is seeded from soul-layer configuration (mood baseline from personality, relationship starting at `stranger`).
+`state.json` is a **shared artifact** — Body owns the transport (`scripts/state-sync.js`), Evolution owns the payload (`evolvedTraits`, `relationship`, `mood`, `eventLog`). The template lives in `templates/` because it is a mold (production input), not a raw material.
 
 ## Generated Output (in persona skill pack)
 
@@ -42,7 +42,7 @@ persona-{slug}/               ← pack root
 
 The Soul layer is one of the **4 structural layers** (Soul / Body / Faculty / Skill). Within the **4+5+3** model:
 
-- **Soul** defines identity — the Generate Gate (`lib/generator-validate.js`) enforces constitution compliance at creation time
+- **Soul** defines identity — the Generate Gate (`lib/generator/validate.js`) enforces constitution compliance at creation time
 - **Evolution** (one of the 5 cross-cutting concepts) extends Soul at runtime — traits emerge, relationships deepen, speaking style drifts
 - The **Runtime Gate** (`scripts/state-sync.js`) enforces `evolution.boundaries` — immutableTraits, formality bounds, stage progression
 

@@ -31,7 +31,7 @@ The Body layer is one of the **4 structural layers** (Soul / Body / Faculty / Sk
 - **Body** owns the transport mechanism — `scripts/state-sync.js` reads, writes, and signals
 - **Evolution** owns the payload — `evolvedTraits`, `speakingStyleDrift`, `relationship`, `mood`, `eventLog`
 
-The initial `state.json` is generated from `layers/soul/soul-state.template.json`.
+The initial `state.json` is generated from `templates/soul/soul-state.template.json`.
 
 ## Source Structure
 

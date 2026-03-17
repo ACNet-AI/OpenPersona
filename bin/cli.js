@@ -10,18 +10,19 @@ const { program } = require('commander');
 const inquirer = require('inquirer');
 const chalk = require('chalk');
 const { generate } = require('../lib/generator');
-const { install } = require('../lib/installer');
-const { download } = require('../lib/downloader');
-const { search } = require('../lib/searcher');
-const { uninstall } = require('../lib/uninstaller');
+const { install } = require('../lib/lifecycle/installer');
+const { download } = require('../lib/remote/downloader');
+const { search } = require('../lib/remote/searcher');
+const { uninstall } = require('../lib/lifecycle/uninstaller');
 const publishAdapter = require('../lib/publisher');
-const { contribute } = require('../lib/contributor');
-const { switchPersona, listPersonas } = require('../lib/switcher');
-const { registerWithAcn } = require('../lib/registrar');
-const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, loadRegistry, shellEscape } = require('../lib/utils');
-const { resolvePersonaDir, runStateSyncCommand } = require('../lib/state-runner');
-const { forkPersona } = require('../lib/forker');
-const { exportPersona, importPersona } = require('../lib/porter');
+const { contribute } = require('../lib/lifecycle/contributor');
+const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
+const { registerWithAcn } = require('../lib/remote/registrar');
+const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, shellEscape } = require('../lib/utils');
+const { loadRegistry } = require('../lib/registry');
+const { resolvePersonaDir, runStateSyncCommand } = require('../lib/state/runner');
+const { forkPersona } = require('../lib/lifecycle/forker');
+const { exportPersona, importPersona } = require('../lib/lifecycle/porter');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
 const PRESETS_DIR = path.join(PKG_ROOT, 'presets');
@@ -300,7 +301,7 @@ program
       process.exit(1);
     }
     const persona = JSON.parse(fs.readFileSync(personaPath, 'utf-8'));
-    const templatePath = path.join(PKG_ROOT, 'layers', 'soul', 'soul-state.template.json');
+    const templatePath = path.join(PKG_ROOT, 'templates', 'soul', 'soul-state.template.json');
     const tpl = fs.readFileSync(templatePath, 'utf-8');
     const Mustache = require('mustache');
     const now = new Date().toISOString();
@@ -315,7 +316,7 @@ program
   .description('★Experimental: Show evolution report for a persona')
   .action(async (slug) => {
     try {
-      const { evolveReport } = require('../lib/evolution');
+      const { evolveReport } = require('../lib/state/evolution');
       await evolveReport(slug);
     } catch (e) {
       printError(e.message);
@@ -428,7 +429,7 @@ program
 // Lookup priority: registry path → default OP_SKILLS_DIR/persona-<slug>
 // Delegates to scripts/state-sync.js inside the persona pack (no logic duplication).
 
-// resolvePersonaDir and runStateSyncCommand are imported from lib/state-runner.js
+// resolvePersonaDir and runStateSyncCommand are imported from lib/state/runner.js
 
 const stateCmd = program
   .command('state')
@@ -467,7 +468,7 @@ vitalityCmd
   .command('score <slug>')
   .description('Print machine-readable Vitality score (used by Survival Policy and agent runners)')
   .action((slug) => {
-    const { calcVitality }    = require('../lib/vitality');
+    const { calcVitality }    = require('../lib/report/vitality');
     const { JsonFileAdapter } = require('agentbooks/adapters/json-file');
 
     const dataPath = process.env.AGENTBOOKS_DATA_PATH
@@ -507,7 +508,7 @@ vitalityCmd
       printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
       process.exit(1);
     }
-    const { renderVitalityHtml } = require('../lib/vitality-report');
+    const { renderVitalityHtml } = require('../lib/report/vitality-report');
     let html;
     try {
       html = renderVitalityHtml(personaDir, slug);
@@ -536,7 +537,7 @@ program
       printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
       process.exit(1);
     }
-    const { renderCanvasHtml } = require('../lib/canvas-generator');
+    const { renderCanvasHtml } = require('../lib/report/canvas');
     let html;
     try {
       html = renderCanvasHtml(personaDir, slug);

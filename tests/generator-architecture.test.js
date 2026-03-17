@@ -6,8 +6,8 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
-const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
-const { generateHandoff, renderHandoff } = require('../lib/switcher');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/registry');
+const { generateHandoff, renderHandoff } = require('../lib/lifecycle/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-arch-' + Date.now());
 
@@ -590,8 +590,8 @@ describe('context handoff', () => {
 
   it('soul-injection template includes handoff conditional block', () => {
     const templatesDir = path.join(__dirname, '..', 'templates');
-    const mainTemplate = fs.readFileSync(path.join(templatesDir, 'soul-injection.template.md'), 'utf-8');
-    const partialsDir = path.join(templatesDir, 'partials');
+    const mainTemplate = fs.readFileSync(path.join(templatesDir, 'soul', 'soul-injection.template.md'), 'utf-8');
+    const partialsDir = path.join(templatesDir, 'soul', 'partials');
     function collectPartials(dir) {
       if (!fs.existsSync(dir)) return [];
       return fs.readdirSync(dir).flatMap((f) => {
@@ -644,11 +644,11 @@ describe('version consistency', () => {
       'bin/cli.js must require package.json for its version'
     );
 
-    // generator.js must also read version dynamically
-    const generatorSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'generator.js'), 'utf-8');
+    // generator/index.js must also read version dynamically
+    const generatorSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'generator', 'index.js'), 'utf-8');
     assert.ok(
-      generatorSrc.includes("require('../package.json')"),
-      'lib/generator.js must require package.json for FRAMEWORK_VERSION'
+      generatorSrc.includes("require('../../package.json')"),
+      'lib/generator/index.js must require package.json for FRAMEWORK_VERSION'
     );
   });
 

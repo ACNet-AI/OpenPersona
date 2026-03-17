@@ -6,7 +6,7 @@ const path   = require('path');
 const os     = require('os');
 const fs     = require('fs-extra');
 
-const { buildReportData, renderVitalityHtml } = require('../lib/vitality-report');
+const { buildReportData, renderVitalityHtml } = require('../lib/report/vitality-report');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

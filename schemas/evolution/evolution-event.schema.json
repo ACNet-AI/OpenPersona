@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "openpersona/soul/evolution-event",
+  "$id": "openpersona/evolution/evolution-event",
   "title": "Evolution Event",
   "description": "Structured evolution event logged during persona growth",
   "type": "object",

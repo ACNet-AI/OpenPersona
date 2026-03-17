@@ -6,8 +6,8 @@ const assert = require('node:assert');
 const path = require('path');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
-const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/utils');
-const { generateHandoff, renderHandoff } = require('../lib/switcher');
+const { loadRegistry, saveRegistry, registryAdd, registryRemove, registrySetActive, REGISTRY_PATH } = require('../lib/registry');
+const { generateHandoff, renderHandoff } = require('../lib/lifecycle/switcher');
 
 const TMP = path.join(require('os').tmpdir(), 'openpersona-test-state-' + Date.now());
 
@@ -413,7 +413,7 @@ describe('body.interface schema and generation', () => {
   const TMP_BI = path.join(require('os').tmpdir(), 'op-test-body-interface');
 
   it('soul-state.schema.json contains pendingCommands and eventLog fields', () => {
-    const schema = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schemas', 'soul', 'soul-state.schema.json'), 'utf-8'));
+    const schema = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schemas', 'evolution', 'soul-state.schema.json'), 'utf-8'));
     assert.ok('pendingCommands' in schema.properties, 'soul-state.schema.json must declare pendingCommands property');
     assert.ok('eventLog' in schema.properties, 'soul-state.schema.json must declare eventLog property');
     assert.ok('speakingStyleDrift' in schema.properties, 'soul-state.schema.json must declare speakingStyleDrift property');

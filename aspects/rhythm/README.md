@@ -42,7 +42,7 @@ Rhythm crosses two structural layers:
 |------|----------|------|
 | `soul-awareness-body.partial.md` | `templates/partials/` | Heartbeat awareness injection |
 | Heartbeat sync logic | `lib/generator-derived.js` | `_heartbeatConfig` derived field |
-| `syncHeartbeat()` | `lib/switcher.js` | Syncs heartbeat config to runner on install/switch |
+| `syncHeartbeat()` | `lib/lifecycle/switcher.js` | Syncs heartbeat config to runner on install/switch |
 
 ## Future
 

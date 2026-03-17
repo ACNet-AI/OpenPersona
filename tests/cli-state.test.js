@@ -13,7 +13,7 @@ const os = require('os');
 const fs = require('fs-extra');
 const { spawnSync } = require('child_process');
 const { generate } = require('../lib/generator');
-const { registryAdd } = require('../lib/utils');
+const { registryAdd } = require('../lib/registry');
 
 const CLI = path.resolve(__dirname, '../bin/cli.js');
 

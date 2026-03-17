@@ -24,45 +24,80 @@ node --test tests/ # Run all tests — must pass before any PR
 ```
 bin/cli.js              ← CLI entry point (commander-based)
 lib/
-  generator.js          ← Core persona generation logic (the heart of the project)
-  evolution.js          ← Evolution governance (evolve-report CLI)
-  installer.js          ← Persona installation to OpenClaw
-  registrar.js          ← ACN registration logic (acn-register CLI command)
-  publisher/clawhub.js  ← Publishing to ClawHub registry
-  contributor.js        ← Persona Harvest (community contribution)
-  downloader.js         ← Preset/package downloading
-  utils.js              ← Shared utilities
+  generator/            ← Core generation pipeline
+    index.js            ← Orchestrator (the heart of the project)
+    validate.js         ← Generate Gate (hard-reject constraint checks)
+    derived.js          ← Derived template variable computation
+    body.js             ← Body layer description builder
+    social.js           ← Social aspect: Agent Card + ACN config builders
+    economy.js          ← Economy aspect: load descriptor + write initial state
+  lifecycle/            ← Persona lifecycle management
+    installer.js        ← Persona installation to ~/.openpersona (with optional OpenClaw sync)
+    uninstaller.js      ← Persona removal
+    switcher.js         ← Active persona switching + handoff generation
+    forker.js           ← Persona fork (derive child from installed parent)
+    porter.js           ← Export / import persona packs
+    contributor.js      ← Persona Harvest (community contribution)
+  state/                ← Runtime state management
+    runner.js           ← Persona directory resolution + state-sync delegation
+    evolution.js        ← Evolution governance (evolve-report CLI)
+  registry/             ← Local persona registry (~/.openpersona/persona-registry.json)
+    index.js            ← loadRegistry / saveRegistry / registryAdd / registryRemove / registrySetActive
+  remote/               ← External service calls (outbound network)
+    registrar.js        ← ACN registration logic (acn-register CLI command)
+    downloader.js       ← Preset/package downloading from ClawHub
+    searcher.js         ← Persona search on ClawHub
+  report/               ← Reporting and visualization
+    vitality.js         ← Vitality score calculation (AgentBooks wrapper)
+    vitality-report.js  ← HTML vitality report rendering
+    canvas.js           ← Living Canvas HTML profile page
+    helpers.js          ← Shared report utilities (readJsonSafe, formatDate, daysBetween, truncate)
+  publisher/            ← Publish persona to OpenPersona public directory
+    index.js            ← Validate GitHub repo + report to OpenPersona telemetry
+  utils.js              ← Path constants + print helpers + string utilities (no registry logic)
 templates/
   skill.template.md          ← Mustache template → generated SKILL.md (four-layer headings)
-  soul-injection.template.md ← Soul layer injection orchestrator (thin; delegates to partials/)
-  handoff.template.md        ← context handoff rendering template
-  handoff.template.md        ← context handoff markdown (used by lib/switcher.js)
-  state-sync.template.js     ← scripts/state-sync.js source template
-  partials/                  ← Mustache partials for soul-injection (6 files, each ~30–75 lines)
-    soul-intro.partial.md              ← persona intro, selfie, personality
-    soul-awareness-identity.partial.md ← Self-Awareness > Identity + dormant Capabilities
-    soul-awareness-body.partial.md     ← Self-Awareness > Body (Signal Protocol, runtime, interface)
-    soul-awareness-growth.partial.md   ← Self-Awareness > Growth (pendingCommands, constraints, evolution sources)
-    soul-how-you-grow.partial.md       ← How You Grow (stage criteria, eventLog, self-narrative)
-    soul-economy.partial.md            ← Survival Policy
-  reports/                   ← standalone HTML report/tool templates
+  soul/                      ← Soul layer molds
+    soul-injection.template.md ← Soul layer injection orchestrator (delegates to partials/)
+    soul-state.template.json   ← Initial state.json mold (seeded from soul config)
+    partials/                  ← Mustache partials for soul-injection (6 files, each ~30–75 lines)
+      soul-intro.partial.md              ← persona intro, selfie, personality
+      soul-awareness-identity.partial.md ← Self-Awareness > Identity + dormant Capabilities
+      soul-awareness-body.partial.md     ← Self-Awareness > Body (Signal Protocol, runtime, interface)
+      soul-awareness-growth.partial.md   ← Self-Awareness > Growth (pendingCommands, constraints, evolution sources)
+      soul-how-you-grow.partial.md       ← How You Grow (stage criteria, eventLog, self-narrative)
+      soul-economy.partial.md            ← Survival Policy
+  body/                      ← Body layer molds
+    state-sync.template.js   ← scripts/state-sync.js source template (Body nervous system)
+  lifecycle/                 ← Lifecycle molds
+    handoff.template.md      ← Context handoff markdown (used by lib/lifecycle/switcher.js)
+  reports/                   ← Standalone HTML report/tool templates
     vitality.template.html   ← openpersona vitality report HTML output
     canvas.template.html     ← Living Canvas HTML profile page
 layers/
   soul/
     constitution.md     ← ⚠️ PROTECTED — universal ethical foundation
     README.md
-    soul-state.template.json ← Evolution state template
   faculties/            ← Faculty implementations (voice, avatar, memory)
   skills/               ← Local skill definitions (skill.json + SKILL.md per skill; music, selfie, reminder)
   body/                 ← Body layer definitions
 aspects/                ← 5 systemic concept source assets (orthogonal to the 4 layers)
   economy/              ← Economy scripts + SKILL.md (AgentBooks wrapper)
-  evolution/            ← README (state template in layers/soul/, state-sync in templates/)
-  vitality/             ← README (lib/vitality.js, templates/reports/vitality.template.html)
+  evolution/            ← README (state template in templates/soul/, state-sync in templates/body/)
+  vitality/             ← README (lib/report/vitality.js, templates/reports/vitality.template.html)
   social/               ← README (agent-card/acn-config generated inline by generator)
-  rhythm/               ← README (heartbeat config in persona.json, sync in lib/switcher.js)
-schemas/                ← JSON schemas for validation (signal.schema.json, persona.schema.json, persona.input.schema.json)
+  rhythm/               ← README (heartbeat config in persona.json, sync in lib/lifecycle/switcher.js)
+schemas/                ← Production specs — organized by 4+5 architecture (documentation-only; runtime enforcement is JS in lib/generator/validate.js)
+  persona.input.schema.json    ← Authoritative input schema (v0.17+ grouped format)
+  persona.input.spec.md        ← Input field reference
+  persona-skill-pack.spec.md   ← Product (skill pack) structure spec
+  soul/                        ← Soul layer schemas (soul-declaration.spec.md, handoff.schema.json)
+  body/                        ← Body layer schemas (body-declaration.spec.md, embodiment.schema.json, signal.schema.json)
+  faculty/                     ← Faculty layer schemas (faculty-declaration.spec.md, faculty.schema.json)
+  skill/                       ← Skill layer schemas (skill-declaration.spec.md)
+  evolution/                   ← Evolution concept schemas (soul-state.schema.json, evolution-event.schema.json, influence-request.schema.json)
+  social/                      ← Social concept schemas (agent-card.schema.json, acn-register.schema.json)
+  legacy/                      ← Deprecated flat-format schemas (pre-v0.17)
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
 tests/                  ← Node.js native test runner (node:test)
 skills/open-persona/    ← Meta-skill for AI agents using the framework
@@ -89,8 +124,8 @@ The same `persona.json` declaration is enforced at three progressive gates, each
 
 | Gate | Module | Mechanism | Scope |
 |---|---|---|---|
-| **Generate Gate** | `lib/generator-validate.js` | Hard reject (`throw`) | Required fields · constitution §3/§6 compliance · evolution.boundaries format · influenceBoundary schema |
-| **Install Gate** | `lib/installer.js` | Warning (`printWarning`) | constitution SHA-256 hash integrity (lineage chain) |
+| **Generate Gate** | `lib/generator/validate.js` | Hard reject (`throw`) | Required fields · constitution §3/§6 compliance · evolution.boundaries format · influenceBoundary schema |
+| **Install Gate** | `lib/lifecycle/installer.js` | Warning (`printWarning`) | constitution SHA-256 hash integrity (lineage chain) |
 | **Runtime Gate** | `scripts/state-sync.js` (generated) | Clamp / filter / hard reject | See below |
 
 **Runtime Gate — full coverage (P17 complete):**
@@ -101,7 +136,7 @@ The same `persona.json` declaration is enforced at three progressive gates, each
 1. **Structural invariants** (always-on): IMMUTABLE identity fields (`$schema`, `version`, `personaSlug`, `createdAt`) are never overwritten; eventLog entry format is validated (hard reject on invalid type/missing fields)
 2. **Evolution boundaries** (when `evolution.boundaries` is declared): `immutableTraits` entries are filtered from the `evolvedTraits` patch; `speakingStyleDrift.formality` is clamped to `[minFormality, maxFormality]`; `relationship.stage` is validated for single-step forward-only progression — reversals and skips are blocked. Violations produce `[evolution-gate]` stderr warnings and a corrected patch (not hard-rejected, to preserve co-located valid data).
 
-**Load-bearing rule:** Any code that modifies `scripts/state-sync.js` (via `templates/state-sync.template.js`) or `lib/generator-validate.js` is touching the core. Changes must preserve Trust Gradient coverage — do not reduce what any gate enforces.
+**Load-bearing rule:** Any code that modifies `scripts/state-sync.js` (via `templates/body/state-sync.template.js`) or `lib/generator/validate.js` is touching the core. Changes must preserve Trust Gradient coverage — do not reduce what any gate enforces.
 
 **The Trust Gradient is fully implemented.** All three gates are active. The architectural debt documented in P17 has been paid.
 
@@ -131,7 +166,7 @@ Note: `personaType` is deprecated — use `role` instead.
 - Personas can add stricter rules on top, but cannot loosen the constitution
 - Section references use `§` prefix: `§1`, `§2`, etc. — never use `S1`, `S2`
 - Priority ordering: **Safety > Honesty > Helpfulness**
-- The generator (`lib/generator.js`) includes a compliance check that rejects `persona.json` boundaries attempting to loosen constitutional constraints
+- The generator (`lib/generator/index.js`) includes a compliance check that rejects `persona.json` boundaries attempting to loosen constitutional constraints
 - The generator also validates `evolution.boundaries`: `immutableTraits` must be a string array (non-empty, max 100 chars each), and formality bounds must be in range -10 to 10 with `minFormality < maxFormality` (negative values allow below-baseline constraints, e.g. `minFormality: -3` = "can drift up to 3 units more casual than baseline")
 
 ### Self-Awareness System
@@ -207,7 +242,7 @@ openpersona state write <slug> '<json-patch>'
 openpersona state signal <slug> <type> '[payload-json]'
 ```
 
-**Lookup**: registry path first (`~/.openclaw/persona-registry.json`), falls back to `~/.openclaw/skills/persona-<slug>/`.
+**Lookup**: registry path first (`~/.openpersona/persona-registry.json`), falls back to `~/.openpersona/personas/persona-<slug>/` then legacy `~/.openclaw/skills/persona-<slug>/`.
 **Delegates to**: `scripts/state-sync.js` inside the persona pack — no logic duplication.
 **Works from any directory** — runners do not need to know where the persona is installed.
 
@@ -228,15 +263,17 @@ Reserved `type` values: `capability_unlock` (dormant skill now available), `cont
 
 ### Local Persona Registry
 
-`persona-registry.json` at `~/.openclaw/` tracks all installed personas. Maintained automatically by `install`, `uninstall`, and `switch` commands — no manual editing needed.
+`persona-registry.json` at `~/.openpersona/` tracks all installed personas. Maintained automatically by `install`, `uninstall`, and `switch` commands — no manual editing needed.
 
-- Functions: `loadRegistry()`, `saveRegistry()`, `registryAdd()`, `registryRemove()`, `registrySetActive()` in `lib/utils.js`
-- All accept optional `regPath` parameter for testing (defaults to `REGISTRY_PATH`)
-- `listPersonas()` in `lib/switcher.js` uses registry as primary source, falls back to scanning `openclaw.json`
+- Canonical source: `lib/registry/index.js` — `loadRegistry()`, `saveRegistry()`, `registryAdd()`, `registryRemove()`, `registrySetActive()`
+- All functions accept optional `regPath` parameter for testing (defaults to `REGISTRY_PATH`)
+- `lib/utils.js` re-exports these functions for backward compatibility — new code should import directly from `lib/registry`
+- `listPersonas()` in `lib/lifecycle/switcher.js` uses registry as primary source, falls back to scanning `openclaw.json`
+- **Distinct from `lib/remote/`** — registry = local install index; remote = external service calls (ClawHub, ACN)
 
 Key implementation details:
-- Soft-ref detection: `lib/generator.js` checks each skill/faculty/body/source for `install` field + missing local definition
-- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Current derived fields: `hasSoftRefSkills`, `softRefSkillNames`, `hasSoftRefFaculties`, `softRefFacultyNames`, `hasSoftRefBody`, `softRefBodyName`, `softRefBodyInstall`, `heartbeatExpected`, `heartbeatStrategy`, `_heartbeatConfig`, `hasDormantCapabilities`, `hasEvolutionBoundaries`, `immutableTraits`, `maxFormality`, `minFormality`, `hasStageBehaviors`, `stageBehaviorsBlock`, `hasEvolutionSources`, `evolutionSourceNames`, `hasSoftRefSources`, `softRefSourceNames`, `softRefSourceInstalls`, `hasInfluenceBoundary`, `influenceBoundaryPolicy`, `influenceableDimensions`, `influenceBoundaryRules`, `hasImmutableTraitsWarning`, `immutableTraitsForInfluence`, `hasEconomyFaculty`, `hasSurvivalPolicy`, `hasInterfaceConfig`, `interfaceSignalPolicy`, `interfaceCommandPolicy`, `additionalAllowedTools`, `heartbeat`, `bodyFramework`
+- Soft-ref detection: `lib/generator/index.js` checks each skill/faculty/body/source for `install` field + missing local definition
+- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Canonical list maintained in `lib/generator/derived.js` (currently 68 entries). Key examples: `hasSoftRefSkills`, `hasDormantCapabilities`, `isDigitalTwin`, `hasEvolutionBoundaries`, `hasInfluenceBoundary`, `hasEconomyFaculty`, `hasSurvivalPolicy`, `allowedTools`, `backstory`, `roleFoundation`, `heartbeat`, `bodyFramework`
 - `version` and `author` are **NOT** derived — they are persona utility fields preserved in output `persona.json` (with defaults `'0.1.0'` / `'openpersona'` if not declared)
 - `rhythm` is **NOT** a derived field — it is a cross-cutting input field preserved in the output `persona.json` (runner reads `rhythm.heartbeat` and `rhythm.circadian` directly). The flat `heartbeat` field IS derived (stripped) because it is the old top-level path superseded by `rhythm.heartbeat`.
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
@@ -266,7 +303,7 @@ The `economy` aspect (`aspects/economy/`) is a thin OpenPersona wrapper around t
 - `scripts/economy-guard.js` → `require('agentbooks/cli/economy-guard')` — outputs `FINANCIAL_HEALTH_REPORT`
 - `scripts/economy-hook.js` → `require('agentbooks/cli/economy-hook')` — post-conversation cost recorder
 
-**Vitality aggregation (`lib/vitality.js`):**
+**Vitality aggregation (`lib/report/vitality.js`):**
 - `calcVitality(agentId, adapter)` — OpenPersona-level aggregator; currently single financial dimension (transparent pass-through to AgentBooks `calcFinancialHealth`)
 - Extension point: when memory/social/reputation dimensions are ready, add them here via weighted averaging — do not modify AgentBooks
 - Exposed via `openpersona vitality score <slug>` CLI command (machine-readable, used by Survival Policy)
@@ -313,15 +350,15 @@ Orthogonal to the four-layer static structure, five concepts span across all lay
 
 - Templates use **Mustache** syntax (`{{variable}}`, `{{#section}}...{{/section}}`)
 - `skill.template.md` generates the persona's main SKILL.md
-- `soul-injection.template.md` is a thin orchestrator that stitches together 6 Mustache partials from `templates/partials/`; each partial owns one semantic section (intro, identity, body, growth, how-you-grow, economy)
-- Template variables are populated by `lib/generator.js`
+- `soul-injection.template.md` (`templates/soul/`) is a thin orchestrator that stitches together 6 Mustache partials from `templates/soul/partials/`; each partial owns one semantic section (intro, identity, body, growth, how-you-grow, economy)
+- Template variables are populated by `lib/generator/index.js`
 
 ### Version Synchronization
 
 All version references must stay in sync at `0.19.0`:
 - `package.json` → `version`
 - `bin/cli.js` → `.version()`
-- `lib/generator.js` → `frameworkVersion` default
+- `lib/generator/index.js` → `frameworkVersion` default
 - `presets/*/persona.json` → no version field needed (generator auto-injects `meta.frameworkVersion` from `FRAMEWORK_VERSION` constant)
 - `skills/open-persona/SKILL.md` → frontmatter `version`
 

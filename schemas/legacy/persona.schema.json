@@ -1,8 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "openpersona/persona",
-  "title": "OpenPersona Persona",
-  "description": "Soul-layer definition for an OpenPersona persona. Required by openpersona create and the four-layer generator.",
+  "$comment": "DEPRECATED — legacy flat format (pre-v0.17). Use schemas/persona.input.schema.json (v0.17+ grouped format) instead. Kept for backward compatibility with tooling that validated against the old flat structure.",
+  "title": "OpenPersona Persona (Legacy Flat Format)",
+  "description": "DEPRECATED. Legacy flat-format persona schema (pre-v0.17). New format groups soul fields under soul.identity / soul.aesthetic / soul.character. See schemas/persona.input.schema.json for the current schema.",
   "type": "object",
   "required": ["personaName", "slug", "bio", "personality", "speakingStyle"],
   "additionalProperties": true,
