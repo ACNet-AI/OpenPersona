@@ -16,7 +16,7 @@ The generation pipeline has been fully audited and aligned: Generate Gate, core 
 
 | Gate | Module | Status |
 |---|---|---|
-| Generate Gate | `lib/generator-validate.js` | ✅ Hard reject on violation |
+| Generate Gate | `lib/generator/validate.js` | ✅ Hard reject on violation |
 | Install Gate | `lib/lifecycle/installer.js` | ✅ Constitution hash warning |
 | Runtime Gate | `scripts/state-sync.js` | ✅ Clamp/filter on boundary violation |
 
@@ -364,7 +364,7 @@ Living Canvas      →  how humans discover and interact with this persona
 
 ### P15 — Generator Pipeline Modularization (Medium Priority — Engineering Quality)
 
-**Problem:** `generate()` in `lib/generator/index.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (generator-derived.js, generator-validate.js, generator-body.js) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
+**Problem:** `generate()` in `lib/generator/index.js` is a ~280-line orchestration function that performs 6 sequential phases inline: deep clone → validate → derive fields → copy assets + build body → render templates → emit artifacts. Although helper extraction (`lib/generator/derived.js`, `lib/generator/validate.js`, `lib/generator/body.js`) has reduced individual function size, the orchestration itself is monolithic. Adding a new phase (e.g. a post-generation hook for third-party faculties) requires modifying the core function.
 
 **Root cause:** No formal pipeline abstraction. Each "phase" is an imperative code block inside a single async function, sharing closure variables.
 
@@ -444,7 +444,7 @@ Post-review bug fixes (2 found during audit):
 
 - `soul-state.schema.json` describes it as "Signed delta from baseline (negative = more casual, positive = more formal)" — implying a signed relative offset (e.g. `-2`, `0`, `+3`)
 - `soul-state.template.json` initializes it to `0` — consistent with a delta interpretation
-- `evolution.boundaries.minFormality` / `maxFormality` are validated by `generator-validate.js` in the range 1–10 — an absolute scale
+- `evolution.boundaries.minFormality` / `maxFormality` are validated by `lib/generator/validate.js` in the range 1–10 — an absolute scale
 - The P17 Evolution Constraint Gate (`state-sync.js writeState`) clamps `speakingStyleDrift.formality` against `[minFormality, maxFormality]` — inheriting the absolute-scale comparison
 
 **Consequence:** A patch with `speakingStyleDrift: { formality: -2 }` (valid as a "2 units more casual" delta) would be clamped to `minFormality` (e.g. 4) if bounds are declared. Whether this is correct depends on whether formality is a delta or an absolute.
@@ -454,7 +454,7 @@ Post-review bug fixes (2 found during audit):
 **Direction:**
 - Decide canonical interpretation: **delta** (signed, unbounded or symmetric range) or **absolute** (1–10 scale)
 - Update `soul-state.schema.json` description to match the chosen interpretation
-- If delta: change `generator-validate.js` bounds validation to allow negative values and a symmetric range (e.g. -5 to +5); update P17 clamp accordingly
+- If delta: change `lib/generator/validate.js` bounds validation to allow negative values and a symmetric range (e.g. -5 to +5); update P17 clamp accordingly
 - If absolute: update `soul-state.template.json` initial value from `0` to a neutral absolute (e.g. `5`); update schema description
 - Update `soul-injection.template.md` instructions to be unambiguous
 
