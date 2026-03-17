@@ -6,9 +6,11 @@
 
 ---
 
-## Current State (as of v0.19.0, post P21)
+## Current State (as of v0.19.0, post P22)
 
-OpenPersona's four-layer architecture (Soul / Body / Faculty / Skill) has reached a stable compositional skeleton with a fully restructured `persona.json` schema. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Faculty delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
+OpenPersona's architecture has reached a new milestone: **4 Layers + 5 Systemic Concepts + 3 Gates** — a fully articulated compositional model with clean separation between structural layers (Soul / Body / Faculty / Skill) and cross-cutting systemic concepts (Evolution / Economy / Vitality / Social / Rhythm). The codebase directory structure now reflects this architecture: `layers/` holds only the 4 structural layer sources; the new `aspects/` directory holds the 5 systemic concept assets; `selfie`, `music`, and `reminder` have been reclassified from Faculties to Skills and relocated to `layers/skills/`.
+
+The generation pipeline has been fully audited and aligned: Generate Gate, core generator, derived fields, and all Mustache templates are consistent with the spec. Post-generation features (installer, forker, uninstaller) have been reviewed and fixed. `persona.json` now lives at the pack root (not `soul/`), and all path references have been updated. The Body layer's nervous system (Signal Protocol, `pendingCommands`, `body.interface`, Lifecycle Protocol) is fully implemented and test-verified. The Economy Aspect delivers Vitality scoring with FHS four-dimension engine, guard/hook/query scripts, and schema migration. Memory Faculty, evolution governance, persona fork, ERC-8004 on-chain identity, and the A2A Agent Card are all operational.
 
 **Trust Gradient — fully closed across all three gates:**
 
@@ -61,6 +63,7 @@ Remaining open items in the runtime coherence phase:
 | P19 修正：rhythm 统一生活节律 | **结构纠正（P19 收尾）**：将顶层 `heartbeat` 和 `body.runtime.circadian` 合并为新的跨横切字段 `rhythm: { heartbeat, circadian }`。语义根据：两者共享时间驱动属性，均横跨 Soul（策略/性格）与 Body（运行时参数），合并为单一"生活节律"概念更准确。读取优先级：`rhythm.heartbeat` > `persona.heartbeat`（向后兼容 P19 中间态）> `manifest.heartbeat`（向后兼容 pre-v0.18）。受影响：`persona.input.schema.json`、`generator-validate.js`（`rhythm` 入 `NEW_FORMAT_ALLOWED_ROOT_KEYS`）、`generator.js`、`utils.js syncHeartbeat()`、`canvas-generator.js`、`vitality-report.js`、6 个 preset `persona.json`、`heartbeat.test.js`、`generator-core.test.js`、`canvas-generator.test.js`、`vitality-report.test.js`。Tests: 406/406 全通过。 |
 | P20 废除预设 manifest | **`persona.json` 成为唯一真相源**：删除全部 6 个 preset `manifest.json`；`allowedTools` 迁入各 preset 的 `additionalAllowedTools`；`bin/cli.js` 改为仅读 `persona.json`（移除 manifest 合并逻辑）；`generator-validate.js` 允许 `version`/`author` 作为根键；`persona.input.schema.json` 新增可选 `version`/`author` 字段。顺带修复两个隐藏 bug：(1) Samantha ElevenLabs voiceConfig 被 manifest bare 覆盖导致丢失；(2) ai-girlfriend vision faculty 缺少 `install: 'clawhub:vision-faculty'`。`persona-schema.test.js` 重写，改为验证 persona.json 中的 faculties/skills/additionalAllowedTools。Tests: 406/406 全通过。 |
 | P21 废除生成 manifest.json | **彻底移除 manifest.json**：generator 不再输出 skill pack 中的 `manifest.json`。所有消费方迁移至直接读取 `persona.json`：`syncHeartbeat()` 参数从 `manifestPath` 改为 `personaDir`（移除 manifest fallback，保留 `persona.heartbeat` P19 向后兼容）；`installer.js` / `switcher.js` 的 `installAllExternal()` 改从 `persona.json` 读 faculties/skills（此前 manifest 只存 `{name}`，install 字段丢失，实为无效操作）；`canvas-generator.js` 直接从 `persona.json meta.frameworkVersion` 读版本。`buildManifest()` 函数及其 export 一并删除。spec/AGENTS.md/README/SKILL.md 同步更新。Tests: 403/403 全通过（删除 3 个 manifest 专属用例，改写 7 个）。 |
+| P22 架构显化：4+5+3 + Faculty/Skill 重分类 | **架构内核显化**：明确 OpenPersona 架构模型为 **4 Layers + 5 Systemic Concepts + 3 Gates**。(1) **Faculty/Skill 重分类**：`selfie`/`music`/`reminder` 从 `layers/faculties/` 迁移至 `layers/skills/`，`faculty.json` 重命名为 `skill.json`，`SKILL.md` 标题更新。6 个 preset `persona.json` 对应更新。`schema/persona-skill-pack.spec.md` 和 `faculty-declaration.spec.md` 同步。(2) **Economy 升格为 Aspect**：`layers/faculties/economy/` → `aspects/economy/`；新增 `aspects/` 根目录及 evolution/vitality/social/rhythm 各子目录（含 README.md）；`economy.json`（原 `faculty.json`）新增 `"type": "aspect"`，移除 `dimension` 字段；generator 使用专用 `loadEconomy()` 函数，Economy 不再出现在 SKILL.md Faculty 表格。(3) **生成流水线对齐**：修复 `capabilitiesSection` 死代码（`soul/injection.md` 现在正确渲染 `soul.character.capabilities`）；修复 Mustache HTML 转义（所有用户内容字段改用 `{{{...}}}`）；`forker.js` 使用 `resolveSoulFile()` 修复路径硬编码；`installer.js` 同时检查 `skills` 和 `faculties` 数组以兼容新旧格式；`uninstaller.js` 修复外部技能检测逻辑。(4) **规范层补齐**：新增 `schemas/faculty/faculty-declaration.spec.md`、`schemas/skill/skill-declaration.spec.md`（含 `files`/`envVars` 字段）；`schemas/persona.input.spec.md` 完整对齐输入模型。Tests: 404/404 全通过。 |
 
 ---
 
@@ -466,26 +469,17 @@ Post-review bug fixes (2 found during audit):
 
 ---
 
-### P19 — Faculty / Skill Boundary Clarification (Low Priority — Conceptual)
+### P19 — Faculty / Skill Boundary Clarification ✅ COMPLETED (P22)
 
-**Problem:** The conceptual boundary between Faculty (sense/expression capabilities) and Skill (actions) blurs in practice:
+**Delivered (P22):** The conceptual boundary has been fully resolved — in code, spec, and documentation.
 
-- Faculties have their own `SKILL.md` (behavior definitions — a Skill concept)
-- Faculty `allowedTools` are merged into the persona's tool list (computed in the Skill section)
-- Faculty content is rendered in the Skill section of the generated SKILL.md
-- A developer adding a new capability asks: "Should this be a faculty or a skill?"
+**Canonical decision rule (implemented in `AGENTS.md`, `README.md`, `faculty-declaration.spec.md`, `skill-declaration.spec.md`):**
+- **Faculty** = persistent capability that affects *how* the persona perceives or expresses. Always active when enabled. Intrinsically tied to persona identity. Current faculties: `voice`, `memory`.
+- **Skill** = discrete action the persona can take on demand. Triggered by user intent. Can be added/removed without changing who the persona *is*. Built-in skills: `selfie`, `music`, `reminder`.
+- **Litmus test:** "If I remove this, does the persona feel like a different entity (Faculty) or just a less capable one (Skill)?"
+- **Systemic Concepts** (not Faculties, not Skills): `economy`, `evolution`, `vitality`, `social`, `rhythm` — live in `aspects/`, declared as top-level `persona.json` fields.
 
-**Root cause:** Faculty was designed as a "dimension of existence" (expression/sense/cognition), but implementation treats it as a "skill with auto-discovery and tool injection." The conceptual model and the implementation model have diverged.
-
-**Direction (documentation + convention, not code redesign):**
-- Define a clear decision rule in `AGENTS.md` and `README.md`:
-  - **Faculty** = persistent capability that affects *how* the persona perceives or expresses (voice, selfie, memory, economy). Always active when enabled. Has `envVars`, `triggers`, and runtime scripts. Affects persona identity.
-  - **Skill** = discrete action the persona can take on demand (web-search, code-review, calendar-manage). Triggered by user intent. May be installed/uninstalled without changing who the persona *is*.
-  - **Litmus test:** "If I remove this, does the persona feel like a different entity (Faculty) or just a less capable one (Skill)?"
-- Rename Faculty's `SKILL.md` to `FACULTY.md` in a future major version (breaking change — requires migration)
-- Keep `allowedTools` merge as-is (it's correct behavior — faculties need tools to function)
-
-**Implementation gate:** Documentation change is immediate. File rename is a breaking change for v0.17+.
+**What changed:** `selfie`, `music`, `reminder` migrated from `layers/faculties/` → `layers/skills/`. `economy` migrated from `layers/faculties/` → `aspects/economy/`. All generator, installer, spec, and test references updated. Tests: 404/404 pass.
 
 ---
 
@@ -526,21 +520,21 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 | Priority | Item | Category | Why |
 |----------|------|----------|-----|
 | P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
-| P1 | P17 Evolution Constraint Gate | Runtime Safety | Prompt-only enforcement fails silently; write-path gate catches violations |
-| P2 | P9 Vitality-Logic Closed Loop | Feature | Closes the economy faculty feedback loop; no new infrastructure |
-| P3 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
-| P4 | P15 Generator Pipeline Modularization | Engineering | Unblocks third-party faculty post-processing; incremental refactor |
-| P5 | P16 Template Partial Decomposition | Engineering | Reduces soul-injection.template.md cognitive load from 300→~60 lines/file |
-| P6 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
-| P7 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
-| P8 | P19 Faculty/Skill Boundary | Conceptual | Documentation-first; file rename deferred to v0.17 |
-| P9 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
-| P10 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
+| P1 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
+| P2 | P15 Generator Pipeline Modularization | Engineering | Unblocks third-party faculty post-processing; incremental refactor |
+| P3 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P4 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
+| P5 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
+| P6 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
+| ✅ | P9 Vitality-Logic Closed Loop | Completed | Economy survivalPolicy opt-in; tier-driven behavior. |
+| ✅ | P16 Template Partial Decomposition | Completed | soul-injection split into 6 partials; 300→25-line orchestrator. |
+| ✅ | P17 Evolution Constraint Gate | Completed | Trust Gradient fully closed — all three gates active. |
+| ✅ | P19 Faculty/Skill Boundary | Completed | Code + spec + docs fully aligned; selfie/music/reminder → Skills; economy → Aspect. |
 
 **Recommended next milestone focus:**
 
-1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that P17 is complete.
+1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that the architecture foundation is solid.
 
-2. **P15 (generator modularization) + P16 (template partials)** — engineering quality investments that reduce the cost of all future feature work. Both are mechanical refactors with no functional change — low risk, high leverage.
+2. **P15 (generator modularization)** — engineering quality investment that enables third-party post-processing hooks; incremental refactor, no functional change.
 
 3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.

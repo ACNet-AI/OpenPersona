@@ -69,14 +69,14 @@ persona-<slug>/
 
 ## Available Presets
 
-| Preset | Persona | Faculties | Best For |
-|--------|---------|-----------|----------|
-| `base` | **Base — Meta-persona (recommended starting point)** | voice, reminder | Blank-slate with all core capabilities; personality emerges through interaction (soul evolution ★Exp) |
-| `samantha` | Samantha — Inspired by the movie *Her* | voice, music | Deep conversation, emotional connection (soul evolution ★Exp) |
-| `ai-girlfriend` | Luna — Pianist turned developer | selfie, voice, music | Visual + audio companion with rich personality (soul evolution ★Exp) |
-| `life-assistant` | Alex — Life management expert | reminder | Schedule, weather, shopping, daily tasks |
-| `health-butler` | Vita — Professional nutritionist | reminder | Diet, exercise, mood, health tracking |
-| `stoic-mentor` | Marcus — Digital twin of Marcus Aurelius | — | Stoic philosophy, daily reflection, mentorship (soul evolution ★Exp) |
+| Preset | Persona | Faculties | Skills | Best For |
+|--------|---------|-----------|--------|----------|
+| `base` | **Base — Meta-persona (recommended starting point)** | voice | reminder | Blank-slate with all core capabilities; personality emerges through interaction (soul evolution ★Exp) |
+| `samantha` | Samantha — Inspired by the movie *Her* | voice | music | Deep conversation, emotional connection (soul evolution ★Exp) |
+| `ai-girlfriend` | Luna — Pianist turned developer | voice | selfie, music | Visual + audio companion with rich personality (soul evolution ★Exp) |
+| `life-assistant` | Alex — Life management expert | — | reminder | Schedule, weather, shopping, daily tasks |
+| `health-butler` | Vita — Professional nutritionist | — | reminder | Diet, exercise, mood, health tracking |
+| `stoic-mentor` | Marcus — Digital twin of Marcus Aurelius | — | — | Stoic philosophy, daily reflection, mentorship (soul evolution ★Exp) |
 
 Use presets: `npx openpersona create --preset base --install`
 Or just `npx openpersona create` — the interactive wizard defaults to `base`.
@@ -102,7 +102,7 @@ When the user wants to create a persona, gather this information through natural
 - **Faculties:** `faculties` array — object format: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "memory" }]` (built-in: voice, avatar, memory)
 - **Skills:** `skills` array includes built-in skills (selfie, music, reminder) + custom/external skills
 - **Skills:** `skills` array — local definitions (`layers/skills/`), inline declarations, or external via `install` field (ClawHub / skills.sh)
-- **Body:** `body` object — three dimensions: `runtime` (REQUIRED — minimum viable body: `framework`, `channels`, `credentials`, `resources`), `physical` (optional — robots/IoT), `appearance` (optional — avatar, 3D model)
+- **Body:** `body` object — four dimensions: `runtime` (REQUIRED — minimum viable body: `framework`, `channels`, `credentials`, `resources`), `physical` (optional — robots/IoT), `appearance` (optional — avatar, 3D model), `interface` (optional — Signal Protocol + Pending Commands + State Sync; the persona's nervous system)
 - **Tools:** `additionalAllowedTools` array — extra tool permissions beyond what faculties contribute automatically
 
 **Soft References (`install` field):** Skills, faculties, and body entries can declare an `install` field (e.g., `"install": "clawhub:deep-research"`) to reference capabilities not yet available locally. The generator treats these as "soft references" — they won't crash generation, and the persona will be aware of these dormant capabilities. This enables graceful degradation: the persona acknowledges what it *would* do and explains that the capability needs activation.
@@ -194,7 +194,7 @@ The generator injects a unified **Self-Awareness** section into every persona's 
 
 3. **Body** (unconditional) — Every persona knows it exists within a host environment. Includes the **Signal Protocol** — a runner-agnostic, file-based bidirectional contract that lets the persona request capabilities from its host. The persona emits signals to a feedback directory resolved from the host's home path; any compatible host (OpenClaw, Cursor, Claude Code, Codex, custom runner) can implement the server side and respond. For host implementation details and the full schema, see `references/SIGNAL-PROTOCOL.md`. When `body.runtime` is declared, specific platform, channels, credentials, and resource details are also injected.
 
-4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies evolved traits, speaking style drift, interests, and mood, and respects hard constraints (`immutableTraits`, formality bounds). If evolution channels are declared, the persona is aware of its dormant channels and can request activation via the Signal Protocol. If `influenceBoundary` is declared, the persona processes external `persona_influence` requests against the access control rules and retains full autonomy over acceptance.
+4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies evolved traits, speaking style drift, interests, and mood, and respects hard constraints (`immutableTraits`, formality bounds). If evolution sources are declared, the persona is aware of its dormant sources and can request activation via the Signal Protocol. If `influenceBoundary` is declared, the persona processes external `persona_influence` requests against the access control rules and retains full autonomy over acceptance.
 
 This means you don't need to manually write degradation instructions. Just declare `install` fields on skills/faculties/body, and the persona will automatically know what it *could* do but *can't yet*.
 
@@ -209,15 +209,15 @@ Soul evolution is a native Soul layer feature (not a faculty). Enable it via `ev
 
 Invalid boundary configurations are rejected by the generator with descriptive error messages.
 
-**Evolution Channels** — Connect the persona to external evolution ecosystems (soft-ref pattern):
+**Evolution Sources** — Connect the persona to external evolution ecosystems (soft-ref pattern):
 
 ```json
 "evolution": {
-  "channels": [{ "name": "evomap", "install": "url:https://evomap.ai/skill.md" }]
+  "sources": [{ "name": "evomap", "install": "url:https://evomap.ai/skill.md" }]
 }
 ```
 
-Channels are declared at generation time, activated at runtime by the host. The persona is aware of its dormant channels and can request activation via the Signal Protocol.
+Sources are declared at generation time, activated at runtime by the host. The persona is aware of its dormant sources and can request activation via the Signal Protocol.
 
 **Influence Boundary** — Declarative access control for external personality influence:
 
@@ -226,7 +226,7 @@ Channels are declared at generation time, activated at runtime by the host. The 
   "influenceBoundary": {
     "defaultPolicy": "reject",
     "rules": [
-      { "dimension": "mood", "allowFrom": ["channel:evomap", "persona:*"], "maxDrift": 0.3 }
+      { "dimension": "mood", "allowFrom": ["source:evomap", "persona:*"], "maxDrift": 0.3 }
     ]
   }
 }
@@ -338,7 +338,7 @@ For detailed reference material, see the `references/` directory:
 - **`references/FACULTIES.md`** — Faculty catalog, environment variables, and configuration details
 - **`references/AVATAR.md`** — Avatar Faculty integration boundary, provider model, and fallback contract
 - **`references/HEARTBEAT.md`** — Proactive real-data check-in system
-- **`references/ECONOMY.md`** — Economy Faculty, FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
+- **`references/ECONOMY.md`** — Economy Aspect (Infrastructure), FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
 - **`references/SIGNAL-PROTOCOL.md`** — Host-side Signal Protocol implementation guide: file schemas, signal types, OpenClaw plugin pattern, and co-evolution feedback loop
 - **[ACN SKILL.md](https://github.com/acnlabs/ACN/blob/main/skills/acn/SKILL.md)** — ACN registration, discovery, tasks, messaging, and ERC-8004 on-chain identity (official, always up-to-date)
 - **`references/CONTRIBUTE.md`** — Persona Harvest community contribution workflow

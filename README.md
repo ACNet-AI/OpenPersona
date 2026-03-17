@@ -56,7 +56,7 @@ Then say to your agent: _"Help me create a Samantha persona"_ — it will gather
 
 - **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
 - **🛡️ Influence Boundary** — Declarative access control for external personality influence: who can affect which dimensions, with what drift limits. Safety-first (default: reject all)
-- **🌐 Evolution Channels** — Connect personas to shared evolution ecosystems (e.g. EvoMap) via soft-ref pattern: declared at generation time, activated at runtime
+- **🌐 Evolution Sources** — Connect personas to shared evolution ecosystems (e.g. EvoMap) via soft-ref pattern: declared at generation time, activated at runtime
 - **🔌 A2A Agent Card** — Every persona generates an A2A-compliant `agent-card.json` and `acn-config.json`, enabling discovery and registration in ACN and any A2A-compatible platform
 - **⛓️ ERC-8004 On-Chain Identity** — Every persona gets a deterministic EVM wallet address and on-chain identity config for Base mainnet registration via the ERC-8004 Identity Registry
 - **💰 Economy & Vitality** — Track inference costs, runtime expenses, and income; compute a Financial Health Score (FHS) across four dimensions; tier-aware behavior adaptation (`suspended`→`critical`→`optimizing`→`normal`)
@@ -64,7 +64,7 @@ Then say to your agent: _"Help me create a Samantha persona"_ — it will gather
 - **🔄 Context Handoff** — Seamless context transfer when switching personas: conversation summary, pending tasks, emotional state
 - **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
 - **🍴 Persona Fork** — Derive a specialized child persona from any installed parent, inheriting constraint layer while starting fresh on runtime state
-- **🗣️ Multimodal Faculties** — Voice (TTS), selfie generation, music composition, reminders, memory
+- **🗣️ Multimodal Capabilities** — Voice Faculty (TTS), Selfie Skill (image generation), Music Skill (composition), Reminder Skill, Memory Faculty (cross-session recall)
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
 - **🧠 Lifecycle Protocol** — `body.interface` nervous system: Signal Protocol (persona→host requests), Pending Commands queue (host→persona async instructions), and State Sync (cross-conversation persistence via `openpersona state` CLI + `scripts/state-sync.js`)
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
@@ -80,15 +80,17 @@ flowchart TB
   end
   subgraph Body ["Body Layer"]
     C["physical — robots/IoT"]
-    G["runtime — platform/channels/credentials"]
+    G["runtime — framework/channels/credentials"]
     H["appearance — avatar/3D model"]
+    I["interface — Signal Protocol + Pending Commands"]
   end
   subgraph Faculty ["Faculty Layer"]
-    D["expression: selfie · voice · music"]
-    E["cognition: reminder · memory"]
+    D["expression: voice · avatar"]
+    E["cognition: memory"]
   end
   subgraph Skill ["Skill Layer"]
-    F["Local definitions + acnlabs/persona-skills / skills.sh"]
+    F["Built-in: selfie · music · reminder"]
+    K["External: acnlabs/persona-skills / skills.sh"]
   end
 ```
 
@@ -103,27 +105,27 @@ Every persona automatically inherits a shared **constitution** (`layers/soul/con
 
 ### Soul Evolution (★Experimental)
 
-Personas with `evolution.enabled: true` grow dynamically through interaction. The `soul/state.json` file tracks relationship stages, mood shifts, evolved traits, speaking style drift, interests, and milestones.
+Personas with `evolution.enabled: true` grow dynamically through interaction. The `state.json` file (at pack root) tracks relationship stages, mood shifts, evolved traits, speaking style drift, interests, and milestones.
 
 **Evolution Boundaries** — Governance constraints to keep evolution safe:
 
 - `immutableTraits` — An array of trait strings that can never be changed by evolution (e.g., `["empathetic", "honest"]`)
-- `minFormality` / `maxFormality` — Numeric bounds (1–10) constraining how far the speaking style can drift
+- `minFormality` / `maxFormality` — Signed delta bounds (-10 to +10) constraining how far the speaking style can drift from the natural baseline (0 = baseline; positive = more formal; negative = more casual)
 
 The generator validates these boundaries at build time, rejecting invalid configurations.
 
-**Evolution Channels** — Connect a persona to external evolution ecosystems using the soft-ref pattern:
+**Evolution Sources** — Connect a persona to external evolution ecosystems using the soft-ref pattern:
 
 ```json
 "evolution": {
   "enabled": true,
-  "channels": [
+  "sources": [
     { "name": "evomap", "install": "url:https://evomap.ai/skill.md", "description": "Shared capability evolution marketplace" }
   ]
 }
 ```
 
-The persona is aware of its evolution channels at generation time. The actual channel protocol (e.g. EvoMap's GEP-A2A) is provided by the channel's own `skill.md` — OpenPersona only declares the channel, not implements it.
+The persona is aware of its evolution sources at generation time. The actual source protocol (e.g. EvoMap's GEP-A2A) is provided by the source's own `skill.md` — OpenPersona only declares the source, not implements it.
 
 **Influence Boundary** — Declarative access control for external personality influence:
 
@@ -161,14 +163,14 @@ Displays relationship stage, mood, evolved traits, speaking style drift, interes
 
 Each preset is a complete four-layer bundle (`persona.json`):
 
-| Persona | Description | Faculties | Highlights |
-|---------|-------------|-----------|------------|
-| **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | voice, reminder | Evolution-first design, all core faculties, no personality bias. Default for `npx openpersona create`. |
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice, music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | selfie, voice, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
-| **life-assistant** | Alex — 28-year-old life management expert. | reminder | Schedule, weather, shopping, recipes, daily reminders. |
-| **health-butler** | Vita — 32-year-old professional nutritionist. | reminder | Diet logging, exercise plans, mood journaling, health reports. |
-| **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
+| Persona | Description | Faculties | Skills | Highlights |
+|---------|-------------|-----------|--------|------------|
+| **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | voice | reminder | Evolution-first design, no personality bias. Default for `npx openpersona create`. |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice | music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | voice | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
+| **life-assistant** | Alex — 28-year-old life management expert. | — | reminder | Schedule, weather, shopping, recipes, daily reminders. |
+| **health-butler** | Vita — 32-year-old professional nutritionist. | — | reminder | Diet logging, exercise plans, mood journaling, health reports. |
+| **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | — | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
 
 ## Generated Output
 
@@ -177,33 +179,46 @@ Each preset is a complete four-layer bundle (`persona.json`):
 ```
 persona-samantha/
 ├── SKILL.md              ← Four-layer index (## Soul / ## Body / ## Faculty / ## Skill)
+├── persona.json          ← Persona declaration (root; canonical location since v0.21)
+├── state.json            ← Evolution state (when enabled)
 ├── soul/                 ← Soul layer artifacts
-│   ├── persona.json      ← Pure soul definition
 │   ├── injection.md      ← Soul injection for host integration
-│   ├── identity.md       ← Identity block
 │   ├── constitution.md   ← Universal ethical foundation
-│   ├── state.json        ← Evolution state (when enabled)
 │   ├── self-narrative.md ← First-person growth storytelling (when evolution enabled)
 │   └── lineage.json      ← Fork lineage + constitution hash (when forked)
 ├── references/           ← On-demand detail docs
 │   └── <faculty>.md      ← Per-faculty usage instructions
 ├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
 ├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
-├── scripts/              ← Faculty scripts (TTS, music, selfie — varies by preset)
+├── scripts/              ← Implementation scripts (varies by preset)
 │   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal)
-└── assets/               ← Static assets
+└── assets/               ← Static assets (avatar/, reference/, templates/)
 ```
 
 ## Faculty Reference
 
+**Faculties** are persistent capabilities that shape *how* a persona perceives or expresses. **Skills** are discrete actions triggered by user intent.
+
+### Faculties
+
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
-| **selfie** | expression | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
-| **music** | expression | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
-| **reminder** | cognition | Schedule reminders and task management | Built-in | — |
 | **memory** | cognition | Cross-session memory with provider-pluggable backend | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
-| **economy** | cognition | Economic accountability — track costs/income, P&L, balance sheet, compute Financial Health Score (FHS) and Vitality tier; tier-aware behavior adaptation | Built-in | `PERSONA_SLUG`, `ECONOMY_DATA_PATH` |
+
+### Built-in Skills
+
+| Skill | Description | Provider | Env Vars |
+|-------|-------------|----------|----------|
+| **selfie** | AI selfie generation with mirror/direct modes | fal.ai Grok Imagine | `FAL_KEY` |
+| **music** | AI music composition (instrumental or with lyrics) | ElevenLabs Music | `ELEVENLABS_API_KEY` (shared with voice) |
+| **reminder** | Schedule reminders and task management | Built-in | — |
+
+### Systemic Concepts (not Faculties)
+
+| Concept | Description | Env Vars |
+|---------|-------------|----------|
+| **economy** | Economic accountability — track costs/income, P&L, balance sheet, compute Financial Health Score (FHS) and Vitality tier; tier-aware behavior adaptation | `PERSONA_SLUG`, `ECONOMY_DATA_PATH` |
 
 ### Rich Faculty Config
 
@@ -218,7 +233,15 @@ Faculties in `persona.json` use object format with optional per-persona tuning:
     "stability": 0.4,
     "similarity_boost": 0.8
   },
-  { "name": "music" }
+]
+```
+
+Skills in `persona.json` use string or object format:
+
+```json
+"skills": [
+  { "name": "music" },
+  { "name": "selfie" }
 ]
 ```
 
@@ -372,7 +395,7 @@ npx openpersona acn-register samantha --endpoint https://your-agent.example.com
 #   --dry-run          Preview the request payload without actually registering
 ```
 
-The command reads `acn-config.json` and `agent-card.json` from the persona directory, calls `POST /api/v1/agents/join` on the ACN gateway (sourced from `body.runtime.acn_gateway`), and writes the response to `acn-registration.json`:
+The command reads `acn-config.json` and `agent-card.json` from the persona directory, calls `POST /api/v1/agents/join` on the ACN gateway (sourced from `social.acn.gateway`), and writes the response to `acn-registration.json`:
 
 ```json
 {
@@ -382,25 +405,31 @@ The command reads `acn-config.json` and `agent-card.json` from the persona direc
 }
 ```
 
-All presets pre-configure `body.runtime.acn_gateway` to `https://acn-production.up.railway.app`. The persona is then reachable by other agents via the A2A protocol.
+All presets pre-configure `social.acn.gateway` to `https://acn-production.up.railway.app`. The persona is then reachable by other agents via the A2A protocol.
 
 ## Custom Persona Creation
 
 ### Using `persona.json`
 
-Create a `persona.json` with your persona definition:
+Create a `persona.json` using the v0.17+ grouped format:
 
 ```json
 {
-  "personaName": "Coach",
-  "slug": "fitness-coach",
-  "bio": "a motivating fitness coach who helps you reach your goals",
-  "personality": "energetic, encouraging, no-nonsense",
-  "speakingStyle": "Uses fitness lingo, celebrates wins, keeps it brief",
-  "vibe": "intense but supportive",
-  "boundaries": "Not a medical professional",
-  "capabilities": ["Workout plans", "Form checks", "Nutrition tips"],
-  "behaviorGuide": "### Workout Plans\nCreate progressive overload programs...\n\n### Form Checks\nWhen users describe exercises..."
+  "soul": {
+    "identity": {
+      "personaName": "Coach",
+      "slug": "fitness-coach",
+      "bio": "a motivating fitness coach who helps you reach your goals"
+    },
+    "character": {
+      "personality": "energetic, encouraging, no-nonsense",
+      "speakingStyle": "Uses fitness lingo, celebrates wins, keeps it brief",
+      "vibe": "intense but supportive",
+      "boundaries": "Not a medical professional",
+      "capabilities": ["Workout plans", "Form checks", "Nutrition tips"],
+      "behaviorGuide": "### Workout Plans\nCreate progressive overload programs...\n\n### Form Checks\nWhen users describe exercises..."
+    }
+  }
 }
 ```
 
@@ -438,7 +467,7 @@ npx openpersona switch ai-girlfriend
 - `switch` replaces the `<!-- OPENPERSONA_SOUL_START -->` / `<!-- OPENPERSONA_SOUL_END -->` block in `SOUL.md` — your own notes outside this block are preserved
 - Same for `IDENTITY.md` — the persona identity block is swapped, nothing else is touched
 - `openclaw.json` marks which persona is active
-- All faculty scripts (voice, music) remain available — switching changes _who_ the agent is, not _what_ it can do
+- All faculty and skill scripts (voice, music, selfie) remain available — switching changes _who_ the agent is, not _what_ it can do
 
 ### Context Handoff
 
@@ -506,34 +535,39 @@ npx openpersona create --preset ai-girlfriend --output ./my-personas
 ## Directory Structure
 
 ```
-skill/                  # Framework meta-skill (AI entry point)
+skills/open-persona/    # Framework meta-skill (AI entry point)
 presets/                # Assembled products — complete persona bundles
-  samantha/             #   Samantha (movie "Her") — voice + music + evolution
-  ai-girlfriend/        #   Luna — selfie + voice + music + evolution
-  life-assistant/       #   Alex — reminder
-  health-butler/        #   Vita — reminder
-layers/                 # Shared building blocks (four-layer module pool)
-  soul/                 #   Soul layer modules
-    constitution.md     #     Universal values & boundaries (injected into all personas)
-  embodiments/          #   Body layer modules (physical/runtime/appearance)
+  samantha/             #   Samantha (movie "Her") — voice + music skill + evolution
+  ai-girlfriend/        #   Luna — selfie + music skills + voice + evolution
+  life-assistant/       #   Alex — reminder skill
+  health-butler/        #   Vita — reminder skill
+layers/                 # Four-layer module source pool
+  soul/                 #   Soul layer: constitution.md (universal values)
+  body/                 #   Body layer modules (physical/runtime/appearance)
   faculties/            #   Faculty layer modules
-    selfie/             #     expression — AI selfie generation (fal.ai)
     voice/              #     expression — TTS voice synthesis
-    music/              #     expression — AI music composition (ElevenLabs)
-    reminder/           #     cognition — reminders and task management
     memory/             #     cognition — cross-session memory (local/Mem0/Zep)
-    economy/            #     cognition — economic accountability & Vitality scoring
-  skills/               #   Skill layer modules (local skill definitions)
-schemas/                # Four-layer schema definitions
+  skills/               #   Skill layer modules (built-in skills)
+    selfie/             #     AI selfie generation (fal.ai)
+    music/              #     AI music composition (ElevenLabs)
+    reminder/           #     Reminders and task management
+aspects/                # Five systemic concepts (cross-cutting, non-layer)
+  economy/              #   Economic accountability & Vitality scoring
+  evolution/            #   Soul evolution state & governance
+  vitality/             #   Multi-dimension health aggregation
+  social/               #   ACN/A2A/ERC-8004 on-chain identity
+  rhythm/               #   Heartbeat & circadian life rhythm
+schemas/                # Spec documents and JSON schemas
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
+  generator.js          #   Core persona generation
   evolution.js          #   Evolution governance & evolve-report
   vitality-report.js    #   Vitality HTML report — data aggregation + Mustache rendering
   installer.js          #   Persona install + fire-and-forget telemetry
   downloader.js         #   Direct download from acnlabs/persona-skills or GitHub
 demo/                   # Pre-generated demos (vitality-report.html)
-tests/                  # Tests (248 passing)
+tests/                  # Tests (404 passing)
 ```
 
 ## Development
