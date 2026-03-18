@@ -539,39 +539,81 @@ Expand `evolution` in `persona.json` to distinguish instance vs. pack levels and
   "evolution": {
     "instance": {
       "enabled": true,
-      "boundaries": { "immutableTraits": [], "speakingStyleDrift": {} },
-      "sources": [],
-      "influenceBoundary": {}
+      "relationshipProgression": true,
+      "moodTracking": true,
+      "traitEmergence": true,
+      "speakingStyleDrift": true,
+      "interestDiscovery": true,
+      "stageBehaviors": {
+        "stranger": "Polite and helpful.",
+        "close_friend": "Warm and direct."
+      },
+      "boundaries": {
+        "immutableTraits": ["empathetic"],
+        "speakingStyleDrift": { "minFormality": -3, "maxFormality": 3 }
+      },
+      "sources": [{ "name": "openai-updates", "install": "clawhub:openai-updates" }],
+      "influenceBoundary": { "defaultPolicy": "reject", "rules": [] }
     },
     "pack": {
       "enabled": false,
+      "engine": "signal",
       "aggregation": "opt-in",
-      "distillationModel": "host-provided",
       "triggerAfterEvents": 10,
       "autoPublish": false
     },
     "faculty": {
-      "allowActivation": true,
-      "activatableFrom": ["pendingCommands"]
+      "activationChannels": ["pendingCommands", "signal", "cli"]
     },
     "body": {
-      "allowChannelExpansion": false,
-      "allowModelUpgrade": true
+      "allowRuntimeExpansion": false,
+      "allowModelSwap": false
     },
     "skill": {
-      "allowNewInstall": true
+      "allowNewInstall": true,
+      "allowUpgrade": true,
+      "allowUninstall": false
     }
   }
 }
 ```
 
-- Current `evolution.*` flat fields (`enabled`, `boundaries`, `sources`, `influenceBoundary`) move under `evolution.instance` — backward compat shim in generator for old flat format
-- `evolution.pack` is the gateway for P24 (Skill Pack Distillation)
-- `evolution.faculty.allowActivation` formalizes what `capability_unlock` pendingCommand does today
-- `evolution.body` and `evolution.skill` are reservation declarations — implementation follows demand
-- `lib/generator/validate.js` validates each sub-object independently
+**Field-level notes:**
 
-**Implementation gate:** Schema + validate.js + generator normalization only. No new runtime behavior. P24 depends on this being in place first.
+- **`evolution.instance`** — all existing flat `evolution.*` fields migrate here; the generator detects new format by presence of `evolution.instance` key and falls back to old flat format otherwise
+- **`evolution.pack.engine`** — `"signal"` (built-in Signal Protocol path, default) or `"autoskill"` (delegates to AutoSkill4OpenClaw); aligns with P24 design
+- **`evolution.faculty.activationChannels`** — enum array declaring which channels may trigger dormant-faculty activation: `"pendingCommands"` (host async queue), `"signal"` (Signal Protocol `capability_unlock` type), `"cli"` (`openpersona install` command); replaces the narrower `allowActivation + activatableFrom` pair
+- **`evolution.body.allowRuntimeExpansion`** — allows the host to add new `body.runtime.channels` entries via `state write` between conversations (e.g. enabling a new integration); default `false`
+- **`evolution.body.allowModelSwap`** — allows the host to replace `body.runtime.models` entries via `state write` (e.g. upgrading the LLM model); default `false`
+- **`evolution.skill`** — three-axis policy covering the full CRUD surface: `allowNewInstall` (install a skill not in the original pack), `allowUpgrade` (bump version of an installed skill), `allowUninstall` (remove an installed skill at runtime); all default `false` for predictability
+
+**Backward-compatible shim — complete field mapping:**
+
+The generator's `normalizeSoulInput()` (or a new `normalizeEvolutionInput()`) detects old flat format when `evolution.instance === undefined` and promotes:
+
+| Old flat field | New location |
+|---|---|
+| `evolution.enabled` | `evolution.instance.enabled` |
+| `evolution.relationshipProgression` | `evolution.instance.relationshipProgression` |
+| `evolution.moodTracking` | `evolution.instance.moodTracking` |
+| `evolution.traitEmergence` | `evolution.instance.traitEmergence` |
+| `evolution.speakingStyleDrift` | `evolution.instance.speakingStyleDrift` |
+| `evolution.interestDiscovery` | `evolution.instance.interestDiscovery` |
+| `evolution.stageBehaviors` | `evolution.instance.stageBehaviors` |
+| `evolution.boundaries` | `evolution.instance.boundaries` |
+| `evolution.sources` | `evolution.instance.sources` |
+| `evolution.influenceBoundary` | `evolution.instance.influenceBoundary` |
+
+All existing presets use the old flat format — the shim ensures zero migration cost.
+
+**`lib/generator/validate.js` changes:**
+
+- Existing `validateEvolutionBoundaries()` and `validateInfluenceBoundary()` functions now read from `evolution.instance.*` (after normalization)
+- New: `validateEvolutionPack()` — validates `pack.engine` enum (`"signal"` | `"autoskill"`), `pack.triggerAfterEvents` is a positive integer
+- New: `validateEvolutionFaculty()` — validates `faculty.activationChannels` is array of known enum values
+- New: `validateEvolutionBody()` + `validateEvolutionSkill()` — simple boolean type checks
+
+**Implementation gate:** Schema + `validate.js` + generator normalization shim only. No new runtime behavior — `state-sync.js`, templates, and derived fields are unchanged in this milestone. All 6 existing presets remain valid via the backward-compat shim. P24 depends on `evolution.pack.engine` being defined here first.
 
 ---
 
