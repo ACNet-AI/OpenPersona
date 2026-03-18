@@ -268,6 +268,153 @@ describe('body.runtime.framework', () => {
 });
 
 // ── 7. evolution.sources / .channels backward compat ────────────────────────
+// ── 8. P23 evolution multi-dimensional expansion ─────────────────────────────
+const { normalizeEvolutionInput } = require('../lib/generator/validate');
+
+describe('P23 evolution multi-dimensional expansion', () => {
+  it('normalizeEvolutionInput: old flat format is promoted to evolution.instance', () => {
+    const persona = {
+      evolution: {
+        enabled: true,
+        boundaries: { immutableTraits: ['empathy'] },
+        sources: [{ name: 'test-source' }],
+        stageBehaviors: { stranger: 'Be polite' },
+        influenceBoundary: { defaultPolicy: 'reject', rules: [] },
+        moodTracking: true,
+        relationshipProgression: true,
+      },
+    };
+    normalizeEvolutionInput(persona);
+    assert.ok(persona.evolution.instance, 'evolution.instance must exist after normalization');
+    assert.strictEqual(persona.evolution.instance.enabled, true, 'enabled promoted');
+    assert.deepStrictEqual(persona.evolution.instance.boundaries, { immutableTraits: ['empathy'] }, 'boundaries promoted');
+    assert.strictEqual(persona.evolution.instance.sources[0].name, 'test-source', 'sources promoted');
+    assert.strictEqual(persona.evolution.instance.stageBehaviors.stranger, 'Be polite', 'stageBehaviors promoted');
+    assert.strictEqual(persona.evolution.instance.influenceBoundary.defaultPolicy, 'reject', 'influenceBoundary promoted');
+    assert.strictEqual(persona.evolution.instance.moodTracking, true, 'moodTracking promoted');
+    assert.strictEqual(persona.evolution.instance.relationshipProgression, true, 'relationshipProgression promoted');
+    // flat fields must be removed from evolution root
+    assert.strictEqual(persona.evolution.enabled, undefined, 'enabled removed from root');
+    assert.strictEqual(persona.evolution.boundaries, undefined, 'boundaries removed from root');
+    assert.strictEqual(persona.evolution.sources, undefined, 'sources removed from root');
+  });
+
+  it('normalizeEvolutionInput: new format (with instance key) is a no-op', () => {
+    const persona = {
+      evolution: {
+        instance: { enabled: true, boundaries: { immutableTraits: ['courage'] } },
+        pack: { enabled: false, engine: 'signal' },
+      },
+    };
+    const before = JSON.stringify(persona.evolution);
+    normalizeEvolutionInput(persona);
+    assert.strictEqual(JSON.stringify(persona.evolution), before, 'new format must not be mutated');
+  });
+
+  it('normalizeEvolutionInput: channels deprecated alias migrated to instance.sources', () => {
+    const persona = {
+      evolution: {
+        enabled: true,
+        channels: [{ name: 'old-ch', install: 'clawhub:old' }],
+      },
+    };
+    normalizeEvolutionInput(persona);
+    assert.ok(persona.evolution.instance.sources, 'channels must be migrated to instance.sources');
+    assert.strictEqual(persona.evolution.instance.sources[0].name, 'old-ch', 'channel name preserved');
+    assert.strictEqual(persona.evolution.channels, undefined, 'channels removed from root');
+  });
+
+  it('validatePersona: pack.engine enum validation — invalid value throws', () => {
+    const persona = {
+      soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } },
+      evolution: { pack: { enabled: true, engine: 'invalid-engine' } },
+    };
+    assert.throws(() => validatePersona(persona), /pack\.engine must be one of/, 'invalid engine must throw');
+  });
+
+  it('validatePersona: pack.engine valid values are accepted', () => {
+    for (const engine of ['signal', 'autoskill']) {
+      const persona = {
+        soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } },
+        evolution: { pack: { enabled: true, engine } },
+      };
+      assert.doesNotThrow(() => validatePersona(persona), `engine "${engine}" must be accepted`);
+    }
+  });
+
+  it('validatePersona: pack.triggerAfterEvents must be positive integer', () => {
+    const base = () => ({ soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } } });
+    assert.throws(() => validatePersona({ ...base(), evolution: { pack: { triggerAfterEvents: 0 } } }), /positive integer/);
+    assert.throws(() => validatePersona({ ...base(), evolution: { pack: { triggerAfterEvents: -1 } } }), /positive integer/);
+    assert.throws(() => validatePersona({ ...base(), evolution: { pack: { triggerAfterEvents: 1.5 } } }), /positive integer/);
+    assert.doesNotThrow(() => validatePersona({ ...base(), evolution: { pack: { triggerAfterEvents: 5 } } }));
+  });
+
+  it('validatePersona: faculty.activationChannels unknown value throws', () => {
+    const persona = {
+      soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } },
+      evolution: { faculty: { activationChannels: ['pendingCommands', 'unknown-channel'] } },
+    };
+    assert.throws(() => validatePersona(persona), /unknown value.*unknown-channel/, 'unknown channel must throw');
+  });
+
+  it('validatePersona: faculty.activationChannels all valid values accepted', () => {
+    const persona = {
+      soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } },
+      evolution: { faculty: { activationChannels: ['pendingCommands', 'signal', 'cli'] } },
+    };
+    assert.doesNotThrow(() => validatePersona(persona));
+  });
+
+  it('validatePersona: body boolean fields type check', () => {
+    const base = () => ({ soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } } });
+    assert.throws(() => validatePersona({ ...base(), evolution: { body: { allowRuntimeExpansion: 'yes' } } }), /boolean/);
+    assert.throws(() => validatePersona({ ...base(), evolution: { body: { allowModelSwap: 1 } } }), /boolean/);
+    assert.doesNotThrow(() => validatePersona({ ...base(), evolution: { body: { allowRuntimeExpansion: false, allowModelSwap: true } } }));
+  });
+
+  it('validatePersona: skill boolean fields type check', () => {
+    const base = () => ({ soul: { identity: { personaName: 'P', slug: 'p', bio: 'b' }, character: { personality: 'x', speakingStyle: 'y' } } });
+    assert.throws(() => validatePersona({ ...base(), evolution: { skill: { allowNewInstall: 'true' } } }), /boolean/);
+    assert.doesNotThrow(() => validatePersona({ ...base(), evolution: { skill: { allowNewInstall: true, allowUpgrade: false, allowUninstall: false } } }));
+  });
+
+  it('full generate: new evolution format (nested instance) round-trips correctly', async () => {
+    const persona = {
+      soul: {
+        identity: { personaName: 'NewEvoTest', slug: 'new-evo-test', bio: 'P23 new format test' },
+        character: { personality: 'thoughtful', speakingStyle: 'Clear' },
+      },
+      evolution: {
+        instance: {
+          enabled: true,
+          boundaries: { immutableTraits: ['curious'], speakingStyleDrift: { minFormality: -2, maxFormality: 4 } },
+          sources: [{ name: 'test-src' }],
+        },
+        pack: { enabled: false, engine: 'signal', triggerAfterEvents: 20 },
+        faculty: { activationChannels: ['pendingCommands'] },
+        body: { allowRuntimeExpansion: false, allowModelSwap: false },
+        skill: { allowNewInstall: true, allowUpgrade: false, allowUninstall: false },
+      },
+    };
+    const TMP_P23 = path.join(os.tmpdir(), 'op-test-p23-' + Date.now());
+    await fs.ensureDir(TMP_P23);
+    const { skillDir } = await generate(persona, TMP_P23);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.ok(output.evolution?.instance?.boundaries, 'instance.boundaries preserved');
+    assert.deepStrictEqual(output.evolution.instance.boundaries.immutableTraits, ['curious']);
+    assert.ok(output.evolution?.pack, 'pack preserved');
+    assert.strictEqual(output.evolution.pack.engine, 'signal');
+    assert.ok(output.evolution?.faculty?.activationChannels?.includes('pendingCommands'), 'faculty.activationChannels preserved');
+    assert.ok(output.evolution?.skill?.allowNewInstall === true, 'skill.allowNewInstall preserved');
+    // derived fields must NOT leak into persona.json
+    for (const key of ['hasEvolutionBoundaries', 'immutableTraits', 'hasEvolutionSources', 'evolutionEnabled']) {
+      assert.ok(!(key in output), `derived field "${key}" must not appear in persona.json`);
+    }
+    await fs.remove(TMP_P23);
+  });
+});
+
 describe('evolution.sources', () => {
   it('evolution.sources is the canonical field (v0.17+)', async () => {
     const persona = {
@@ -285,7 +432,7 @@ describe('evolution.sources', () => {
     const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
     const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf-8');
 
-    assert.ok(output.evolution?.sources?.[0]?.name === 'self-improving', 'evolution.sources preserved in output');
+    assert.ok(output.evolution?.instance?.sources?.[0]?.name === 'self-improving', 'evolution.instance.sources preserved in output');
     assert.ok(skillMd.includes('Evolution Sources'), 'SKILL.md should have Evolution Sources section');
   });
 

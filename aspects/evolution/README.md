@@ -11,7 +11,35 @@ Evolution is not a structural layer — it is an operational dimension that span
 
 ## Declaration
 
-Declared in `persona.json` under the top-level `evolution` field:
+Declared in `persona.json` under the top-level `evolution` field. Two formats are supported:
+
+**New format (v0.20+):** fields nested under `evolution.instance/pack/faculty/body/skill`
+
+```json
+{
+  "evolution": {
+    "instance": {
+      "enabled": true,
+      "boundaries": {
+        "immutableTraits": ["empathetic", "curious"],
+        "speakingStyleDrift": { "minFormality": -3, "maxFormality": 3 }
+      },
+      "sources": [{ "name": "openai-updates", "install": "clawhub:openai-updates" }]
+    },
+    "pack": {
+      "enabled": false,
+      "engine": "signal",
+      "triggerAfterEvents": 10,
+      "autoPublish": false
+    },
+    "faculty": { "activationChannels": ["pendingCommands", "signal", "cli"] },
+    "body": { "allowRuntimeExpansion": false, "allowModelSwap": false },
+    "skill": { "allowNewInstall": true, "allowUpgrade": true, "allowUninstall": false }
+  }
+}
+```
+
+**Old format (pre-v0.20, still supported):** flat fields at `evolution.*` — auto-promoted to `evolution.instance` by the generator shim with zero migration cost.
 
 ```json
 {

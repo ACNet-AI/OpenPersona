@@ -6,7 +6,7 @@
 
 ---
 
-## Current State (as of v0.19.0, post P22)
+## Current State (as of v0.19.0, post P23)
 
 OpenPersona's architecture has reached a new milestone: **4 Layers + 5 Systemic Concepts + 3 Gates** — a fully articulated compositional model with clean separation between structural layers (Soul / Body / Faculty / Skill) and cross-cutting systemic concepts (Evolution / Economy / Vitality / Social / Rhythm). The codebase directory structure now reflects this architecture: `layers/` holds only the 4 structural layer sources; the new `aspects/` directory holds the 5 systemic concept assets; `selfie`, `music`, and `reminder` have been reclassified from Faculties to Skills and relocated to `layers/skills/`.
 
@@ -63,6 +63,7 @@ Remaining open items in the runtime coherence phase:
 | P19 修正：rhythm 统一生活节律 | **结构纠正（P19 收尾）**：将顶层 `heartbeat` 和 `body.runtime.circadian` 合并为新的跨横切字段 `rhythm: { heartbeat, circadian }`。语义根据：两者共享时间驱动属性，均横跨 Soul（策略/性格）与 Body（运行时参数），合并为单一"生活节律"概念更准确。读取优先级：`rhythm.heartbeat` > `persona.heartbeat`（向后兼容 P19 中间态）> `manifest.heartbeat`（向后兼容 pre-v0.18）。受影响：`persona.input.schema.json`、`generator-validate.js`（`rhythm` 入 `NEW_FORMAT_ALLOWED_ROOT_KEYS`）、`generator.js`、`utils.js syncHeartbeat()`、`canvas-generator.js`、`vitality-report.js`、6 个 preset `persona.json`、`heartbeat.test.js`、`generator-core.test.js`、`canvas-generator.test.js`、`vitality-report.test.js`。Tests: 406/406 全通过。 |
 | P20 废除预设 manifest | **`persona.json` 成为唯一真相源**：删除全部 6 个 preset `manifest.json`；`allowedTools` 迁入各 preset 的 `additionalAllowedTools`；`bin/cli.js` 改为仅读 `persona.json`（移除 manifest 合并逻辑）；`generator-validate.js` 允许 `version`/`author` 作为根键；`persona.input.schema.json` 新增可选 `version`/`author` 字段。顺带修复两个隐藏 bug：(1) Samantha ElevenLabs voiceConfig 被 manifest bare 覆盖导致丢失；(2) ai-girlfriend vision faculty 缺少 `install: 'clawhub:vision-faculty'`。`persona-schema.test.js` 重写，改为验证 persona.json 中的 faculties/skills/additionalAllowedTools。Tests: 406/406 全通过。 |
 | P21 废除生成 manifest.json | **彻底移除 manifest.json**：generator 不再输出 skill pack 中的 `manifest.json`。所有消费方迁移至直接读取 `persona.json`：`syncHeartbeat()` 参数从 `manifestPath` 改为 `personaDir`（移除 manifest fallback，保留 `persona.heartbeat` P19 向后兼容）；`installer.js` / `switcher.js` 的 `installAllExternal()` 改从 `persona.json` 读 faculties/skills（此前 manifest 只存 `{name}`，install 字段丢失，实为无效操作）；`canvas-generator.js` 直接从 `persona.json meta.frameworkVersion` 读版本。`buildManifest()` 函数及其 export 一并删除。spec/AGENTS.md/README/SKILL.md 同步更新。Tests: 403/403 全通过（删除 3 个 manifest 专属用例，改写 7 个）。 |
+|| P23 Evolution Multi-dimensional Expansion | `evolution` aspect expanded to 4-layer governance: `evolution.instance` (Soul state, old flat fields auto-promoted via shim), `evolution.pack` (`engine: signal|autoskill`, P24 gateway), `evolution.faculty` (`activationChannels`), `evolution.body` (`allowRuntimeExpansion/allowModelSwap`), `evolution.skill` (3-axis CRUD policy). `normalizeEvolutionInput()` shim: zero-migration for all 6 presets. Runtime Gate (`state-sync.template.js`) updated with instance/flat dual-read. Tests: 404→415 (+11). |
 | P22 架构显化：4+5+3 + Faculty/Skill 重分类 | **架构内核显化**：明确 OpenPersona 架构模型为 **4 Layers + 5 Systemic Concepts + 3 Gates**。(1) **Faculty/Skill 重分类**：`selfie`/`music`/`reminder` 从 `layers/faculties/` 迁移至 `layers/skills/`，`faculty.json` 重命名为 `skill.json`，`SKILL.md` 标题更新。6 个 preset `persona.json` 对应更新。`schema/persona-skill-pack.spec.md` 和 `faculty-declaration.spec.md` 同步。(2) **Economy 升格为 Aspect**：`layers/faculties/economy/` → `aspects/economy/`；新增 `aspects/` 根目录及 evolution/vitality/social/rhythm 各子目录（含 README.md）；`economy.json`（原 `faculty.json`）新增 `"type": "aspect"`，移除 `dimension` 字段；generator 使用专用 `loadEconomy()` 函数，Economy 不再出现在 SKILL.md Faculty 表格。(3) **生成流水线对齐**：修复 `capabilitiesSection` 死代码（`soul/injection.md` 现在正确渲染 `soul.character.capabilities`）；修复 Mustache HTML 转义（所有用户内容字段改用 `{{{...}}}`）；`forker.js` 使用 `resolveSoulFile()` 修复路径硬编码；`installer.js` 同时检查 `skills` 和 `faculties` 数组以兼容新旧格式；`uninstaller.js` 修复外部技能检测逻辑。(4) **规范层补齐**：新增 `schemas/faculty/faculty-declaration.spec.md`、`schemas/skill/skill-declaration.spec.md`（含 `files`/`envVars` 字段）；`schemas/persona.input.spec.md` 完整对齐输入模型。Tests: 404/404 全通过。 |
 
 ---
@@ -736,22 +737,22 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 |----------|------|----------|-----|
 | P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
 | P1 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
-| P2 | P23 Evolution Aspect Multi-dimensional Expansion | Architecture | Foundation for pack-level evolution; schema-only, no new runtime |
-| P3 | P24 Skill Pack Distillation | Product Quality | Skill pack as evolving product; integrates existing publisher + Signal Protocol |
-| P4 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
-| P5 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
-| P6 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
-| P7 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
+| P2 | P24 Skill Pack Distillation | Product Quality | Skill pack as evolving product; integrates existing publisher + Signal Protocol |
+| P3 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
+| P4 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
+| P5 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
+| P6 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |
 | ✅ | P9 Vitality-Logic Closed Loop | Completed | Economy survivalPolicy opt-in; tier-driven behavior. |
 | ✅ | P15 Generator Pipeline Modularization | Completed | 7-phase pipeline + GeneratorContext; load/derived/prepare/render separation. |
 | ✅ | P16 Template Partial Decomposition | Completed | soul-injection split into 6 partials; 300→25-line orchestrator. |
 | ✅ | P17 Evolution Constraint Gate | Completed | Trust Gradient fully closed — all three gates active. |
 | ✅ | P19 Faculty/Skill Boundary | Completed | Code + spec + docs fully aligned; selfie/music/reminder → Skills; economy → Aspect. |
+| ✅ | P23 Evolution Multi-dimensional Expansion | Completed | evolution.instance/pack/faculty/body/skill schema; backward-compat shim; 11 new tests. Tests: 404→415 (+11). |
 
 **Recommended next milestone focus:**
 
 1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that the architecture foundation is solid.
 
-2. **P23 (evolution multi-dimensional expansion)** — schema-only, low-risk; unblocks P24 and formalizes what the `evolution` aspect was always meant to cover architecturally.
+2. **P24 (skill pack distillation)** — closes the loop between usage experience and published product quality; P23 is now in place, so this is the natural next step.
 
-3. **P24 (skill pack distillation)** — closes the loop between usage experience and published product quality; integrates existing Signal Protocol + publisher with no new infrastructure dependencies.
+3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.

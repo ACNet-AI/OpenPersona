@@ -1008,8 +1008,8 @@ describe('generated soul-injection quality', () => {
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
-    assert.ok(output.evolution?.boundaries, 'Original evolution.boundaries must be preserved');
-    assert.ok(output.evolution?.stageBehaviors, 'Original evolution.stageBehaviors must be preserved');
+    assert.ok(output.evolution?.instance?.boundaries, 'Original evolution.boundaries must be preserved (under evolution.instance)');
+    assert.ok(output.evolution?.instance?.stageBehaviors, 'Original evolution.stageBehaviors must be preserved (under evolution.instance)');
 
     await fs.remove(TMP);
   });

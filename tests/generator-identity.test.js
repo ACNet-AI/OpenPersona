@@ -251,9 +251,9 @@ describe('influence boundary', () => {
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
-    assert.ok(output.evolution?.influenceBoundary, 'Original influenceBoundary must be preserved');
-    assert.strictEqual(output.evolution.influenceBoundary.defaultPolicy, 'reject', 'defaultPolicy must be preserved');
-    assert.strictEqual(output.evolution.influenceBoundary.rules.length, 2, 'rules must be preserved');
+    assert.ok(output.evolution?.instance?.influenceBoundary, 'Original influenceBoundary must be preserved (under evolution.instance)');
+    assert.strictEqual(output.evolution.instance.influenceBoundary.defaultPolicy, 'reject', 'defaultPolicy must be preserved');
+    assert.strictEqual(output.evolution.instance.influenceBoundary.rules.length, 2, 'rules must be preserved');
   });
 
   it('cleanup influence boundary test dir', () => {

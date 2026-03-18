@@ -260,69 +260,124 @@
 
     "evolution": {
       "type": "object",
-      "description": "Growth and state evolution configuration. Declared here; enforced at Generate Gate and Runtime Gate. Body nervous system runtime (body.interface policy, scripts/state-sync.js) is auto-generated separately.",
+      "description": "Cross-cutting evolution governance spanning all 4 layers. Two formats supported: (1) new format — fields nested under evolution.instance/pack/faculty/body/skill; (2) old flat format — top-level evolution.enabled/boundaries/sources/… are auto-promoted to evolution.instance by the generator shim. Enforced at Generate Gate (validate.js) and Runtime Gate (state-sync.js).",
       "additionalProperties": true,
       "properties": {
-        "enabled": { "type": "boolean", "default": false },
-        "relationshipProgression": { "type": "boolean" },
-        "moodTracking": { "type": "boolean" },
-        "traitEmergence": { "type": "boolean" },
-        "speakingStyleDrift": { "type": "boolean" },
-        "interestDiscovery": { "type": "boolean" },
-        "boundaries": {
+        "instance": {
           "type": "object",
+          "description": "Soul-layer instance evolution — one deployed persona growing through its own conversations. All old flat evolution.* fields belong here in the new format.",
           "additionalProperties": true,
           "properties": {
-            "immutableTraits": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
-            "minFormality": { "type": "number", "minimum": -10, "maximum": 10 },
-            "maxFormality": { "type": "number", "minimum": -10, "maximum": 10 }
-          }
-        },
-        "stageBehaviors": {
-          "type": "object",
-          "additionalProperties": { "type": "string" },
-          "properties": {
-            "stranger": { "type": "string" },
-            "acquaintance": { "type": "string" },
-            "friend": { "type": "string" },
-            "close_friend": { "type": "string" },
-            "intimate": { "type": "string" }
-          }
-        },
-        "sources": {
-          "type": "array",
-          "description": "External evolution signal sources. install field supports ClawHub skill integration (e.g. 'clawhub:pskoett/self-improving-agent'). Replaces deprecated 'channels' field.",
-          "items": {
-            "type": "object",
-            "required": ["name"],
-            "additionalProperties": true,
-            "properties": {
-              "name": { "type": "string" },
-              "description": { "type": "string" },
-              "install": { "type": "string", "description": "Install source — generator detects as soft-ref if present" }
-            }
-          }
-        },
-        "influenceBoundary": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "defaultPolicy": { "type": "string", "enum": ["reject", "accept"], "default": "reject" },
-            "rules": {
+            "enabled": { "type": "boolean", "default": false },
+            "relationshipProgression": { "type": "boolean" },
+            "moodTracking": { "type": "boolean" },
+            "traitEmergence": { "type": "boolean" },
+            "speakingStyleDrift": { "type": "boolean" },
+            "interestDiscovery": { "type": "boolean" },
+            "boundaries": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "immutableTraits": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
+                "minFormality": { "type": "number", "minimum": -10, "maximum": 10 },
+                "maxFormality": { "type": "number", "minimum": -10, "maximum": 10 }
+              }
+            },
+            "stageBehaviors": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "properties": {
+                "stranger": { "type": "string" },
+                "acquaintance": { "type": "string" },
+                "friend": { "type": "string" },
+                "close_friend": { "type": "string" },
+                "intimate": { "type": "string" }
+              }
+            },
+            "sources": {
               "type": "array",
+              "description": "External evolution signal sources (e.g. 'clawhub:pskoett/self-improving-agent'). Replaces deprecated 'channels' field.",
               "items": {
                 "type": "object",
-                "required": ["dimension", "allowFrom", "maxDrift"],
+                "required": ["name"],
                 "additionalProperties": true,
                 "properties": {
-                  "dimension": { "type": "string", "enum": ["mood", "traits", "speakingStyle", "interests", "formality"] },
-                  "allowFrom": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-                  "maxDrift": { "type": "number", "minimum": 0, "maximum": 1 }
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "install": { "type": "string", "description": "Install source — generator detects as soft-ref if present" }
+                }
+              }
+            },
+            "influenceBoundary": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "defaultPolicy": { "type": "string", "enum": ["reject", "accept"], "default": "reject" },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["dimension", "allowFrom", "maxDrift"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "dimension": { "type": "string", "enum": ["mood", "traits", "speakingStyle", "interests", "formality"] },
+                      "allowFrom": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+                      "maxDrift": { "type": "number", "minimum": 0, "maximum": 1 }
+                    }
+                  }
                 }
               }
             }
           }
-        }
+        },
+        "pack": {
+          "type": "object",
+          "description": "Pack-level evolution — the skill pack artifact itself as a versioned, improvable product. Gateway for P24 Skill Pack Distillation.",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "engine": { "type": "string", "enum": ["signal", "autoskill"], "default": "signal", "description": "'signal' = built-in Signal Protocol path; 'autoskill' = delegate to AutoSkill4OpenClaw" },
+            "aggregation": { "type": "string", "enum": ["opt-in", "disabled"], "default": "disabled" },
+            "triggerAfterEvents": { "type": "integer", "minimum": 1, "default": 10 },
+            "autoPublish": { "type": "boolean", "default": false }
+          }
+        },
+        "faculty": {
+          "type": "object",
+          "description": "Faculty-layer evolution policy — which channels may trigger dormant-faculty activation.",
+          "additionalProperties": true,
+          "properties": {
+            "activationChannels": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["pendingCommands", "signal", "cli"] },
+              "description": "Channels that may activate a dormant faculty: pendingCommands (host async queue), signal (Signal Protocol capability_unlock type), cli (openpersona install command)"
+            }
+          }
+        },
+        "body": {
+          "type": "object",
+          "description": "Body-layer evolution policy — runtime expansion and model swap permissions.",
+          "additionalProperties": true,
+          "properties": {
+            "allowRuntimeExpansion": { "type": "boolean", "default": false, "description": "Allow host to add new body.runtime.channels entries via state write" },
+            "allowModelSwap": { "type": "boolean", "default": false, "description": "Allow host to replace body.runtime.models entries via state write" }
+          }
+        },
+        "skill": {
+          "type": "object",
+          "description": "Skill-layer evolution policy — full CRUD surface for runtime skill management.",
+          "additionalProperties": true,
+          "properties": {
+            "allowNewInstall": { "type": "boolean", "default": false, "description": "Allow installing a skill not in the original pack at runtime" },
+            "allowUpgrade": { "type": "boolean", "default": false, "description": "Allow upgrading an installed skill to a newer version at runtime" },
+            "allowUninstall": { "type": "boolean", "default": false, "description": "Allow removing an installed skill at runtime" }
+          }
+        },
+        "enabled": { "type": "boolean", "description": "Legacy flat-format field. Promoted to evolution.instance.enabled by the generator shim. Use evolution.instance.enabled in new format." },
+        "boundaries": { "type": "object", "description": "Legacy flat-format field. Promoted to evolution.instance.boundaries by the generator shim.", "additionalProperties": true },
+        "sources": { "type": "array", "description": "Legacy flat-format field. Promoted to evolution.instance.sources by the generator shim.", "items": { "type": "object" } },
+        "channels": { "type": "array", "description": "Deprecated alias for sources. Migrated to evolution.instance.sources by the generator shim.", "items": { "type": "object" } },
+        "influenceBoundary": { "type": "object", "description": "Legacy flat-format field. Promoted to evolution.instance.influenceBoundary by the generator shim.", "additionalProperties": true }
       }
     },
 

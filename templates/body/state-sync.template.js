@@ -88,7 +88,10 @@ function writeState(patchJson) {
     if (fs.existsSync(personaJsonPath)) {
       try {
         const personaData = JSON.parse(fs.readFileSync(personaJsonPath, 'utf-8'));
-        evolutionBoundaries = (personaData.evolution && personaData.evolution.boundaries) || null;
+        // evolution.instance.boundaries is the canonical path (P23+);
+        // fall back to evolution.boundaries for pre-P23 persona.json files.
+        const evo = personaData.evolution || {};
+        evolutionBoundaries = (evo.instance && evo.instance.boundaries) || evo.boundaries || null;
       } catch { /* graceful degradation — skip enforcement if persona.json is unreadable */ }
     }
 

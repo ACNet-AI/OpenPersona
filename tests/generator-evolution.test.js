@@ -802,8 +802,8 @@ describe('evolution channels', () => {
     for (const key of forbidden) {
       assert.ok(!(key in output), `persona.json must not contain derived field: ${key}`);
     }
-    assert.ok(output.evolution?.sources, 'Original evolution.sources must be preserved');
-    assert.strictEqual(output.evolution.sources[0].name, 'evomap', 'Source name must be preserved');
+    assert.ok(output.evolution?.instance?.sources, 'Original evolution.sources must be preserved (under evolution.instance)');
+    assert.strictEqual(output.evolution.instance.sources[0].name, 'evomap', 'Source name must be preserved');
   });
 
   it('soft-ref channels trigger hasDormantCapabilities', async () => {
