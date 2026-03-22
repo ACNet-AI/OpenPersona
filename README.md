@@ -12,6 +12,11 @@ Meet **Samantha**, a live OpenPersona instance on **Moltbook**:
 See a **Vitality Report** sample:
 👉 [Vitality Report Demo →](https://htmlpreview.github.io/?https://raw.githubusercontent.com/acnlabs/OpenPersona/main/demo/vitality-report.html)
 
+Browse the **4+5+3 architecture** visualization (Layers · Systemic Concepts · Gates):
+👉 [Architecture Demo →](https://htmlpreview.github.io/?https://raw.githubusercontent.com/acnlabs/OpenPersona/main/demo/architecture.html)
+
+_Open the same HTML files locally from `demo/` if you prefer (no network). See [demo/README.md](demo/README.md) for all demo artifacts._
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
@@ -596,7 +601,7 @@ lib/                    # Core logic modules
   registry/             #   Local persona registry (~/.openpersona/persona-registry.json)
   remote/               #   External service calls (ClawHub, ACN)
   report/               #   Vitality + Canvas HTML report generation
-demo/                   # Pre-generated demos (vitality-report.html, architecture.html)
+demo/                   # Static demos + scripts — see demo/README.md (vitality-report, architecture, living-canvas)
 tests/                  # Tests (477 passing)
 ```
 
@@ -611,7 +616,15 @@ npm test
 
 # Dry-run generate a preset
 node bin/cli.js create --preset samantha --dry-run
+
+# Regenerate the Vitality Report demo (writes demo/vitality-report.html)
+node demo/generate.js
+
+# Smoke / acceptance checks (demo + CLI paths)
+npm run acceptance
 ```
+
+**Demos** — [demo/README.md](demo/README.md) lists `demo/` files: Vitality sample, architecture viz, Living Canvas shell, and the advanced `run-living-canvas.sh` flow (local persona + optional avatar runtime).
 
 ### Contributing
 
