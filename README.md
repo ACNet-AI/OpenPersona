@@ -2,7 +2,7 @@
 
 An open, agent-agnostic lifecycle framework for AI agent personas — covering declaration, generation, constraint enforcement, and evolution.
 
-Four-layer architecture — **Soul / Body / Faculty / Skill** — compiles `persona.json` declarations into portable SKILL.md skill packs that work with any compatible agent. Default integration with [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
+The architecture is **4+5+3**: **four layers** — **Soul / Body / Faculty / Skill** — describe structure; **five systemic concepts** — Evolution · Economy · Vitality · Social · Rhythm — span all layers; **three gates** — Generate · Install · Runtime — enforce declared constraints end-to-end. `persona.json` compiles into portable SKILL.md skill packs that work with any compatible agent. Default integration with [OpenClaw](https://github.com/openclaw/openclaw). Inspired by [Clawra](https://github.com/SumeLabs/clawra).
 
 ## 🚀 Live Demo
 
@@ -79,6 +79,8 @@ Then say to your agent: _"Help me create a Samantha persona"_ — it will gather
 - **📦 One-Command Install** — `npx openpersona install samantha` and you're live — browse all personas at [openpersona-frontend.vercel.app](https://openpersona-frontend.vercel.app)
 
 ## Four-Layer Architecture
+
+This section details the **four structural layers** of the full **[4+5+3](#live-demo)** model (see the architecture demo for **systemic concepts** and **gates**).
 
 ```mermaid
 flowchart TB
