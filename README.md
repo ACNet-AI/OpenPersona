@@ -19,6 +19,7 @@ _Open the same HTML files locally from `demo/` if you prefer (no network). See [
 
 ## Table of Contents
 
+- [Live Demo](#live-demo)
 - [Quick Start](#quick-start)
 - [Key Features](#key-features)
 - [Four-Layer Architecture](#four-layer-architecture)
@@ -190,7 +191,7 @@ Each preset is a complete four-layer bundle (`persona.json`):
 ```
 persona-samantha/
 ├── SKILL.md              ← Four-layer index (## Soul / ## Body / ## Faculty / ## Skill)
-├── persona.json          ← Persona declaration (root; canonical location since v0.21)
+├── persona.json          ← Persona declaration (pack root; v0.17+ grouped input schema)
 ├── state.json            ← Evolution state (when enabled)
 ├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
 ├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
@@ -208,7 +209,7 @@ persona-samantha/
 │   ├── <faculty>.md      ← Per-faculty usage instructions
 │   └── SIGNAL-PROTOCOL.md ← Host-side Signal Protocol integration guide
 ├── scripts/              ← Implementation scripts
-│   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal)
+│   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal/promote)
 └── assets/               ← Static assets (avatar/, reference/, templates/)
 ```
 
