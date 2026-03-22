@@ -84,3 +84,7 @@ If avatar skill/runtime is unavailable:
 - **P0:** One production provider (default `heygen`) + graceful fallback
 - **P1:** Multi-provider switch (realistic + anime style + custom)
 - **P2:** Capability-driven sensory UI sync (icon states driven by runtime `status`)
+
+## See Also
+
+- **[avatar-runtime](https://github.com/acnlabs/avatar-runtime)** — Full technical reference: provider capability matrix, AvatarWidget API, Renderer Registry, VRM/Live2D asset setup, and Session API contract.

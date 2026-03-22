@@ -6,7 +6,7 @@
 
 ---
 
-## Current State (as of v0.19.0, post P23)
+## Current State (as of v0.19.0, post P1)
 
 OpenPersona's architecture has reached a new milestone: **4 Layers + 5 Systemic Concepts + 3 Gates** — a fully articulated compositional model with clean separation between structural layers (Soul / Body / Faculty / Skill) and cross-cutting systemic concepts (Evolution / Economy / Vitality / Social / Rhythm). The codebase directory structure now reflects this architecture: `layers/` holds only the 4 structural layer sources; the new `aspects/` directory holds the 5 systemic concept assets; `selfie`, `music`, and `reminder` have been reclassified from Faculties to Skills and relocated to `layers/skills/`.
 
@@ -26,12 +26,10 @@ The v0.17.0 schema restructure (`persona.json` Schema 结构性重组) resolved 
 
 Remaining open items in the runtime coherence phase:
 
-- Memory retrieval does not yet resolve semantic conflicts between old and new facts
 - Vitality diagnostics are computed but do not automatically adjust tool-call behavior
-- Skill installation has no trust-level gate before execution
-- `pendingCommands` is pull-only; urgent host instructions require a conversation trigger to be noticed
-- Generator pipeline is monolithic — hard to extend with third-party phases
-- State schema has no migration mechanism for version bumps
+- Skill installation trust gate covers `capability_unlock` pendingCommands (P4-A ✅); direct `npx skills add` path remains ungated (runner-layer concern, outside OpenPersona scope)
+- `pendingCommands` is pull-only; urgent host instructions require a conversation trigger to be noticed (P10 — architecture reservation)
+- State schema has no migration mechanism for version bumps (P18 — reserve when first breaking change is designed)
 
 ---
 
@@ -65,6 +63,9 @@ Remaining open items in the runtime coherence phase:
 | P21 废除生成 manifest.json | **彻底移除 manifest.json**：generator 不再输出 skill pack 中的 `manifest.json`。所有消费方迁移至直接读取 `persona.json`：`syncHeartbeat()` 参数从 `manifestPath` 改为 `personaDir`（移除 manifest fallback，保留 `persona.heartbeat` P19 向后兼容）；`installer.js` / `switcher.js` 的 `installAllExternal()` 改从 `persona.json` 读 faculties/skills（此前 manifest 只存 `{name}`，install 字段丢失，实为无效操作）；`canvas-generator.js` 直接从 `persona.json meta.frameworkVersion` 读版本。`buildManifest()` 函数及其 export 一并删除。spec/AGENTS.md/README/SKILL.md 同步更新。Tests: 403/403 全通过（删除 3 个 manifest 专属用例，改写 7 个）。 |
 || P23 Evolution Multi-dimensional Expansion | `evolution` aspect expanded to 4-layer governance: `evolution.instance` (Soul state, old flat fields auto-promoted via shim), `evolution.pack` (`engine: signal|autoskill`, P24 gateway), `evolution.faculty` (`activationChannels`), `evolution.body` (`allowRuntimeExpansion/allowModelSwap`), `evolution.skill` (3-axis CRUD policy). `normalizeEvolutionInput()` shim: zero-migration for all 6 presets. Runtime Gate (`state-sync.template.js`) updated with instance/flat dual-read. Tests: 404→415 (+11). |
 | P22 架构显化：4+5+3 + Faculty/Skill 重分类 | **架构内核显化**：明确 OpenPersona 架构模型为 **4 Layers + 5 Systemic Concepts + 3 Gates**。(1) **Faculty/Skill 重分类**：`selfie`/`music`/`reminder` 从 `layers/faculties/` 迁移至 `layers/skills/`，`faculty.json` 重命名为 `skill.json`，`SKILL.md` 标题更新。6 个 preset `persona.json` 对应更新。`schema/persona-skill-pack.spec.md` 和 `faculty-declaration.spec.md` 同步。(2) **Economy 升格为 Aspect**：`layers/faculties/economy/` → `aspects/economy/`；新增 `aspects/` 根目录及 evolution/vitality/social/rhythm 各子目录（含 README.md）；`economy.json`（原 `faculty.json`）新增 `"type": "aspect"`，移除 `dimension` 字段；generator 使用专用 `loadEconomy()` 函数，Economy 不再出现在 SKILL.md Faculty 表格。(3) **生成流水线对齐**：修复 `capabilitiesSection` 死代码（`soul/injection.md` 现在正确渲染 `soul.character.capabilities`）；修复 Mustache HTML 转义（所有用户内容字段改用 `{{{...}}}`）；`forker.js` 使用 `resolveSoulFile()` 修复路径硬编码；`installer.js` 同时检查 `skills` 和 `faculties` 数组以兼容新旧格式；`uninstaller.js` 修复外部技能检测逻辑。(4) **规范层补齐**：新增 `schemas/faculty/faculty-declaration.spec.md`、`schemas/skill/skill-declaration.spec.md`（含 `files`/`envVars` 字段）；`schemas/persona.input.spec.md` 完整对齐输入模型。Tests: 404/404 全通过。 |
+| P24 Skill Pack Refinement | **人格体技能包改良闭环**：`openpersona refine <slug>` CLI；9 维精炼面（4 层 + 5 个系统概念）；P24 范围：Soul 优先（`soul/behavior-guide.md` 冷启动 bootstrap + constitution 关键词扫描合规门）+ Skill（`evolution.skill` 门控审计 + 安装提示）+ Social（`agent-card.json` 随 generator 重跑自动同步）。两条执行路径：Signal Protocol 异步两步（`--emit` → host LLM → `--apply`）和 AutoSkill 同步直连。新增 `lib/lifecycle/refine.js`；更新 `lib/lifecycle/forker.js`、`bin/cli.js`、`lib/utils.js`。Tests: 415→434 (+19). |
+| P1 Memory as Soul Infrastructure | **记忆升级为灵魂基础设施**：(1) **Memory supersession**（`memory.js update`）：`update <id>` 命令创建新记忆条目并将原条目标记 `supersededBy`，`retrieve`/`search`/`stats` 自动排除被取代条目，解决人格体自相矛盾问题。(2) **Soul-Memory Bridge**（`promoteToInstinct`）：扫描 `eventLog` 重复模式（`interest_discovery`/`trait_emergence`/`mood_shift`），达到阈值（`persona.memory.promotionThreshold`，默认 3）时自动升华为 `evolvedTraits`；`immutableTraits` 门控、幂等去重；通过 `openpersona state promote <slug>`（支持 `--dry-run`）触发。(3) **Fork memory inheritance**：`persona.json` 新增顶层 `memory` 字段（`inheritance: "none"|"copy"`, `promotionThreshold`）；`fork` 时若策略为 `"copy"`，父人格体 `memories.jsonl` 自动复制到子人格体内存目录；`memoryDir()` 修复：统一从 `OPENCLAW_HOME` 派生，修复多 slug 路径语义错误。Tests: 434→451 (+17). |
+|| P4-A Skill Signature Verification | **技能安装信任门**：`trust` 字段加入 `persona.json skills[]` 条目（`verified`/`community`/`unverified`）；`evolution.skill.minTrustLevel` 枚举字段声明最低信任门槛；`validateEvolutionSkill()` 校验枚举值；Runtime Gate 第三层约束 — `state-sync.js writeState` 过滤信任不足的 `capability_unlock` pendingCommands，阻断时写入 `capability_gap` 信号（`trust_below_threshold`），全部阻断时保留现有队列不覆盖（镜像 P17 wipe-prevention）；`soul-awareness-body.partial.md` 注入 `{{#hasSkillTrustPolicy}}` 感知块（Body 层，始终渲染）；`AGENTS.md` Runtime Gate 更新为三层约束。Tests: 451→471 (+20). |
 
 ---
 
@@ -132,13 +133,29 @@ Introduce temporal decay and explicit supersession to resolve semantic conflicts
 
 **Sub-direction: Skill Signature Verification (P4-A)**
 
-Introduce a trust-level field in `manifest.json` skill entries and a persona-level minimum trust policy:
+Introduce a trust-level field in `persona.json` skill entries and a persona-level minimum trust policy:
 
-- Add `trust` field to skill install entries: `"verified"` (signed by skills.sh registry) | `"community"` (peer-reviewed, unsigned) | `"unverified"` (arbitrary source)
-- Add `minSkillTrust` to `evolution.boundaries` in `persona.json`: persona refuses installation of skills below its declared threshold
-- `installer.js` checks `trust` against `minSkillTrust` before executing install; on rejection, emits a `capability_gap` signal with reason `trust_below_threshold`
-- No new infrastructure required — pure extension of existing `installer.js` + `evolution.boundaries` + Signal Protocol
-- Personas acting as economic agents (with Economy Faculty) should default to `minSkillTrust: "community"` to reduce attack surface
+- Add `trust` field to `persona.json` `skills[]` entries: `"verified"` (signed by skills.sh registry) | `"community"` (peer-reviewed, unsigned) | `"unverified"` (arbitrary source)
+- Add `minTrustLevel` to `evolution.skill` in `persona.json` (alongside the existing `allowNewInstall` / `allowUpgrade` / `allowUninstall` booleans introduced in P23): persona refuses installation of skills below its declared threshold
+- Two enforcement points:
+  1. **`state-sync.js` `writeState`** — when processing a `capability_unlock` `pendingCommand`, check the skill's `trust` against `minTrustLevel` before accepting the command; on rejection, emit a `capability_gap` signal with reason `trust_below_threshold` and remove the command from the queue
+  2. **Soul awareness layer** — `soul/injection.md` Body section (always rendered, independent of `evolutionEnabled`) injects `minTrustLevel` when declared, so the persona self-enforces the policy when autonomously deciding whether to request a skill install during conversation
+- No new infrastructure required — extends existing `evolution.skill` (P23) + `state-sync.js` + Signal Protocol
+- `validateEvolutionSkill()` in `lib/generator/validate.js` adds a `minTrustLevel` enum check (`"verified"` | `"community"` | `"unverified"`)
+- Personas acting as economic agents (with Economy Faculty) should default to `minTrustLevel: "community"` to reduce attack surface
+
+```json
+{
+  "evolution": {
+    "skill": {
+      "allowNewInstall": true,
+      "allowUpgrade": true,
+      "allowUninstall": false,
+      "minTrustLevel": "community"
+    }
+  }
+}
+```
 
 ---
 
@@ -487,7 +504,7 @@ Post-review bug fixes (2 found during audit):
 **Canonical decision rule (implemented in `AGENTS.md`, `README.md`, `faculty-declaration.spec.md`, `skill-declaration.spec.md`):**
 - **Faculty** = persistent capability that affects *how* the persona perceives or expresses. Always active when enabled. Intrinsically tied to persona identity. Current faculties: `voice`, `memory`.
 - **Skill** = discrete action the persona can take on demand. Triggered by user intent. Can be added/removed without changing who the persona *is*. Built-in skills: `selfie`, `music`, `reminder`.
-- **Litmus test:** "If I remove this, does the persona feel like a different entity (Faculty) or just a less capable one (Skill)?"
+  - **Litmus test:** "If I remove this, does the persona feel like a different entity (Faculty) or just a less capable one (Skill)?"
 - **Systemic Concepts** (not Faculties, not Skills): `economy`, `evolution`, `vitality`, `social`, `rhythm` — live in `aspects/`, declared as top-level `persona.json` fields.
 
 **What changed:** `selfie`, `music`, `reminder` migrated from `layers/faculties/` → `layers/skills/`. `economy` migrated from `layers/faculties/` → `aspects/economy/`. All generator, installer, spec, and test references updated. Tests: 404/404 pass.
@@ -618,30 +635,32 @@ All existing presets use the old flat format — the shim ensures zero migration
 
 ---
 
-### P24 — Skill Pack Distillation (Medium Priority — Product Quality)
+### P24 — Skill Pack Refinement (Medium Priority — Product Quality)
 
-**Problem:** A persona skill pack (`SKILL.md` + `soul/behavior-guide.md`) is generated once and never updated. Over time, real usage reveals patterns that would make the pack better — behavioral rules that resonate, phrasing that the persona handles awkwardly, context gaps in the behavior guide — but there is no mechanism to distill those insights back into the pack artifact. Every new installation gets the original v0.1.0, regardless of how much has been learned.
+**Problem:** A persona skill pack (`SKILL.md` + `soul/behavior-guide.md`) is generated once and never updated. Over time, real usage reveals patterns that would make the pack better — behavioral rules that resonate, phrasing that the persona handles awkwardly, context gaps in the behavior guide — but there is no mechanism to refine the pack artifact from those insights. Every new installation gets the original v0.1.0, regardless of how much has been learned.
 
-This is the **skill pack as static snapshot** problem. AutoSkill's experience-driven lifelong learning model demonstrates that skill artifacts should evolve through real usage — accumulating experience, distilling patterns, and publishing refined versions that benefit all future users. AutoSkill already provides this for general skills; OpenPersona's contribution is governance: Trust Gradient compliance, persona-specific constraints, and publisher integration.
+This is the **skill pack as static snapshot** problem. AutoSkill's experience-driven lifelong learning model demonstrates that skill artifacts should evolve through real usage — accumulating experience, refining patterns, and publishing improved versions that benefit all future users. AutoSkill already provides this for general skills; OpenPersona's contribution is governance: Trust Gradient compliance, persona-specific constraints, and publisher integration.
 
-**Root cause:** OpenPersona's `evolution` aspect models instance-level growth (one persona's personal history). There is no concept of **pack-level evolution** — the skill pack as a distributable product that gets better across many deployments.
+**Distribution model:** OpenPersona personas are distributed the same way as [skills.sh](https://skills.sh/) skills — the unit of distribution is a **GitHub repo**; `openpersona install <owner/repo>` installs directly from it. The OpenPersona directory (`openpersona-frontend.vercel.app`) indexes repos one-time via `openpersona publish`. Publishing a refined version therefore means **committing and pushing** the updated files to the same repo — no re-registration needed. Anyone who installs after the push automatically gets the improved version.
+
+**Root cause:** OpenPersona's `evolution` aspect models instance-level growth (one persona's personal history). P23 introduced the `evolution.pack` schema as a declaration, but there is no *implementation* of **pack-level evolution** — no CLI mechanism to refine the skill pack as a distributable product that gets better across many deployments.
 
 **The two-level distinction:**
 
 | Dimension | Instance Evolution (existing) | Pack Evolution (this item) |
 |---|---|---|
 | Unit | One deployed persona | The skill pack artifact |
-| State storage | `state.json` (private to deployment) | `behavior-guide.md` (versioned, publishable) |
-| Trigger | Per conversation | N events accumulated, then batch distillation |
+| State storage | `state.json` (private to deployment) | `soul/behavior-guide.md` + `persona.json` (versioned, publishable) |
+| Trigger | Per conversation | N new events since last refinement |
 | Beneficiary | That instance only | All future installations |
-| Mechanism | `openpersona state write` | `openpersona evolve` → distill → publish |
+| Mechanism | `openpersona state write` | `openpersona refine` → refine → publish |
 | Analogy | Personal diary | Textbook new edition |
 
 **Direction:**
 
-**1. Distillation engine: pluggable, not embedded**
+**1. Refinement engine: pluggable, not embedded**
 
-`evolution.pack.engine` (introduced in P23) selects the distillation backend:
+`evolution.pack.engine` (introduced in P23) selects the refinement backend:
 
 ```json
 {
@@ -661,13 +680,34 @@ Two paths share the same orchestration command and compliance layer; only the ex
 | Step | `engine: "signal"` (built-in) | `engine: "autoskill"` (recommended) |
 |---|---|---|
 | Experience accumulation | OpenPersona `eventLog` | OpenPersona `eventLog` |
-| Extraction | `openpersona evolve` builds prompt → Signal Protocol → host LLM | `POST /v1/autoskill/openclaw/hooks/agent_end` → AutoSkill extracts + versions |
+| Extraction | `openpersona refine <slug> --emit` → Signal Protocol → host LLM → `openpersona refine <slug> --apply` | `POST /v1/autoskill/openclaw/hooks/agent_end` → AutoSkill extracts + versions |
 | Merge / dedup | Manual (single-instance) | AutoSkill Maintainer (add / merge / discard logic) |
-| Versioning | `behavior-guide.meta.json` | AutoSkill SkillBank (`SKILL.md` v0.1.N) |
-| **Compliance gate** | **OpenPersona Generate Gate** | **OpenPersona Generate Gate** |
-| Publish | `lib/publisher/` → ClawHub | `lib/publisher/` → ClawHub |
+| Versioning | `soul/behavior-guide.meta.json` (`packRevision`) | `soul/behavior-guide.meta.json` (`packRevision`) + AutoSkill SkillBank (internal) |
+| **Compliance gate** | **OpenPersona constitution keyword scan** | **OpenPersona constitution keyword scan** |
+| Publish (opt-in) | `git commit + push` to GitHub repo (auto-push, not re-registration) | `git commit + push` to GitHub repo (auto-push, not re-registration) |
 
-**2. AutoSkill integration path (`engine: "autoskill"`):**
+**2. CLI command: `openpersona refine`**
+
+The command is `refine` (not `evolve`) to distinguish from the existing `evolve-report` command and to precisely name the operation. New file: `lib/lifecycle/refine.js`.
+
+```bash
+# Check threshold; if met, emit refinement signal and exit
+openpersona refine <slug> --emit
+
+# Read signal-responses.json, run compliance, write behavior-guide.md + meta
+openpersona refine <slug> --apply
+
+# Shortcut for autoskill engine (synchronous — AutoSkill responds inline)
+# Requires evolution.pack.engine: "autoskill" in persona.json; errors if engine is "signal"
+openpersona refine <slug>
+
+# Pull from AutoSkill shared pool (requires aggregation: "opt-in")
+openpersona refine <slug> --from-pool
+```
+
+The two-step `--emit` / `--apply` design matches Signal Protocol's fire-and-forget async model: the host LLM processes the refinement signal between the two commands (as it does for any other signal type). No polling or timeout logic needed.
+
+**3. AutoSkill integration path (`engine: "autoskill"`):**
 
 [AutoSkill](https://github.com/ECNU-ICALK/AutoSkill) is an experience-driven lifelong learning system that already provides `AutoSkill4OpenClaw` — an embedded integration plugin for the OpenClaw ecosystem, using the same `SKILL.md` artifact format as OpenPersona. Rather than re-implementing skill extraction, OpenPersona delegates to AutoSkill and contributes what it uniquely provides: Trust Gradient governance.
 
@@ -675,53 +715,114 @@ Role boundary:
 
 | Responsibility | Owner |
 |---|---|
-| Decide when to distill (event threshold) | OpenPersona (`openpersona evolve`) |
+| Decide when to refine (event threshold) | OpenPersona (`openpersona refine`) |
 | Extract conversation experience → skill draft | **AutoSkill** (`agent_end` hook) |
 | Merge / version management | **AutoSkill** SkillBank |
-| Constitution + `evolution.instance.boundaries` compliance | **OpenPersona** Generate Gate |
-| Publish versioned pack to ClawHub | **OpenPersona** publisher |
+| Constitution + `evolution.instance.boundaries` compliance | **OpenPersona** constitution keyword scan |
+| Publish versioned pack | `git commit + push` (by persona author); OpenPersona directory auto-indexes via existing repo registration |
 
-`lib/lifecycle/evolve.js` is an orchestration shim (~100 lines): check threshold → call AutoSkill hook → receive updated `SKILL.md` → run Generate Gate → write `behavior-guide.meta.json` → optionally trigger publisher.
+AutoSkill hook contract (endpoint configured via `AUTOSKILL_ENDPOINT` env var, default `http://localhost:8080`):
+- **Request payload**: `{ slug, eventLog: [...], currentBehaviorGuide: "<md>" }`
+- **Response**: `{ behaviorGuide: "<updated-md>", revision: "0.1.N" }`
 
-**3. Built-in Signal Protocol path (`engine: "signal"`, default):**
+The hook contract is **Soul-only by design** — AutoSkill handles behavior-guide extraction; it does not know about OpenPersona's skill governance policies. **Skill dimension refinement is always a local operation** in `refine.js`, independent of the engine: `refine.js` scans new `eventLog` entries for `capability_gap` / `tool_missing` signals and applies eligible skill changes via `lib/installer.js` per the `evolution.skill` gates. This runs on both the Signal and AutoSkill paths.
 
-For deployments without AutoSkill, OpenPersona falls back to its existing Signal Protocol:
+`lib/lifecycle/refine.js` is an orchestration shim (~150 lines): check threshold → [autoskill] call hook or [signal] read response → run compliance scan on behavior-guide → write Soul sources → apply Skill gate changes → re-run generator (Social + SKILL.md) → write meta → optionally `git commit + push`.
 
-1. Count `eventLog` entries since last distillation (`behavior-guide.meta.json`)
-2. If below `triggerAfterEvents` → exit (no-op)
-3. Build distillation prompt from `eventLog` + `soul/self-narrative.md` + current `behavior-guide.md`
-4. Emit via Signal Protocol → host LLM executes → result in `signal-responses.json`
-5. Run Generate Gate compliance check
-6. Write versioned `soul/behavior-guide.md` (v0.1.N → v0.1.N+1)
-7. Update `soul/behavior-guide.meta.json`
+**4. Built-in Signal Protocol path (`engine: "signal"`, default):**
 
-**4. Pack versioning (both paths):**
+For deployments without AutoSkill. Uses the existing fire-and-forget Signal Protocol with a two-step CLI design:
+
+**Step A — `openpersona refine <slug> --emit`:**
+1. Load `soul/behavior-guide.meta.json`; read `lastRefinedAt` timestamp
+2. Count `eventLog` entries with `timestamp > lastRefinedAt` — these are the new events
+3. If count < `triggerAfterEvents` → exit (no-op, print count/threshold)
+4. If `soul/behavior-guide.md` does not exist → bootstrap from `persona.json` fields (`personality`, `speakingStyle`, `boundaries`) and write initial `soul/behavior-guide.md`; set `persona.json.behaviorGuide = "file:soul/behavior-guide.md"`
+5. Build refinement prompt from new `eventLog` entries + `soul/self-narrative.md` + current `soul/behavior-guide.md`
+6. Emit `refinement_request` signal via Signal Protocol (writes `signals.json`)
+7. Exit — host LLM processes the signal asynchronously
+
+**Step B — `openpersona refine <slug> --apply`:**
+1. Read refinement result from `signal-responses.json`; fail gracefully if absent
+2. Run constitution keyword scan on the refined Markdown (extends `validateConstitutionCompliance` logic to free-form text — no LLM required)
+3. Reject and exit if constitutional violations detected; print offending excerpts
+4. **[Soul]** Write `soul/behavior-guide.md` (new content); if cold-start occurred in Step A, ensure `persona.json.behaviorGuide = "file:soul/behavior-guide.md"` is set
+5. **[Skill]** Scan new `eventLog` entries for `capability_gap` / `tool_missing` signal types; for each matched skill, check `evolution.skill` gates (`allowNewInstall`, `allowUpgrade`, `allowUninstall`); apply eligible changes via `lib/installer.js`
+6. **[Social + SKILL.md]** Re-run generator: produces updated `SKILL.md` (reflects new `behavior-guide.md` + any newly installed skills) and regenerated `agent-card.json` (auto-syncs capability changes — no additional logic)
+7. Write `soul/behavior-guide.meta.json` with updated `lastRefinedAt` and incremented `packRevision`
+8. If `evolution.pack.autoPublish: true` → run `git add soul/behavior-guide.md persona.json agent-card.json SKILL.md && git commit -m "refine: v<revision>" && git push` inside the persona pack repo directory (auto-push, not re-registration — the OpenPersona directory already indexes this repo from the one-time `openpersona publish` step)
+
+**5. Pack versioning — `soul/behavior-guide.meta.json`:**
 
 ```json
 {
-  "version": "0.1.4",
+  "packRevision": "0.1.4",
   "engine": "autoskill",
-  "lastDistilledAt": "2026-03-17T12:00:00Z",
-  "eventsDistilled": 42,
+  "lastRefinedAt": "2026-03-17T12:00:00Z",
+  "totalEventsRefined": 42,
   "changeLog": [
-    { "version": "0.1.4", "summary": "Added boundary for overly technical explanations" }
+    { "revision": "0.1.4", "summary": "Added boundary for overly technical explanations" }
   ]
 }
 ```
 
-**5. Multi-instance aggregation (opt-in, AutoSkill path only):**
+Note: `packRevision` tracks the pack's refinement cycle (Soul + Skill + Social changes combined), distinct from `persona.json` `version` (creator-declared persona version) and `SKILL.md` frontmatter `version` (skill pack version at generation time).
 
-When `evolution.pack.aggregation: "opt-in"`, anonymized `eventLog` entries are contributed to AutoSkill's shared SkillBank (Common pool). The pack maintainer runs `openpersona evolve <slug> --from-pool` to pull aggregate distillation into a new published version. This is AutoSkill's native capability — OpenPersona only adds the publish + compliance step.
+**6. Multi-instance aggregation (opt-in, AutoSkill path only):**
 
-**6. Publisher integration:**
+When `evolution.pack.aggregation: "opt-in"`, anonymized `eventLog` entries are contributed to AutoSkill's shared SkillBank (Common pool). The pack maintainer runs `openpersona refine <slug> --from-pool` to pull aggregate refinement into a new published version. This is AutoSkill's native capability — OpenPersona only adds the compliance scan + `git commit + push` step.
 
-When `evolution.pack.autoPublish: true`, a successful distillation automatically triggers `lib/publisher/` → ClawHub. Usage → experience → distillation → new version → all future installations benefit.
+**7. Distribution model and `autoPublish`:**
 
-**Distillation scope:** Only `soul/behavior-guide.md` is distilled — not the full SKILL.md. Structural layer sections (Soul identity, Body, Faculty, Skill declarations) reflect `persona.json` and remain stable.
+OpenPersona's distribution model mirrors [skills.sh](https://skills.sh/): the unit of distribution is a GitHub repo. There are two distinct operations:
 
-**Generate Gate role:** Distilled content must pass the same compliance check as generated content — no distillation can introduce constitution violations or exceed `evolution.instance.boundaries`. This is OpenPersona's non-negotiable contribution regardless of which engine is used.
+- **`openpersona publish <owner/repo>`** — one-time, **author-initiated** registration: validates the repo contains a valid persona pack, registers it with the OpenPersona directory (`openpersona-frontend.vercel.app`) so it appears immediately. This is an intentional author action, not automated.
+- **Version updates** — after the one-time registration, pushing new content to the same repo is sufficient; `openpersona install <owner/repo>` always fetches the latest commit, so no re-registration is needed.
 
-**Implementation gate:** Requires P23 (`evolution.pack` schema with `engine` field). AutoSkill4OpenClaw hook endpoint already exists; Signal Protocol already exists. `lib/lifecycle/evolve.js` is the only new file required.
+`evolution.pack.autoPublish: true` controls only the **version update** step: when `--apply` succeeds, automatically run `git add soul/behavior-guide.md persona.json agent-card.json SKILL.md && git commit -m "refine: v<revision>" && git push` inside the persona pack's repo directory. This field name is intentionally distinguished from `openpersona publish` (the registration command) — it is auto-**push**, not auto-register.
+
+**8. Refinement surface:**
+
+A persona skill pack encodes two structural levels: **four compositional layers** (Soul, Body, Faculty, Skill) and **five systemic cross-cutting concepts** (Evolution, Vitality, Economy, Social, Rhythm) — nine refinable dimensions in total. Each dimension has its own governance level.
+
+| Dimension | Pack artifact | P24 scope | Governance |
+|---|---|---|---|
+| **Soul** | `soul/behavior-guide.md`; `persona.json` character fields | ✅ P24 primary | Auto (compliance scan gate) |
+| **Skill** | `skills` array in `persona.json` | ✅ P24 (via `evolution.skill` gate) | Per `evolution.skill` policy declared in P23 |
+| **Social** | `agent-card.json` | ✅ P24 (auto-sync on Soul/Skill change) | Auto-regenerated by generator — zero extra logic |
+| **Body** | `body.runtime.models`, `channels` | 🔜 deferred | Per `evolution.body` policy (P23); requires env validation |
+| **Faculty** | `faculties` array | 🔜 deferred | Per `evolution.faculty` policy (P23); requires host coordination |
+| **Evolution policy** | `evolution.instance.stageBehaviors`, `influenceBoundary` | 🔜 deferred | Changes governance boundaries — requires human review |
+| **Vitality** | vitality threshold config | 🔜 deferred | Conservative; financial accuracy takes priority |
+| **Economy** | `economy/economic-state.json` | 🔜 deferred | Conservative; financial accuracy takes priority |
+| **Rhythm** | `persona.json` → `rhythm.heartbeat`, `circadian` | 🔜 deferred | Requires usage-frequency analytics infrastructure |
+
+**What refinement writes:** Refinement always writes to **source files** (`soul/behavior-guide.md` and `persona.json` fields) — never to `SKILL.md` directly. `SKILL.md` is a **generated output** — `--apply` re-runs the generator after all source writes so the installed pack reflects every change. This guarantees generator consistency and makes pack evolution durable across re-generations.
+
+**P24 implementation scope:** Soul (`behavior-guide.md` + cold-start bootstrap) is the primary refinement target. Skill expansion runs as a policy-gated side-effect, using P23's `evolution.skill` gates (`allowNewInstall` / `allowUpgrade` / `allowUninstall`) via the existing installer. Social Infrastructure (`agent-card.json`) is auto-regenerated whenever Soul or Skill changes — no additional logic required. Body, Faculty, Evolution policy, Vitality, Economy, and Rhythm refinement are deferred to future milestones.
+
+**Compliance gate for Markdown:** The compliance check on refined content uses **constitutional keyword scanning** (extends the existing `validateConstitutionCompliance` regex patterns to free-form text) — not an LLM review. This keeps the compliance gate fast, deterministic, and zero-dependency. Pre-publish human review is the user's responsibility.
+
+**9. Fork lineage connection:**
+
+Pack refinement and fork lineage are two orthogonal version axes — `packRevision` (horizontal improvement cycle) and `generationDepth` (vertical inheritance tree). Currently they are independent: `lineage.json` tracks the constitution chain but not the pack revision at fork time.
+
+Adding `parentPackRevision` to `lineage.json` at fork time closes this gap at minimal cost:
+
+```json
+{
+  "parent": "samantha",
+  "constitutionHash": "sha256:...",
+  "generationDepth": 1,
+  "parentPackRevision": "0.1.3"
+}
+```
+
+This enables a child fork to know which refinement cycle it was created from, and whether the parent has since been refined further. A future `openpersona refine <child-slug> --from-parent` command could selectively merge parent refinements into a diverged child — the fork family tree becomes a structured alternative to AutoSkill's anonymous common pool.
+
+**P24 scope addition:** When `openpersona fork` runs, read `soul/behavior-guide.meta.json` from the parent pack (if present) and write `parentPackRevision` into the child's `lineage.json`. One-line change to `lib/forker.js`. The `--from-parent` sub-command is deferred to P24+.
+
+**Implementation gate:** Requires P23 (`evolution.pack` schema with `engine` field — ✅ complete). Signal Protocol already exists. Installer (`lib/installer.js`) and generator (`lib/generator/index.js`) already exist for Skill expansion and Social auto-sync. Files to create/modify: `lib/lifecycle/refine.js` (new, ~160 lines), `lib/forker.js` (add `parentPackRevision` write, ~5 lines), `bin/cli.js` (add `refine` command).
 
 ---
 
@@ -735,9 +836,9 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 
 | Priority | Item | Category | Why |
 |----------|------|----------|-----|
-| P0 | P1-A Memory Half-life & Truth Override | Feature | Most visible daily UX failure — persona contradicts itself |
-| P1 | P4-A Skill Signature Verification | Security | Trust gate; extends existing installer + signal protocol |
-| P2 | P24 Skill Pack Distillation | Product Quality | Skill pack as evolving product; integrates existing publisher + Signal Protocol |
+| ✅ | P4-A Skill Signature Verification | Security | Trust gate; `trust` field on `persona.json skills[]` entries; `evolution.skill.minTrustLevel` enum (`verified`/`community`/`unverified`); enforced at `state-sync.js writeState` (capability_unlock pendingCommand check, wipe-prevention) + soul awareness Body section (always-rendered self-enforcement); extends P23 `evolution.skill` + Signal Protocol; `validateEvolutionSkill()` enum check. Tests: 451→471 (+20). |
+| ✅ | P1 Memory as Soul Infrastructure | Feature | Memory supersession (`memory.js update` + `supersededBy` chain); Soul-Memory Bridge (`promoteToInstinct`: eventLog → evolvedTraits, threshold + immutableTraits gate); Fork memory inheritance (`memory.inheritance: copy/none`); `openpersona state promote <slug>` CLI; `memory` top-level schema field (`inheritance`, `promotionThreshold`). Tests: 434→451 (+17). |
+| ✅ | P24 Skill Pack Refinement | Product Quality | `openpersona refine` CLI (`lib/lifecycle/refine.js`); 9-dimension surface (4 layers + 5 concepts); P24 scope: Soul-first (behavior-guide.md cold-start + compliance scan) + Skill (evolution.skill gates) + Social (agent-card.json auto-sync); refinement writes to sources (persona.json + behavior-guide.md), SKILL.md re-generated; two-step --emit/--apply; publish = git commit+push |
 | P3 | P11 Professional Preset Matrix | Growth | Expands addressable use cases; 3-cell pilot validates the taxonomy |
 | P4 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
 | P5 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
@@ -751,8 +852,10 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 
 **Recommended next milestone focus:**
 
-1. **P1-A (memory truth override)** — most visible user-facing bug; the highest-leverage remaining item now that the architecture foundation is solid.
+1. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform. Deliver 3 high-priority cells first: `engineering/collaborator` (Pair Programmer), `medical/coach` (Wellness Coach), `finance/advisor` (Portfolio Analyst) to validate the taxonomy before generating the full matrix.
 
-2. **P24 (skill pack distillation)** — closes the loop between usage experience and published product quality; P23 is now in place, so this is the natural next step.
+2. **P1-A (memory temporal decay)** — the supersession chain (`supersededBy`) was delivered in P1; the `decayWeight = e^(−λ·days)` scoring and configurable λ remain open. A moderate-scope Memory Faculty–internal change with direct user-visible impact (prevents contradictory "coffee vs tea" retrievals).
 
-3. **P11 (professional preset matrix)** — the primary growth-surface investment. Expands OpenPersona from a companion framework into a domain-agnostic professional persona platform.
+3. **P18 (state schema migration)** — reserve the `migrateState()` pattern in `state-sync.js` before the first breaking state schema change is designed. Low effort, high future-proofing value.
+
+4. **Living Canvas CLI promotion** — `openpersona vitality canvas <slug>` is currently a sub-command of `vitality` for implementation convenience, but the Living Canvas is architecturally a persona interface (Social concept expression), not a Vitality tool. Design intent: promote to a top-level `openpersona canvas <slug>` command. Requires a minor CLI refactor in `bin/cli.js`; low risk, improves discoverability and conceptual accuracy.

@@ -19,7 +19,7 @@ Personas can have a `heartbeat` config in `persona.json` under `rhythm.heartbeat
 | Field | Description |
 |-------|-------------|
 | `enabled` | Turn heartbeat on/off |
-| `strategy` | `"smart"` (only when meaningful) or `"scheduled"` (fixed intervals) |
+| `strategy` | `"smart"` (only when meaningful) · `"scheduled"` (fixed intervals) · `"emotional"` (mood-driven) · `"rational"` (task/goal-driven) · `"wellness"` (wellbeing-focused) |
 | `maxDaily` | Maximum proactive messages per day |
 | `quietHours` | `[start, end]` — hours during which the persona stays silent (24h format) |
 | `sources` | Data sources: `workspace-digest`, `upgrade-notify`, `context-aware` |
