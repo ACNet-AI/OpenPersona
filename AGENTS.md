@@ -363,14 +363,20 @@ Orthogonal to the four-layer static structure, five concepts span across all lay
 
 ### Version Synchronization
 
-All version references must stay in sync at `0.19.0`:
-- `package.json` → `version`
-- `bin/cli.js` → `.version()`
-- `lib/generator/index.js` → `frameworkVersion` default
-- `presets/*/persona.json` → no version field needed (generator auto-injects `meta.frameworkVersion` from `FRAMEWORK_VERSION` constant)
-- `skills/open-persona/SKILL.md` → frontmatter `version`
+All **framework** version references must match `package.json` → `version` (currently `0.19.0`):
+- `package.json` → `version` (single source of truth)
+- `bin/cli.js` → `.version()` reads from `package.json`
+- `lib/generator/index.js` → `FRAMEWORK_VERSION` from `package.json` → `cleanPersona.meta.frameworkVersion`
+- `lib/generator/social.js` → Agent Card version fallback uses `FRAMEWORK_VERSION`
+- `lib/registry/index.js` → registry `frameworkVersion` fallback uses `package.json` `version`
+- `lib/report/vitality-report.js` → HTML report `frameworkVersion` uses `package.json` (fallback string must stay aligned)
+- `lib/report/canvas.js` → Living Canvas `frameworkVersion` uses `package.json` when persona meta is absent
+- `demo/generate.js` → demo mock data uses `package.json` `version`
+- `presets/*/persona.json` → no `meta.frameworkVersion` needed (generator injects from `FRAMEWORK_VERSION`)
+- `skills/open-persona/SKILL.md` → frontmatter `version` (meta-skill release line; must match `package.json`)
+- `demo/architecture.html` → visible banner version (must match on bump)
 
-When bumping versions, update ALL of these locations.
+When bumping versions, update every location above (and grep for hardcoded semver strings under `lib/`, `demo/`, `skills/`).
 
 ## Code Style
 

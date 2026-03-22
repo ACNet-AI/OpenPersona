@@ -16,6 +16,8 @@ const fs       = require('fs-extra');
 const path     = require('path');
 const Mustache = require('mustache');
 
+const PKG = require('../package.json');
+
 const TEMPLATE = path.resolve(__dirname, '..', 'templates', 'vitality.template.html');
 const OUTPUT   = path.resolve(__dirname, 'vitality-report.html');
 
@@ -107,7 +109,7 @@ const data = {
   ],
 
   // Meta
-  frameworkVersion: '0.18.0',
+  frameworkVersion: PKG.version,
 };
 
 // ─── Render ───────────────────────────────────────────────────────────────────
