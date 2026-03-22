@@ -32,7 +32,11 @@ _Open the same HTML files locally from `demo/` if you prefer (no network). See [
 - [Custom Persona Creation](#custom-persona-creation)
 - [Persona Switching](#persona-switching--the-pantheon)
 - [CLI Commands](#cli-commands)
+- [Directory Structure](#directory-structure)
 - [Development](#development)
+- [License](#license)
+
+_Agent-oriented manual (workflows, 4+5+3 detail, runner protocol, references): [`skills/open-persona/SKILL.md`](skills/open-persona/SKILL.md)._
 
 ## Quick Start
 
