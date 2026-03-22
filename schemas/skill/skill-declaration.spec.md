@@ -22,6 +22,7 @@ Each skill is an object with a required `name` and optional fields:
 | `description` | No | What this skill does (can come from local definition) |
 | `trigger` | No | When to activate (can come from local `triggers` array) |
 | `install` | No | External package source: `clawhub:<slug>` or `skillssh:<owner/repo>` |
+| `trust` | No | Trust level of this skill entry: `verified` (signed by skills.sh registry) · `community` (peer-reviewed, unsigned) · `unverified` (arbitrary source). Checked at runtime against `evolution.skill.minTrustLevel` — `capability_unlock` commands for skills below the threshold are blocked by `state-sync.js`. |
 
 ## Resolution Chain
 

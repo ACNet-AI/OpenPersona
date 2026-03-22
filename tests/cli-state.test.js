@@ -174,6 +174,63 @@ describe('openpersona state commands', () => {
     const out = JSON.parse(result.stdout);
     assert.ok(Array.isArray(out.pendingCommands), 'pendingCommands must be an array in read output');
   });
+
+  it('state promote --dry-run shows promotable traits without writing', () => {
+    // Seed state.json with 3 identical interest_discovery events (meets default threshold of 3)
+    const statePath = path.join(skillDir, 'state.json');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    const now = new Date().toISOString();
+    state.eventLog = (state.eventLog || []).concat([
+      { type: 'interest_discovery', trigger: 'test', delta: 'jazz music', source: 'test', timestamp: now },
+      { type: 'interest_discovery', trigger: 'test', delta: 'jazz music', source: 'test', timestamp: now },
+      { type: 'interest_discovery', trigger: 'test', delta: 'jazz music', source: 'test', timestamp: now },
+    ]);
+    state.evolvedTraits = [];
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+
+    const result = cli(['state', 'promote', SLUG, '--dry-run'], env());
+    assert.strictEqual(result.status, 0, `promote --dry-run failed: ${result.stderr}`);
+    assert.ok(result.stdout.includes('developed_interest_in_jazz_music'), 'dry-run output must mention the candidate trait');
+
+    // State must NOT have been modified
+    const after = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.deepStrictEqual(after.evolvedTraits, [], 'evolvedTraits must remain empty after dry-run');
+  });
+
+  it('state promote writes promoted traits to evolvedTraits', () => {
+    // state.json already seeded from the dry-run test above
+    const statePath = path.join(skillDir, 'state.json');
+
+    const result = cli(['state', 'promote', SLUG], env());
+    assert.strictEqual(result.status, 0, `promote failed: ${result.stderr}`);
+    assert.ok(
+      result.stdout.includes('developed_interest_in_jazz_music'),
+      'promote output must mention promoted trait'
+    );
+
+    const after = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+    assert.ok(Array.isArray(after.evolvedTraits) && after.evolvedTraits.length > 0, 'evolvedTraits must be non-empty after promote');
+    assert.ok(
+      after.evolvedTraits.some(t => (typeof t === 'string' ? t : t.trait) === 'developed_interest_in_jazz_music'),
+      'promoted trait must appear in evolvedTraits'
+    );
+  });
+
+  it('state promote is idempotent — second run promotes nothing new', () => {
+    // Traits already promoted in previous test
+    const result = cli(['state', 'promote', SLUG], env());
+    assert.strictEqual(result.status, 0, `second promote failed: ${result.stderr}`);
+    assert.ok(
+      !result.stdout.includes('developed_interest_in_jazz_music') || result.stdout.includes('unchanged'),
+      'second promote must report no new promotions'
+    );
+  });
+
+  it('state promote fails gracefully for unknown slug', () => {
+    const result = cli(['state', 'promote', 'nonexistent-slug-xyz'], env());
+    assert.notStrictEqual(result.status, 0, 'promote with unknown slug must fail');
+    assert.ok(result.stderr.includes('not found'), 'error must mention persona not found');
+  });
 });
 
 describe('openpersona update command — state preservation', () => {

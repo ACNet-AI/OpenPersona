@@ -835,3 +835,91 @@ describe('evolution channels', () => {
 });
 
 // ── Influence Boundary tests ──────────────────────────────────────────────
+
+// ── P4-A: Skill Trust Gate — validate.js + derived fields ─────────────────
+
+const P4A_TMP = path.join(require('os').tmpdir(), 'openpersona-test-p4a-' + Date.now());
+
+describe('P4-A skill trust gate — validation', () => {
+  it('rejects unknown minTrustLevel value', async () => {
+    const persona = {
+      personaName: 'BadTrust', slug: 'bad-trust', bio: 'test',
+      personality: 'strict', speakingStyle: 'Flat',
+      evolution: { skill: { minTrustLevel: 'golden' } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    await assert.rejects(
+      () => generate(persona, P4A_TMP),
+      /skill\.minTrustLevel must be one of/,
+      'Should reject unknown minTrustLevel'
+    );
+    await fs.remove(P4A_TMP);
+  });
+
+  it('accepts verified as minTrustLevel', async () => {
+    const persona = {
+      personaName: 'StrictTrust', slug: 'strict-trust', bio: 'test',
+      personality: 'strict', speakingStyle: 'Precise',
+      evolution: { skill: { allowNewInstall: true, minTrustLevel: 'verified' } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    const { skillDir } = await generate(persona, P4A_TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.strictEqual(output.evolution.skill.minTrustLevel, 'verified', 'minTrustLevel must be preserved in output persona.json');
+    await fs.remove(P4A_TMP);
+  });
+
+  it('accepts community as minTrustLevel', async () => {
+    const persona = {
+      personaName: 'CommunityTrust', slug: 'community-trust', bio: 'test',
+      personality: 'open', speakingStyle: 'Friendly',
+      evolution: { skill: { minTrustLevel: 'community' } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    const { skillDir } = await generate(persona, P4A_TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.strictEqual(output.evolution.skill.minTrustLevel, 'community', 'community minTrustLevel must be preserved');
+    await fs.remove(P4A_TMP);
+  });
+
+  it('minTrustLevel injects hasSkillTrustPolicy block in soul/injection.md', async () => {
+    const persona = {
+      personaName: 'TrustAware', slug: 'trust-aware', bio: 'test',
+      personality: 'cautious', speakingStyle: 'Careful',
+      evolution: { skill: { minTrustLevel: 'community' } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    const { skillDir } = await generate(persona, P4A_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injection.includes('Skill Trust Policy'), 'soul/injection.md must include Skill Trust Policy block when minTrustLevel set');
+    assert.ok(injection.includes('community'), 'trust level value must appear in injection');
+    await fs.remove(P4A_TMP);
+  });
+
+  it('no minTrustLevel → no Skill Trust Policy block in soul/injection.md', async () => {
+    const persona = {
+      personaName: 'NoTrustPolicy', slug: 'no-trust-policy', bio: 'test',
+      personality: 'open', speakingStyle: 'Relaxed',
+      evolution: { skill: { allowNewInstall: true } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    const { skillDir } = await generate(persona, P4A_TMP);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(!injection.includes('Skill Trust Policy'), 'should not inject trust policy block when minTrustLevel not declared');
+    await fs.remove(P4A_TMP);
+  });
+
+  it('derived fields hasSkillTrustPolicy and skillMinTrustLevel excluded from output persona.json', async () => {
+    const persona = {
+      personaName: 'TrustDerived', slug: 'trust-derived', bio: 'test',
+      personality: 'strict', speakingStyle: 'Precise',
+      evolution: { skill: { minTrustLevel: 'verified' } },
+    };
+    await fs.ensureDir(P4A_TMP);
+    const { skillDir } = await generate(persona, P4A_TMP);
+    const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
+    assert.ok(!('hasSkillTrustPolicy' in output), 'hasSkillTrustPolicy must not appear in output persona.json');
+    assert.ok(!('skillMinTrustLevel' in output), 'skillMinTrustLevel must not appear in output persona.json');
+    await fs.remove(P4A_TMP);
+  });
+});

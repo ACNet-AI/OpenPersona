@@ -850,3 +850,184 @@ describe('P17 evolution constraint gate — writeState enforces evolution.bounda
     await fs.remove(TMP_P17);
   });
 });
+
+// ── P4-A: Skill Trust Gate — state-sync.js runtime enforcement ────────────
+
+const TMP_TRUST = path.join(require('os').tmpdir(), 'openpersona-test-trust-' + Date.now());
+
+describe('P4-A skill trust gate — state-sync.js runtime enforcement', () => {
+  it('capability_unlock below minTrustLevel is blocked and emits [skill-trust-gate] warning', async () => {
+    const persona = {
+      personaName: 'TrustGateTest',
+      slug: 'trust-gate-test',
+      bio: 'skill trust gate tester',
+      personality: 'strict',
+      speakingStyle: 'Precise',
+      evolution: { skill: { allowNewInstall: true, minTrustLevel: 'community' } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // Write a capability_unlock command with trust: 'unverified' (below 'community' threshold)
+    const patch = JSON.stringify({
+      pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'dodgy-skill', trust: 'unverified' }, source: 'host' }],
+    });
+    const output = execSync(
+      `node "${syncScript}" write '${patch}' 2>&1 || true`,
+      { encoding: 'utf-8', cwd: skillDir, shell: true },
+    );
+    assert.ok(output.includes('[skill-trust-gate]'), 'must emit [skill-trust-gate] warning on stderr');
+    assert.ok(output.includes('dodgy-skill'), 'warning must name the blocked skill');
+    assert.ok(output.includes('trust_below_threshold') || output.includes('unverified'), 'warning must mention trust reason');
+
+    // The command must be absent from state (blocked before write)
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const pendingCmds = state.pendingCommands || [];
+    const hasBlocked = pendingCmds.some((c) => c.payload && c.payload.skill === 'dodgy-skill');
+    assert.ok(!hasBlocked, 'blocked capability_unlock must not appear in state.pendingCommands');
+
+    await fs.remove(TMP_TRUST);
+  });
+
+  it('capability_unlock meeting minTrustLevel passes through unchanged', async () => {
+    const persona = {
+      personaName: 'TrustPassTest',
+      slug: 'trust-pass-test',
+      bio: 'trust gate pass-through tester',
+      personality: 'open',
+      speakingStyle: 'Friendly',
+      evolution: { skill: { allowNewInstall: true, minTrustLevel: 'community' } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({
+      pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'verified-skill', trust: 'verified' }, source: 'host' }],
+    });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const pendingCmds = state.pendingCommands || [];
+    const found = pendingCmds.some((c) => c.payload && c.payload.skill === 'verified-skill');
+    assert.ok(found, 'capability_unlock with sufficient trust must pass through to state');
+
+    await fs.remove(TMP_TRUST);
+  });
+
+  it('capability_unlock with exact minTrustLevel (community → community) passes through', async () => {
+    const persona = {
+      personaName: 'TrustExactTest',
+      slug: 'trust-exact-test',
+      bio: 'trust exact threshold tester',
+      personality: 'balanced',
+      speakingStyle: 'Neutral',
+      evolution: { skill: { minTrustLevel: 'community' } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({
+      pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'community-skill', trust: 'community' }, source: 'host' }],
+    });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const found = (state.pendingCommands || []).some((c) => c.payload && c.payload.skill === 'community-skill');
+    assert.ok(found, 'command at exactly the trust threshold must be accepted');
+
+    await fs.remove(TMP_TRUST);
+  });
+
+  it('non-capability_unlock commands are unaffected by trust gate', async () => {
+    const persona = {
+      personaName: 'TrustOtherCmd',
+      slug: 'trust-other-cmd',
+      bio: 'trust gate non-capability command tester',
+      personality: 'flexible',
+      speakingStyle: 'Casual',
+      evolution: { skill: { minTrustLevel: 'verified' } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({
+      pendingCommands: [{ type: 'context_inject', payload: { message: 'hello' }, source: 'host' }],
+    });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const found = (state.pendingCommands || []).some((c) => c.type === 'context_inject');
+    assert.ok(found, 'non-capability_unlock command must pass through regardless of trust gate');
+
+    await fs.remove(TMP_TRUST);
+  });
+
+  it('all capability_unlock blocked → pre-existing queue NOT wiped (mirrors P17 evolvedTraits fix)', async () => {
+    const persona = {
+      personaName: 'TrustWipeGuard',
+      slug: 'trust-wipe-guard',
+      bio: 'all-blocked wipe prevention tester',
+      personality: 'strict',
+      speakingStyle: 'Precise',
+      evolution: { skill: { minTrustLevel: 'verified' } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    // First write: establish a legitimate verified command in the queue
+    execSync(`node "${syncScript}" write '${JSON.stringify({ pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'legit-skill', trust: 'verified' }, source: 'host' }] })}'`, {
+      encoding: 'utf-8', cwd: skillDir,
+    });
+
+    // Second write: all-unverified batch — should be fully blocked; existing queue preserved
+    execSync(
+      `node "${syncScript}" write '${JSON.stringify({ pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'dodgy', trust: 'unverified' }, source: 'host' }] })}' 2>/dev/null || true`,
+      { encoding: 'utf-8', cwd: skillDir, shell: true },
+    );
+
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const cmds = state.pendingCommands || [];
+    assert.ok(cmds.some((c) => c.payload && c.payload.skill === 'legit-skill'),
+      'pre-existing verified command must NOT be wiped when all new commands are blocked');
+    assert.ok(!cmds.some((c) => c.payload && c.payload.skill === 'dodgy'),
+      'blocked unverified command must not appear');
+
+    await fs.remove(TMP_TRUST);
+  });
+
+  it('no minTrustLevel declared → all capability_unlock commands pass through', async () => {
+    const persona = {
+      personaName: 'TrustNoPolicy',
+      slug: 'trust-no-policy',
+      bio: 'no trust policy tester',
+      personality: 'permissive',
+      speakingStyle: 'Open',
+      evolution: { skill: { allowNewInstall: true } },
+    };
+    await fs.ensureDir(TMP_TRUST);
+    const { skillDir } = await generate(persona, TMP_TRUST);
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+
+    const patch = JSON.stringify({
+      pendingCommands: [{ type: 'capability_unlock', payload: { skill: 'any-skill', trust: 'unverified' }, source: 'host' }],
+    });
+    execSync(`node "${syncScript}" write '${patch}'`, { encoding: 'utf-8', cwd: skillDir });
+
+    const state = JSON.parse(execSync(`node "${syncScript}" read`, { encoding: 'utf-8', cwd: skillDir }));
+    const found = (state.pendingCommands || []).some((c) => c.payload && c.payload.skill === 'any-skill');
+    assert.ok(found, 'without minTrustLevel policy, all commands must pass through');
+
+    await fs.remove(TMP_TRUST);
+  });
+});

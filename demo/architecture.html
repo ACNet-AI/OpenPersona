@@ -8,18 +8,20 @@
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: #1e2d47;
-    --accent: #3b82f6;
-    --accent2: #8b5cf6;
-    --accent3: #10b981;
-    --accent4: #f59e0b;
-    --accent5: #ef4444;
-    --text: #e2e8f0;
-    --text-dim: #64748b;
-    --text-mid: #94a3b8;
+    --bg:       #080c18;
+    --surface:  #0f1624;
+    --surface2: #141d2e;
+    --border:   #1c2a42;
+    --soul:     #8b5cf6;
+    --body:     #3b82f6;
+    --faculty:  #10b981;
+    --skill:    #f59e0b;
+    --red:      #ef4444;
+    --cyan:     #06b6d4;
+    --pink:     #ec4899;
+    --text:     #e2e8f0;
+    --dim:      #4b5e7a;
+    --mid:      #8899b0;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,176 +34,301 @@
   }
 
   .canvas {
-    max-width: 1200px;
+    max-width: 1260px;
     margin: 0 auto;
-    padding: 32px 24px 56px;
+    padding: 36px 28px 64px;
   }
 
-  h1 {
-    font-size: 13px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 4px;
+  /* ─── Header ─── */
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
   }
-  .subtitle {
+  .title-block h1 {
     font-size: 11px;
-    color: var(--text-dim);
     font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.1em;
-    margin-bottom: 36px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--body);
+    margin-bottom: 5px;
+  }
+  .tagline {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .meta .ver {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .meta .sub {
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 3px;
+    letter-spacing: 0.06em;
   }
 
-  .sec-label {
+  /* ─── Section label ─── */
+  .sec {
     font-size: 9px;
     font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: var(--dim);
     margin-bottom: 10px;
     padding-left: 2px;
   }
 
-  /* Four-layer strip */
+  /* ─── 4+5+3 kernel ─── */
+  .kernel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
+    align-items: start;
+  }
+  .kernel-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 4px 0;
+    align-self: center;
+  }
+  .kernel-rows { display: flex; flex-direction: column; gap: 6px; }
+
+  /* 4 Layers row */
   .layers {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 2px;
-    margin-bottom: 28px;
-    border-radius: 8px;
-    overflow: hidden;
+    gap: 4px;
   }
-  .layer { padding: 16px 14px; }
-  .layer-soul    { background: linear-gradient(135deg, #1e1432 0%, #2d1b5e 100%); border-top: 2px solid var(--accent2); }
-  .layer-body    { background: linear-gradient(135deg, #0d1f35 0%, #1a3560 100%); border-top: 2px solid var(--accent); }
-  .layer-faculty { background: linear-gradient(135deg, #0d2420 0%, #1a4a30 100%); border-top: 2px solid var(--accent3); }
-  .layer-skill   { background: linear-gradient(135deg, #2a1a08 0%, #5a3210 100%); border-top: 2px solid var(--accent4); }
-
-  .layer-name {
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    font-weight: 700;
-    margin-bottom: 10px;
-  }
-  .layer-soul    .layer-name { color: var(--accent2); }
-  .layer-body    .layer-name { color: var(--accent); }
-  .layer-faculty .layer-name { color: var(--accent3); }
-  .layer-skill   .layer-name { color: var(--accent4); }
-
-  .layer-items { list-style: none; }
-  .layer-items li {
-    font-size: 11px;
-    color: var(--text-mid);
-    padding: 2px 0;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.5;
-  }
-  .layer-items li::before { content: '› '; color: var(--text-dim); }
-
-  /* Generator pipeline */
-  .pipeline {
-    display: flex;
-    align-items: stretch;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  .pipe-stage {
-    flex: 1;
-    padding: 14px 12px;
-    border-right: 1px solid var(--border);
+  .layer {
+    border-radius: 6px;
+    padding: 14px 13px;
     position: relative;
   }
-  .pipe-stage:last-child { border-right: none; }
-  .pipe-label {
-    font-size: 9px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-  .pipe-name {
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  .pipe-items { list-style: none; }
-  .pipe-items li {
-    font-size: 10px;
-    color: var(--text-mid);
-    font-family: 'JetBrains Mono', monospace;
-    padding: 1.5px 0;
-    line-height: 1.4;
-  }
+  .layer-soul    { background: linear-gradient(135deg, #160e2e 0%, #261550 100%); border: 1px solid rgba(139,92,246,0.35); }
+  .layer-body    { background: linear-gradient(135deg, #091828 0%, #152d55 100%); border: 1px solid rgba(59,130,246,0.35); }
+  .layer-faculty { background: linear-gradient(135deg, #081e1a 0%, #0e3828 100%); border: 1px solid rgba(16,185,129,0.35); }
+  .layer-skill   { background: linear-gradient(135deg, #1c1005 0%, #3a2008 100%); border: 1px solid rgba(245,158,11,0.35); }
 
-  /* Main grids */
-  .main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  .main-grid-3 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
-  }
-  .card-title {
+  .layer-name {
     font-size: 10px;
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    margin-bottom: 14px;
+    font-weight: 700;
+    margin-bottom: 9px;
+  }
+  .layer-soul .layer-name    { color: var(--soul); }
+  .layer-body .layer-name    { color: var(--body); }
+  .layer-faculty .layer-name { color: var(--faculty); }
+  .layer-skill .layer-name   { color: var(--skill); }
+
+  .layer-items { list-style: none; }
+  .layer-items li {
+    font-size: 10px;
+    color: var(--mid);
+    padding: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+  }
+  .layer-items li::before { content: '› '; color: var(--dim); }
+  .layer-items li.new { color: var(--cyan); }
+  .layer-items li.new::before { color: rgba(6,182,212,0.5); }
+
+  /* 5 Concepts row */
+  .concepts {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+  .concept {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 12px;
+  }
+  .concept-name {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 7px;
+  }
+  .concept-items { list-style: none; }
+  .concept-items li {
+    font-size: 10px;
+    color: var(--mid);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1.5px 0;
+    line-height: 1.45;
+  }
+  .concept-items li::before { content: '· '; color: var(--dim); }
+
+  /* 3 Gates row */
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .gate {
+    border-radius: 6px;
+    padding: 11px 13px;
+  }
+  .gate-generate { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.35); }
+  .gate-install  { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.30); }
+  .gate-runtime  { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.30); }
+
+  .gate-label {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+  .gate-generate .gate-label { color: var(--red); }
+  .gate-install  .gate-label { color: var(--skill); }
+  .gate-runtime  .gate-label { color: var(--faculty); }
+
+  .gate-module {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--mid);
+    margin-bottom: 6px;
+  }
+  .gate-rules { list-style: none; }
+  .gate-rules li {
+    font-size: 10px;
+    color: var(--mid);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1.5px 0;
+    line-height: 1.45;
+  }
+  .gate-rules li::before { content: '⊢ '; color: var(--dim); }
+  .gate-rules li.new { color: var(--cyan); }
+  .gate-rules li.new::before { color: rgba(6,182,212,0.5); }
+
+  /* ─── Grid helpers ─── */
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 0; }
+  .mb { margin-bottom: 14px; }
+
+  /* ─── Card ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 15px;
+  }
+  .card-title {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 13px;
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 
-  /* Artifact tree */
-  .artifact-tree {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    line-height: 1.85;
-    color: var(--text-mid);
+  /* ─── Pipeline ─── */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 14px;
   }
-  .artifact-tree pre { white-space: pre; }
-  .dir  { color: var(--accent); }
-  .fh   { color: var(--text); }
-  .fw   { color: var(--accent4); }
-  .fs   { color: var(--accent3); }
-  .fn   { color: var(--accent2); }
-  .fc   { color: var(--text-dim); }
+  .pipe {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 10px;
+    position: relative;
+  }
+  .pipe-ph {
+    font-size: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 5px;
+  }
+  .pipe-name {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 7px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pipe-items { list-style: none; }
+  .pipe-items li {
+    font-size: 9.5px;
+    color: var(--mid);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1.5px 0;
+    line-height: 1.4;
+  }
+  .pipe-arrow {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--dim);
+    z-index: 1;
+  }
+  .pipe:last-child .pipe-arrow { display: none; }
 
-  /* Flow items */
-  .flow { display: flex; flex-direction: column; gap: 6px; }
+  /* ─── Artifact tree ─── */
+  .tree {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.85;
+    color: var(--mid);
+    white-space: pre;
+  }
+  .dir  { color: var(--body); }
+  .fh   { color: var(--text); }
+  .fw   { color: var(--skill); }
+  .fs   { color: var(--faculty); }
+  .fn   { color: var(--soul); }
+  .fc   { color: var(--dim); }
+  .fnew { color: var(--cyan); }
+
+  /* ─── Flow items ─── */
+  .flow { display: flex; flex-direction: column; gap: 5px; }
   .flow-item {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 6px;
+    gap: 9px;
+    padding: 7px 9px;
+    border-radius: 5px;
     background: var(--surface2);
     border: 1px solid var(--border);
   }
   .flow-num {
-    font-size: 9px;
+    font-size: 8.5px;
     font-family: 'JetBrains Mono', monospace;
-    color: var(--text-dim);
+    color: var(--dim);
     background: var(--border);
     border-radius: 3px;
     padding: 1px 5px;
@@ -210,8 +337,8 @@
     white-space: nowrap;
   }
   .flow-text {
-    font-size: 11px;
-    color: var(--text-mid);
+    font-size: 10.5px;
+    color: var(--mid);
     font-family: 'JetBrains Mono', monospace;
     line-height: 1.55;
   }
@@ -219,72 +346,73 @@
   .flow-text code {
     background: var(--border);
     border-radius: 3px;
-    padding: 1px 5px;
-    font-size: 10px;
-    color: var(--accent3);
+    padding: 1px 4px;
+    font-size: 9.5px;
+    color: var(--faculty);
   }
+  .flow-text .nc { color: var(--cyan); }
 
-  /* CLI list */
-  .cmd-list { display: flex; flex-direction: column; gap: 4px; }
+  /* ─── CLI list ─── */
+  .cmd-list { display: flex; flex-direction: column; gap: 3px; }
   .cmd {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    padding: 5px 8px;
+    padding: 4.5px 7px;
     border-radius: 4px;
     background: var(--surface2);
+    border: 1px solid transparent;
   }
+  .cmd.new-cmd { border-color: rgba(6,182,212,0.25); }
   .cmd-verb {
-    font-size: 10px;
+    font-size: 9.5px;
     font-family: 'JetBrains Mono', monospace;
-    color: var(--accent3);
+    color: var(--faculty);
     font-weight: 600;
-    min-width: 72px;
+    min-width: 78px;
+    flex-shrink: 0;
   }
+  .cmd.new-cmd .cmd-verb { color: var(--cyan); }
   .cmd-desc {
-    font-size: 10px;
-    color: var(--text-dim);
+    font-size: 9.5px;
+    color: var(--dim);
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Ecosystem columns */
-  .eco-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
+  /* ─── Eco list ─── */
   .eco-col-title {
     font-size: 9px;
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: .15em;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: var(--dim);
     margin-bottom: 8px;
   }
   .eco-list {
     list-style: none;
-    font-size: 10px;
+    font-size: 9.5px;
     font-family: 'JetBrains Mono', monospace;
-    color: var(--text-mid);
+    color: var(--mid);
     line-height: 2;
   }
   .eco-list .mod { color: var(--text); }
+  .eco-list .new { color: var(--cyan); }
 
-  /* Legend */
+  /* ─── Legend ─── */
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 24px;
-    padding-top: 16px;
+    gap: 14px;
+    margin-top: 22px;
+    padding-top: 14px;
     border-top: 1px solid var(--border);
   }
   .legend-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 10px;
-    color: var(--text-dim);
+    font-size: 9.5px;
+    color: var(--dim);
     font-family: 'JetBrains Mono', monospace;
   }
   .badge {
@@ -300,240 +428,371 @@
 <body>
 <div class="canvas">
 
+  <!-- Header -->
+  <div class="header">
+    <div class="title-block">
   <h1>OpenPersona · Architecture Map</h1>
-  <div class="subtitle">v0.16.1 &nbsp;·&nbsp; Four-Layer Framework for Agent Persona Skill Packs</div>
+      <div class="tagline">AI Agent Persona Lifecycle Framework</div>
+    </div>
+    <div class="meta">
+      <div class="ver">v0.19.0 · post P4-A</div>
+      <div class="sub">4 Layers + 5 Concepts + 3 Gates</div>
+    </div>
+  </div>
 
-  <!-- ① Four Layers -->
-  <div class="sec-label">① Four-Layer Model — persona.json input declaration</div>
-  <div class="layers">
+  <!-- ① 4+5+3 Architectural Kernel -->
+  <div class="sec">① Architectural Kernel — 4 Layers + 5 Systemic Concepts + 3 Trust Gates</div>
+  <div class="kernel mb" style="margin-bottom:28px">
+    <div class="kernel-rows" style="grid-column:1/-1">
+
+      <!-- 4 Layers -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);width:64px;flex-shrink:0">4 Layers</div>
+        <div class="layers" style="flex:1">
     <div class="layer layer-soul">
       <div class="layer-name">Soul</div>
       <ul class="layer-items">
-        <li>personaName / slug / bio</li>
-        <li>personality / speakingStyle</li>
+              <li>soul.identity · aesthetic</li>
+              <li>soul.character · boundaries</li>
         <li>role / sourceIdentity</li>
-        <li>evolution { boundaries }</li>
+              <li>evolution.instance.*</li>
         <li>influenceBoundary</li>
-        <li>heartbeat</li>
-        <li>boundaries (ethical)</li>
+              <li>constitution.md (§1–§8)</li>
       </ul>
     </div>
     <div class="layer layer-body">
       <div class="layer-name">Body</div>
       <ul class="layer-items">
         <li>runtime (REQUIRED)</li>
-        <li>platform / channels</li>
+              <li>framework / channels</li>
         <li>credentials / resources</li>
         <li>appearance { avatar }</li>
-        <li>physical (optional)</li>
-        <li>interface { signals }</li>
-        <li>pendingCommands policy</li>
+              <li>physical (robots/IoT)</li>
+              <li>interface { signals · cmds }</li>
       </ul>
     </div>
     <div class="layer layer-faculty">
       <div class="layer-name">Faculty</div>
       <ul class="layer-items">
-        <li>voice · music</li>
-        <li>selfie · memory</li>
-        <li>reminder · economy</li>
-        <li>dim: expression / sense</li>
-        <li>dim: cognition</li>
-        <li>soft-ref via install:</li>
-        <li>→ dormant awareness</li>
+              <li>voice — expression</li>
+              <li>avatar — expression</li>
+              <li>memory — cognition</li>
+              <li>dim: expression/sense/cognition</li>
+              <li>always-active when on</li>
+              <li>soft-ref → dormant aware</li>
       </ul>
     </div>
     <div class="layer layer-skill">
       <div class="layer-name">Skill</div>
       <ul class="layer-items">
+              <li>selfie · music · reminder</li>
         <li>local: layers/skills/</li>
         <li>external: clawhub:…</li>
-        <li>trigger / description</li>
-        <li>soft-ref via install:</li>
-        <li>→ dormant awareness</li>
+              <li class="new">trust: verified/community</li>
         <li>allowedTools merge</li>
-        <li>behaviorGuide</li>
+              <li>on-demand, removable</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 Concepts -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);width:64px;flex-shrink:0">5 Concepts</div>
+        <div class="concepts" style="flex:1">
+          <div class="concept">
+            <div class="concept-name" style="color:var(--soul)">Evolution</div>
+            <ul class="concept-items">
+              <li>instance (Soul growth)</li>
+              <li>pack (artifact versioning)</li>
+              <li>faculty / body / skill</li>
+              <li>normalizeEvolutionInput()</li>
+            </ul>
+          </div>
+          <div class="concept">
+            <div class="concept-name" style="color:var(--faculty)">Economy</div>
+            <ul class="concept-items">
+              <li>AgentBooks wrapper</li>
+              <li>FHS 4-dimension engine</li>
+              <li>survivalPolicy opt-in</li>
+              <li>guard / hook / query</li>
+            </ul>
+          </div>
+          <div class="concept">
+            <div class="concept-name" style="color:var(--body)">Vitality</div>
+            <ul class="concept-items">
+              <li>calcVitality() aggregator</li>
+              <li>financial (implemented)</li>
+              <li>memory/social (reserved)</li>
+              <li>HTML vitality report</li>
+            </ul>
+          </div>
+          <div class="concept">
+            <div class="concept-name" style="color:var(--pink)">Social</div>
+            <ul class="concept-items">
+              <li>agent-card.json (A2A)</li>
+              <li>acn-config.json (ACN)</li>
+              <li>wallet_address (ERC-8004)</li>
+              <li>Living Canvas HTML</li>
+            </ul>
+          </div>
+          <div class="concept">
+            <div class="concept-name" style="color:var(--skill)">Rhythm</div>
+            <ul class="concept-items">
+              <li>rhythm.heartbeat</li>
+              <li>rhythm.circadian</li>
+              <li>strategy · maxDaily</li>
+              <li>quietHours · sources</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Gates -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);width:64px;flex-shrink:0">3 Gates</div>
+        <div class="gates" style="flex:1">
+          <div class="gate gate-generate">
+            <div class="gate-label">Generate Gate</div>
+            <div class="gate-module" style="color:var(--red)">lib/generator/validate.js · throw</div>
+            <ul class="gate-rules">
+              <li>required soul fields</li>
+              <li>constitution §3/§6 compliance</li>
+              <li>evolution.instance.boundaries</li>
+              <li>influenceBoundary rules</li>
+              <li>pack / faculty / body / skill types</li>
+              <li class="new">evolution.skill.minTrustLevel enum</li>
+            </ul>
+          </div>
+          <div class="gate gate-install">
+            <div class="gate-label">Install Gate</div>
+            <div class="gate-module" style="color:var(--skill)">lib/lifecycle/installer.js · warn</div>
+            <ul class="gate-rules">
+              <li>constitution SHA-256 hash</li>
+              <li>lineage.json chain verify</li>
+              <li>printWarning (never throws)</li>
+              <li>registry add + setActive</li>
+              <li>soft-ref install hints</li>
+            </ul>
+          </div>
+          <div class="gate gate-runtime">
+            <div class="gate-label">Runtime Gate</div>
+            <div class="gate-module" style="color:var(--faculty)">scripts/state-sync.js · clamp/filter</div>
+            <ul class="gate-rules">
+              <li>IMMUTABLE identity fields</li>
+              <li>immutableTraits filter</li>
+              <li>formality clamp [min,max]</li>
+              <li>stage single-step forward</li>
+              <li class="new">capability_unlock trust gate</li>
+              <li class="new">→ capability_gap signal emit</li>
       </ul>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- ② Generator Pipeline -->
-  <div class="sec-label">② Generator Pipeline — lib/generator.js + generator-*.js</div>
+  <!-- ② Generator 7-Phase Pipeline -->
+  <div class="sec">② Generator Pipeline — lib/generator/index.js · 7-phase + GeneratorContext</div>
   <div class="pipeline">
-    <div class="pipe-stage">
-      <div class="pipe-label">input</div>
-      <div class="pipe-name" style="color:#3b82f6">Deep Clone</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 1</div>
+      <div class="pipe-name" style="color:var(--body)">Clone</div>
       <ul class="pipe-items">
-        <li>JSON.parse(JSON.stringify)</li>
-        <li>防止 caller 对象被</li>
-        <li>asset 路径改写污染</li>
+        <li>createContext(ctx)</li>
+        <li>deep-copy input</li>
+        <li>resolve inputDir</li>
+        <li>ctx shared across phases</li>
       </ul>
+      <span class="pipe-arrow">›</span>
     </div>
-    <div class="pipe-stage">
-      <div class="pipe-label">validate</div>
-      <div class="pipe-name" style="color:#ef4444">Validate</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 2</div>
+      <div class="pipe-name" style="color:var(--red)">Validate</div>
       <ul class="pipe-items">
-        <li>required fields</li>
-        <li>constitution compliance</li>
-        <li>evolution.boundaries</li>
-        <li>influenceBoundary rules</li>
-        <li>personaType deprecation</li>
+        <li>validatePersona()</li>
+        <li>↳ normalizeEvolutionInput()</li>
+        <li>normalizeSoulInput()</li>
+        <li>deprecation warns</li>
       </ul>
+      <span class="pipe-arrow">›</span>
     </div>
-    <div class="pipe-stage">
-      <div class="pipe-label">compute</div>
-      <div class="pipe-name" style="color:#8b5cf6">Derive Fields</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 3</div>
+      <div class="pipe-name" style="color:var(--soul)">Load</div>
       <ul class="pipe-items">
-        <li>63 DERIVED_FIELDS</li>
+        <li>constitution · behaviorGuide</li>
+        <li>faculty.json × N</li>
+        <li>skill.json × N</li>
+        <li>economy aspect</li>
+        <li>all templates / partials</li>
+      </ul>
+      <span class="pipe-arrow">›</span>
+    </div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 4</div>
+      <div class="pipe-name" style="color:var(--soul)">Derive</div>
+      <ul class="pipe-items">
+        <li>computeDerivedFields()</li>
+        <li>70 DERIVED_FIELDS</li>
         <li>soft-ref detection</li>
-        <li>hasDormantCapabilities</li>
-        <li>roleFoundation</li>
-        <li>body interface flags</li>
-        <li>avatar (computed)</li>
+        <li>hasSkillTrustPolicy ★</li>
+        <li>zero I/O — pure compute</li>
       </ul>
+      <span class="pipe-arrow">›</span>
     </div>
-    <div class="pipe-stage">
-      <div class="pipe-label">build</div>
-      <div class="pipe-name" style="color:#3b82f6">Assets + Body</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 5</div>
+      <div class="pipe-name" style="color:var(--body)">Prepare</div>
       <ul class="pipe-items">
-        <li>copy referenceImage</li>
-        <li>copy avatar / model3d</li>
-        <li>buildBodySection()</li>
-        <li>interface signal policy</li>
-        <li>command policy</li>
+        <li>create output dir tree</li>
+        <li>copy assets (avatar/ref)</li>
+        <li>rewrite asset paths</li>
+        <li>set persona.avatar</li>
       </ul>
+      <span class="pipe-arrow">›</span>
     </div>
-    <div class="pipe-stage">
-      <div class="pipe-label">render</div>
-      <div class="pipe-name" style="color:#10b981">Templates</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 6</div>
+      <div class="pipe-name" style="color:var(--faculty)">Render</div>
       <ul class="pipe-items">
+        <li>Mustache soul-injection</li>
+        <li>6 partials (3 conditional)</li>
         <li>skill.template.md</li>
-        <li>soul-injection.template</li>
-        <li>identity.template.md</li>
-        <li>state-sync.template.js</li>
-        <li>state.template.json</li>
+        <li>zero I/O — pure render</li>
       </ul>
+      <span class="pipe-arrow">›</span>
     </div>
-    <div class="pipe-stage">
-      <div class="pipe-label">output</div>
-      <div class="pipe-name" style="color:#f59e0b">Emit Pack</div>
+    <div class="pipe">
+      <div class="pipe-ph">Phase 7</div>
+      <div class="pipe-name" style="color:var(--skill)">Emit</div>
       <ul class="pipe-items">
-        <li>strip DERIVED_FIELDS</li>
-        <li>write soul/persona.json</li>
-        <li>agent-card + acn-config</li>
-        <li>manifest.json</li>
-        <li>.gitignore 🆕</li>
+        <li>SKILL.md · soul/</li>
+        <li>persona.json + meta.frameworkVersion</li>
+        <li>state.json · scripts/state-sync.js</li>
+        <li>references/ (faculty + Signal)</li>
+        <li>agent-card · acn-config</li>
+        <li>.gitignore</li>
       </ul>
     </div>
   </div>
 
-  <!-- ③ + ④ -->
-  <div class="main-grid">
-
+  <!-- ③ + ④ Pack + Lifecycle -->
+  <div class="g2">
     <!-- ③ Generated Pack -->
     <div class="card">
-      <div class="card-title"><div class="dot" style="background:#3b82f6"></div><span style="color:#3b82f6">③ Generated Persona Pack — output structure</span></div>
-      <div class="artifact-tree"><pre>persona-&lt;slug&gt;/
-├── <span class="fh">SKILL.md</span>            <span class="fc"># agent entry point</span>
-├── <span class="fs">.gitignore</span>          <span class="fc"># 🆕 protects secrets</span>
-├── <span class="fh">manifest.json</span>       <span class="fc"># 4-layer manifest</span>
-├── <span class="fh">agent-card.json</span>     <span class="fc"># A2A v0.3.0</span>
-├── <span class="fh">acn-config.json</span>     <span class="fc"># ACN + ERC-8004</span>
-├── soul/
-│   ├── <span class="fh">injection.md</span>    <span class="fc"># self-awareness</span>
-│   ├── <span class="fh">identity.md</span>
-│   ├── <span class="fw">persona.json</span>    <span class="fc"># clean (no derived)</span>
-│   ├── <span class="fw">constitution.md</span> <span class="fc"># 🔒 protected</span>
-│   ├── <span class="fn">state.json</span>      <span class="fc"># evolution runtime</span>
-│   ├── <span class="fn">self-narrative.md</span>
-│   └── <span class="fn">lineage.json</span>    <span class="fc"># fork chain</span>
-├── scripts/
-│   ├── <span class="fh">state-sync.js</span>   <span class="fc"># nerve fiber</span>
-│   ├── economy.js
-│   ├── economy-guard.js
-│   └── economy-hook.js
-├── references/
-│   └── &lt;faculty&gt;.md
-└── assets/
-    ├── avatar/
-    └── reference/</pre></div>
+      <div class="card-title"><div class="dot" style="background:var(--body)"></div><span style="color:var(--body)">③ Generated Persona Pack — output structure</span></div>
+      <div class="tree">persona-&lt;slug&gt;/
+├── <span class="fh">SKILL.md</span>                  <span class="fc"># agent entry point</span>
+├── <span class="fh">persona.json</span>              <span class="fc"># pack root (no derived fields)</span>
+├── <span class="fh">state.json</span>                <span class="fc"># evolution runtime state</span>
+├── <span class="fh">agent-card.json</span>           <span class="fc"># A2A protocol v0.3.0</span>
+├── <span class="fh">acn-config.json</span>           <span class="fc"># ACN + ERC-8004</span>
+├── <span class="fs">.gitignore</span>                <span class="fc"># protects state + private files</span>
+├── <span class="dir">soul/</span>
+│   ├── <span class="fh">injection.md</span>          <span class="fc"># 4-dim self-awareness</span>
+│   ├── <span class="fw">constitution.md</span>       <span class="fc"># 🔒 §1–§8 protected</span>
+│   ├── <span class="fn">self-narrative.md</span>     <span class="fc"># if evolution enabled</span>
+│   ├── <span class="fn">lineage.json</span>          <span class="fc"># if forked</span>
+│   ├── <span class="fnew">behavior-guide.md</span>     <span class="fc"># if behaviorGuide / after refine ★</span>
+│   └── <span class="fnew">behavior-guide.meta.json</span> <span class="fc"># if behavior-guide.md ★</span>
+├── <span class="dir">economy/</span>                  <span class="fc"># if economy.enabled</span>
+│   ├── economic-identity.json
+│   └── economic-state.json
+├── <span class="dir">scripts/</span>
+│   ├── <span class="fh">state-sync.js</span>         <span class="fc"># nerve fiber (3-gate)</span>
+│   ├── economy.js            <span class="fc"># if economy.enabled</span>
+│   ├── economy-guard.js      <span class="fc"># if economy.enabled</span>
+│   └── economy-hook.js       <span class="fc"># if economy.enabled</span>
+├── <span class="dir">references/</span>
+│   ├── &lt;faculty&gt;.md
+│   └── SIGNAL-PROTOCOL.md
+└── <span class="dir">assets/</span>  avatar/ · reference/</div>
     </div>
 
     <!-- ④ Lifecycle Protocol -->
     <div class="card">
-      <div class="card-title"><div class="dot" style="background:#10b981"></div><span style="color:#10b981">④ Lifecycle Protocol — Nervous System</span></div>
+      <div class="card-title"><div class="dot" style="background:var(--faculty)"></div><span style="color:var(--faculty)">④ Lifecycle Protocol — Body Nervous System</span></div>
       <div class="flow">
         <div class="flow-item">
           <div class="flow-num">START</div>
-          <div class="flow-text"><strong>openpersona state read &lt;slug&gt;</strong><br>→ state-runner.js → state-sync.js read<br>inject: mood / relationship / evolvedTraits<br>process: <code>pendingCommands</code> queue</div>
+          <div class="flow-text"><strong>openpersona state read &lt;slug&gt;</strong><br>→ state-sync.js read<br>inject: mood / relationship / evolvedTraits<br>process: <code>pendingCommands</code> queue</div>
+        </div>
+        <div class="flow-item" style="border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.04)">
+          <div class="flow-num">TRUST</div>
+          <div class="flow-text"><strong class="nc">Soul self-check (P4-A)</strong><br>persona reads <code>pendingCommands</code>, self-enforces <code>minTrustLevel</code><br>refuses to activate low-trust skills autonomously<br>runtime enforcement: writeState (see END↓)</div>
         </div>
         <div class="flow-item">
           <div class="flow-num">MID</div>
-          <div class="flow-text"><strong>Signal Protocol</strong> (persona → host)<br><code>state-sync.js signal &lt;type&gt; '{...}'</code><br>writes signals.json · reads signal-responses.json<br>types: scheduling · file_io · tool_missing · …</div>
+          <div class="flow-text"><strong>Signal Protocol</strong> (persona → host)<br><code>state-sync.js signal &lt;type&gt; '{...}'</code><br>writes signals.json · reads signal-responses.json<br>types: scheduling · file_io · capability_gap · …</div>
         </div>
         <div class="flow-item">
           <div class="flow-num">END</div>
-          <div class="flow-text"><strong>openpersona state write &lt;slug&gt; '&lt;patch&gt;'</strong><br>deep-merge → snapshot stateHistory (max 10)<br>append eventLog (max 50) · clear pendingCommands<br>milestones → self-narrative.md (append-only)</div>
+          <div class="flow-text"><strong>openpersona state write &lt;slug&gt; '&lt;patch&gt;'</strong><br>Evolution Gate → Skill Trust Gate → deep-merge<br>stateHistory (max 10) · eventLog (max 50)<br>clear pendingCommands</div>
         </div>
         <div class="flow-item" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.05)">
-          <div class="flow-num">HOST→</div>
-          <div class="flow-text"><strong>Pending Commands Queue</strong> (host → persona)<br>host writes between conversations:<br><code>capability_unlock · context_inject</code><br><code>trait_nudge · relationship_update</code></div>
+          <div class="flow-num">GROW</div>
+          <div class="flow-text"><strong>Soul–Memory Bridge</strong><br><code>openpersona state promote &lt;slug&gt;</code><br>eventLog patterns → evolvedTraits instincts<br>threshold · immutableTraits gate · idempotent</div>
         </div>
-        <div class="flow-item" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.05)">
-          <div class="flow-num">SYNC</div>
-          <div class="flow-text"><strong>state-runner.js</strong> — resolution order:<br>① registry path (survives dir moves)<br>② ~/.openpersona/personas/persona-&lt;slug&gt;<br>③ legacy ~/.openclaw/skills/persona-&lt;slug&gt;</div>
+        <div class="flow-item" style="border-color:rgba(245,158,11,0.25);background:rgba(245,158,11,0.04)">
+          <div class="flow-num">REFINE</div>
+          <div class="flow-text"><strong class="nc">openpersona refine &lt;slug&gt; (P24)</strong><br>behavior-guide.md cold-start + compliance scan<br>evolution.skill gates · agent-card auto-sync<br>--emit/--apply · optional git push</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ⑤ + ⑥ + ⑦ -->
-  <div class="main-grid-3">
-
+  <div class="g3">
     <!-- ⑤ CLI -->
     <div class="card">
-      <div class="card-title"><div class="dot" style="background:#f59e0b"></div><span style="color:#f59e0b">⑤ CLI — bin/cli.js</span></div>
+      <div class="card-title"><div class="dot" style="background:var(--skill)"></div><span style="color:var(--skill)">⑤ CLI — bin/cli.js</span></div>
       <div class="cmd-list">
         <div class="cmd"><span class="cmd-verb">create</span><span class="cmd-desc">generate persona pack</span></div>
-        <div class="cmd"><span class="cmd-verb">install</span><span class="cmd-desc">zip/gh → ~/.openclaw</span></div>
+        <div class="cmd"><span class="cmd-verb">install</span><span class="cmd-desc">zip/gh → ~/.openpersona</span></div>
         <div class="cmd"><span class="cmd-verb">update</span><span class="cmd-desc">re-gen, keep state+lineage</span></div>
         <div class="cmd"><span class="cmd-verb">uninstall</span><span class="cmd-desc">clean registry + dir</span></div>
         <div class="cmd"><span class="cmd-verb">fork</span><span class="cmd-desc">derive child + lineage.json</span></div>
         <div class="cmd"><span class="cmd-verb">switch</span><span class="cmd-desc">activate + handoff</span></div>
         <div class="cmd"><span class="cmd-verb">export/import</span><span class="cmd-desc">zip pack (porter)</span></div>
-        <div class="cmd"><span class="cmd-verb">publish</span><span class="cmd-desc">registry → clawhub</span></div>
+        <div class="cmd"><span class="cmd-verb">publish</span><span class="cmd-desc">register to OpenPersona dir</span></div>
         <div class="cmd"><span class="cmd-verb">acn-register</span><span class="cmd-desc">register with ACN</span></div>
-        <div class="cmd"><span class="cmd-verb">state r/w/sig</span><span class="cmd-desc">lifecycle protocol</span></div>
+        <div class="cmd"><span class="cmd-verb">state r/w/sig</span><span class="cmd-desc">lifecycle read/write/signal</span></div>
+        <div class="cmd new-cmd"><span class="cmd-verb">state promote</span><span class="cmd-desc">eventLog → instincts ★</span></div>
         <div class="cmd"><span class="cmd-verb">vitality</span><span class="cmd-desc">score / HTML report</span></div>
+        <div class="cmd"><span class="cmd-verb">canvas</span><span class="cmd-desc">Living Canvas HTML profile</span></div>
         <div class="cmd"><span class="cmd-verb">evolve-report</span><span class="cmd-desc">evolution governance</span></div>
+        <div class="cmd new-cmd"><span class="cmd-verb">refine</span><span class="cmd-desc">pack refinement --emit/--apply ★</span></div>
       </div>
     </div>
 
-    <!-- ⑥ Economy -->
+    <!-- ⑥ Memory + Economy -->
     <div class="card">
-      <div class="card-title"><div class="dot" style="background:#10b981"></div><span style="color:#10b981">⑥ Economy & Vitality</span></div>
+      <div class="card-title"><div class="dot" style="background:var(--faculty)"></div><span style="color:var(--faculty)">⑥ Memory (Soul Infra) + Economy</span></div>
       <div class="flow">
+        <div class="flow-item" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.05)">
+          <div class="flow-num">MEM</div>
+          <div class="flow-text"><strong>Memory Faculty</strong><br>read · write · search · forget<br>multi-backend via install:<br>local JSON / Mem0 / Zep / Vector</div>
+        </div>
+        <div class="flow-item" style="border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.04)">
+          <div class="flow-num">BRIDGE</div>
+          <div class="flow-text"><strong class="nc">Soul–Memory Bridge (P1)</strong><br>supersededBy chain → no contradiction<br>promoteToInstinct: threshold grouping<br>interest_discovery/trait_emergence</div>
+        </div>
         <div class="flow-item">
-          <div class="flow-num">LIB</div>
-          <div class="flow-text"><strong>lib/vitality.js</strong><br>calcVitality(slug, adapter)<br>→ agentbooks calcFinancialHealth<br>extension point: memory/social</div>
+          <div class="flow-num">ECO</div>
+          <div class="flow-text"><strong>Economy Aspect (AgentBooks)</strong><br>calcVitality() → FHS 4-dimension<br>survivalPolicy: tier-driven behavior<br>tiers: uninitialized→suspended→normal</div>
         </div>
         <div class="flow-item">
           <div class="flow-num">GUARD</div>
-          <div class="flow-text"><strong>economy-guard.js</strong><br>always exits 0<br>outputs FINANCIAL_HEALTH_REPORT<br>persona makes autonomous decisions</div>
-        </div>
-        <div class="flow-item">
-          <div class="flow-num">TIERS</div>
-          <div class="flow-text"><code>uninitialized</code><br><code>suspended → critical</code><br><code>optimizing → normal</code></div>
-        </div>
-        <div class="flow-item">
-          <div class="flow-num">HTML</div>
-          <div class="flow-text"><strong>vitality-report.js</strong><br>buildReportData + renderHtml<br>wallet · FHS · runway · events<br>pendingCommands · moodCurrent</div>
+          <div class="flow-text"><strong>economy-guard.js</strong><br>always exits 0 → FINANCIAL_HEALTH_REPORT<br>persona makes autonomous decisions<br>never forces silence</div>
         </div>
       </div>
     </div>
 
     <!-- ⑦ Identity & Trust -->
     <div class="card">
-      <div class="card-title"><div class="dot" style="background:#8b5cf6"></div><span style="color:#8b5cf6">⑦ Identity & Trust Chain</span></div>
+      <div class="card-title"><div class="dot" style="background:var(--soul)"></div><span style="color:var(--soul)">⑦ Identity, Trust Chain & Social</span></div>
       <div class="flow">
         <div class="flow-item">
           <div class="flow-num">A2A</div>
@@ -545,32 +804,44 @@
         </div>
         <div class="flow-item">
           <div class="flow-num">FORK</div>
-          <div class="flow-text"><strong>lineage.json</strong><br>parent · constitutionHash (SHA-256)<br>generation depth<br>installer verifies hash on install</div>
+          <div class="flow-text"><strong>lineage.json</strong><br>parent · constitutionHash (SHA-256)<br>generation depth · parentPackRevision<br>installer verifies hash on install</div>
+        </div>
+        <div class="flow-item" style="border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.04)">
+          <div class="flow-num">TRUST★</div>
+          <div class="flow-text"><strong class="nc">Skill Trust Gate (P4-A)</strong><br><code>evolution.skill.minTrustLevel</code><br>verified › community › unverified<br>Runtime Gate layer 3</div>
         </div>
         <div class="flow-item" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05)">
           <div class="flow-num">🔒</div>
-          <div class="flow-text"><strong>constitution.md</strong><br>Safety > Honesty > Helpfulness<br>compliance checked at generate<br>hash verified at install time</div>
+          <div class="flow-text"><strong>constitution.md</strong><br>Safety › Honesty › Helpfulness<br>compliance at Generate Gate<br>SHA-256 verified at Install Gate</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ⑧ Ecosystem -->
-  <div class="sec-label">⑧ Ecosystem modules</div>
-  <div class="card" style="margin-bottom:0">
-    <div class="eco-grid">
+  <div class="sec">⑧ Ecosystem Modules</div>
+  <div class="card">
+    <div class="g4" style="gap:20px;margin-bottom:0">
       <div>
         <div class="eco-col-title">Install / Lifecycle</div>
         <ul class="eco-list">
           <li class="mod">installer.js</li>
-          <li>→ hash verify lineage</li>
+          <li>→ constitution hash verify</li>
           <li>→ registryAdd / setActive</li>
+          <li>→ soft-ref install hints</li>
           <li class="mod">uninstaller.js</li>
           <li>→ resolveSoulFile</li>
-          <li>→ marker cleanup</li>
           <li class="mod">forker.js</li>
           <li>→ lineage.json write</li>
-          <li>→ state reset (fresh)</li>
+          <li>→ parentPackRevision</li>
+          <li>→ memory inheritance</li>
+          <li class="mod">body.js</li>
+          <li>→ buildBodySection()</li>
+          <li>→ bodyDescription + policy</li>
+          <li class="mod new">refine.js (P24)</li>
+          <li>→ behavior-guide.md</li>
+          <li>→ compliance scan</li>
+          <li>→ evolution.skill gates</li>
         </ul>
       </div>
       <div>
@@ -581,50 +852,68 @@
           <li>→ MAX_HOPS = 5</li>
           <li>→ tmp dir cleanup</li>
           <li class="mod">porter.js</li>
-          <li>→ export zip</li>
-          <li>→ skip node_modules</li>
-          <li class="mod">publisher/registry.js</li>
-          <li>→ branch fallback</li>
-        </ul>
-      </div>
-      <div>
-        <div class="eco-col-title">Community</div>
-        <ul class="eco-list">
-          <li class="mod">contributor.js</li>
-          <li>→ resolveSoulFile</li>
-          <li>→ gh CLI (PR submit)</li>
-          <li class="mod">searcher.js</li>
-          <li>→ shellEscape(query)</li>
-          <li>→ npx clawhub search</li>
-          <li class="mod">evolution.js</li>
-          <li>→ OPENCLAW_HOME path</li>
-          <li>→ evolve-report</li>
-        </ul>
-      </div>
-      <div>
-        <div class="eco-col-title">Shared Infra</div>
-        <ul class="eco-list">
-          <li class="mod">utils.js</li>
-          <li>→ OPENCLAW_HOME</li>
-          <li>→ resolveSoulFile</li>
-          <li>→ shellEscape</li>
-          <li>→ registry CRUD</li>
+          <li>→ export / import zip</li>
+          <li class="mod">publisher/index.js</li>
+          <li>→ validate GitHub repo</li>
+          <li>→ telemetry report</li>
           <li class="mod">switcher.js</li>
           <li>→ shellEscape(greeting)</li>
           <li>→ generateHandoff</li>
+          <li>→ listPersonas (registry)</li>
+          <li class="mod">registrar.js</li>
+          <li>→ registerWithAcn</li>
+          <li>→ acn-register CLI backend</li>
+        </ul>
+      </div>
+      <div>
+        <div class="eco-col-title">State + Memory</div>
+        <ul class="eco-list">
+          <li class="mod">runner.js</li>
+          <li>→ registry path lookup</li>
+          <li>→ delegates state-sync.js</li>
+          <li class="mod">evolution.js</li>
+          <li>→ evolveReport (CLI)</li>
+          <li>→ promoteToInstinct()</li>
+          <li class="mod new">memory/scripts/memory.js</li>
+          <li>→ update + supersededBy</li>
+          <li>→ promoteToInstinct</li>
+          <li>→ retrieve/search/forget</li>
+          <li class="mod">registry/index.js</li>
+          <li>→ loadRegistry</li>
+          <li>→ registryAdd/Remove</li>
+        </ul>
+      </div>
+      <div>
+        <div class="eco-col-title">Report + Social</div>
+        <ul class="eco-list">
+          <li class="mod">vitality.js</li>
+          <li>→ calcVitality()</li>
+          <li>→ AgentBooks FHS</li>
+          <li class="mod">vitality-report.js</li>
+          <li>→ buildReportData</li>
+          <li>→ renderVitalityHtml</li>
+          <li class="mod">canvas.js</li>
+          <li>→ Living Canvas HTML</li>
+          <li>→ soul/body/faculty/skill</li>
+          <li class="mod">social.js</li>
+          <li>→ buildAgentCard</li>
+          <li>→ buildAcnConfig</li>
+          <li>→ wallet_address (SHA-256)</li>
         </ul>
       </div>
     </div>
   </div>
 
+  <!-- Legend -->
   <div class="legend">
-    <div class="legend-item"><span style="color:#3b82f6">■</span> generator core</div>
-    <div class="legend-item"><span style="color:#8b5cf6">■</span> soul / identity / trust</div>
-    <div class="legend-item"><span style="color:#10b981">■</span> runtime / economy</div>
-    <div class="legend-item"><span style="color:#f59e0b">■</span> cli / distribution</div>
-    <div class="legend-item"><span style="color:#ef4444">■</span> validation / security</div>
-    <div class="legend-item"><span class="badge" style="background:rgba(139,92,246,0.2);color:#8b5cf6;border:1px solid rgba(139,92,246,0.3)">🆕 added in review</span></div>
-    <div class="legend-item"><span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3)">🔒 constitution-protected</span></div>
+    <div class="legend-item"><span style="color:var(--soul)">■</span> Soul layer</div>
+    <div class="legend-item"><span style="color:var(--body)">■</span> Body layer / generator core</div>
+    <div class="legend-item"><span style="color:var(--faculty)">■</span> Faculty / runtime / economy</div>
+    <div class="legend-item"><span style="color:var(--skill)">■</span> Skill / CLI / distribution</div>
+    <div class="legend-item"><span style="color:var(--red)">■</span> validation / security</div>
+    <div class="legend-item"><span style="color:var(--cyan)">■</span> P4-A / P1 / P24 new additions</div>
+    <div class="legend-item"><span class="badge" style="background:rgba(6,182,212,0.12);color:var(--cyan);border:1px solid rgba(6,182,212,0.3)">★ new in this session</span></div>
+    <div class="legend-item"><span class="badge" style="background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.3)">🔒 constitution-protected</span></div>
   </div>
 
 </div>

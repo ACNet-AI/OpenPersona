@@ -253,7 +253,13 @@
           "name": { "type": "string" },
           "description": { "type": "string" },
           "trigger": { "type": "string" },
-          "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "External install source: 'clawhub:<slug>' or 'skillssh:<owner/repo>'" }
+          "install": { "type": "string", "pattern": "^(clawhub|skillssh):.+$", "description": "External install source: 'clawhub:<slug>' or 'skillssh:<owner/repo>'" },
+          "trust": { "type": "string", "enum": ["verified", "community", "unverified"], "description": "Trust level of this skill: 'verified' (signed by skills.sh registry), 'community' (peer-reviewed, unsigned), 'unverified' (arbitrary source). Checked against evolution.skill.minTrustLevel at runtime." },
+          "trust": {
+            "type": "string",
+            "enum": ["verified", "community", "unverified"],
+            "description": "Trust level of this skill entry. 'verified' = signed by skills.sh registry; 'community' = peer-reviewed, unsigned; 'unverified' = arbitrary source. Checked against evolution.skill.minTrustLevel at runtime by state-sync.js when a capability_unlock pendingCommand arrives."
+          }
         }
       }
     },
@@ -370,7 +376,8 @@
           "properties": {
             "allowNewInstall": { "type": "boolean", "default": false, "description": "Allow installing a skill not in the original pack at runtime" },
             "allowUpgrade": { "type": "boolean", "default": false, "description": "Allow upgrading an installed skill to a newer version at runtime" },
-            "allowUninstall": { "type": "boolean", "default": false, "description": "Allow removing an installed skill at runtime" }
+            "allowUninstall": { "type": "boolean", "default": false, "description": "Allow removing an installed skill at runtime" },
+            "minTrustLevel": { "type": "string", "enum": ["verified", "community", "unverified"], "default": "unverified", "description": "Minimum trust level required for a capability_unlock pendingCommand to be accepted. Trust order: verified > community > unverified. Personas acting as economic agents should set 'community' or higher." }
           }
         },
         "enabled": { "type": "boolean", "description": "Legacy flat-format field. Promoted to evolution.instance.enabled by the generator shim. Use evolution.instance.enabled in new format." },
@@ -559,6 +566,27 @@
               "note": { "type": "string", "description": "Human-readable explanation of this profile" }
             }
           }
+        }
+      }
+    },
+
+    "memory": {
+      "type": "object",
+      "description": "Memory Faculty lifecycle configuration — policies for cross-session memory management. Orthogonal to the faculties array; these fields govern OpenPersona-level behaviour (fork inheritance, soul-bridge promotion) independent of the storage backend.",
+      "additionalProperties": false,
+      "properties": {
+        "inheritance": {
+          "type": "string",
+          "enum": ["none", "copy"],
+          "default": "none",
+          "description": "Fork memory inheritance policy. 'none' (default): child persona starts with a blank memory store. 'copy': parent's memories.jsonl is copied to the child at fork time — useful when specialising a persona that should already know everything the parent knew."
+        },
+        "promotionThreshold": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 20,
+          "default": 3,
+          "description": "Minimum number of same-type eventLog events required for promoteToInstinct() to promote a pattern to an evolvedTrait. Lower values = more aggressive trait adoption; higher values = more conservative. Default: 3."
         }
       }
     },

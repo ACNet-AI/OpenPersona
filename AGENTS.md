@@ -27,7 +27,7 @@ lib/
   generator/            ← Core generation pipeline
     index.js            ← Orchestrator (the heart of the project)
     validate.js         ← Generate Gate (hard-reject constraint checks)
-    derived.js          ← Derived template variable computation
+    derived.js          ← Derived template variable computation (returns plain object; caller applies via Object.assign)
     body.js             ← Body layer description builder
     social.js           ← Social aspect: Agent Card + ACN config builders
     economy.js          ← Economy aspect: load descriptor + write initial state
@@ -36,11 +36,12 @@ lib/
     uninstaller.js      ← Persona removal
     switcher.js         ← Active persona switching + handoff generation
     forker.js           ← Persona fork (derive child from installed parent)
+    refine.js           ← Skill Pack Refinement (behavior-guide bootstrap + compliance scan + skill gate + social auto-sync)
     porter.js           ← Export / import persona packs
     contributor.js      ← Persona Harvest (community contribution)
   state/                ← Runtime state management
     runner.js           ← Persona directory resolution + state-sync delegation
-    evolution.js        ← Evolution governance (evolve-report CLI)
+    evolution.js        ← Evolution governance (evolve-report CLI + promoteToInstinct Soul-Memory Bridge)
   registry/             ← Local persona registry (~/.openpersona/persona-registry.json)
     index.js            ← loadRegistry / saveRegistry / registryAdd / registryRemove / registrySetActive
   remote/               ← External service calls (outbound network)
@@ -124,21 +125,20 @@ The same `persona.json` declaration is enforced at three progressive gates, each
 
 | Gate | Module | Mechanism | Scope |
 |---|---|---|---|
-| **Generate Gate** | `lib/generator/validate.js` | Hard reject (`throw`) | Required fields · constitution §3/§6 compliance · evolution.boundaries format · influenceBoundary schema |
+| **Generate Gate** | `lib/generator/validate.js` | Hard reject (`throw`) | Required fields · constitution §3/§6 compliance · evolution.instance.boundaries format · evolution.instance.influenceBoundary schema · evolution.pack/faculty/body/skill sub-object validation · evolution.skill.minTrustLevel enum (`verified`/`community`/`unverified`) |
 | **Install Gate** | `lib/lifecycle/installer.js` | Warning (`printWarning`) | constitution SHA-256 hash integrity (lineage chain) |
 | **Runtime Gate** | `scripts/state-sync.js` (generated) | Clamp / filter / hard reject | See below |
 
-**Runtime Gate — full coverage (P17 complete):**
+**Runtime Gate — full coverage (P17 + P4-A complete):**
 
 `emitSignal` reads `persona.json` (pack root) and enforces `body.interface.signals` policy (enabled flag + allowedTypes whitelist) — hard reject on violation.
 
-`writeState` enforces two layers of constraints, both reading `persona.json` (pack root):
+`writeState` enforces three layers of constraints, all reading `persona.json` (pack root):
 1. **Structural invariants** (always-on): IMMUTABLE identity fields (`$schema`, `version`, `personaSlug`, `createdAt`) are never overwritten; eventLog entry format is validated (hard reject on invalid type/missing fields)
-2. **Evolution boundaries** (when `evolution.boundaries` is declared): `immutableTraits` entries are filtered from the `evolvedTraits` patch; `speakingStyleDrift.formality` is clamped to `[minFormality, maxFormality]`; `relationship.stage` is validated for single-step forward-only progression — reversals and skips are blocked. Violations produce `[evolution-gate]` stderr warnings and a corrected patch (not hard-rejected, to preserve co-located valid data).
+2. **Evolution boundaries** (when `evolution.instance.boundaries` is declared — P23+; old flat `evolution.boundaries` is read as fallback for pre-P23 persona.json): `immutableTraits` entries are filtered from the `evolvedTraits` patch; `speakingStyleDrift.formality` is clamped to `[minFormality, maxFormality]`; `relationship.stage` is validated for single-step forward-only progression — reversals and skips are blocked. Violations produce `[evolution-gate]` stderr warnings and a corrected patch (not hard-rejected, to preserve co-located valid data).
+3. **Skill Trust Gate** (when `evolution.skill.minTrustLevel` is declared — P4-A): incoming `pendingCommands` of type `capability_unlock` are filtered against `minTrustLevel` (trust order: `verified` > `community` > `unverified`); commands below threshold are dropped and a `capability_gap` signal (reason `trust_below_threshold`) is written to the feedback directory. If all commands in a patch are blocked, the `pendingCommands` key is dropped rather than writing `[]` — prevents wiping pre-existing queue entries (mirrors P17 evolvedTraits wipe-prevention fix).
 
 **Load-bearing rule:** Any code that modifies `scripts/state-sync.js` (via `templates/body/state-sync.template.js`) or `lib/generator/validate.js` is touching the core. Changes must preserve Trust Gradient coverage — do not reduce what any gate enforces.
-
-**The Trust Gradient is fully implemented.** All three gates are active. The architectural debt documented in P17 has been paid.
 
 ---
 
@@ -150,7 +150,7 @@ Every persona is a four-layer bundle:
 3. **Faculty** — persistent capabilities that shape how the persona perceives or expresses: `voice`, `avatar`, `memory` (and any custom faculties)
 4. **Skill** — discrete actions the persona can take on demand: built-in (`selfie`, `music`, `reminder`) + local definitions in `layers/skills/` + external via `install` field (ClawHub / skills.sh)
 
-**Three orthogonal classification axes:**
+**Four orthogonal classification axes:**
 - **Relationship role** (`role` field) — what the persona is to the user
 - **Identity origin** (`sourceIdentity` field) — whether the persona mirrors a real-world entity
 - **Physical form** (`layers.body.physical`) — optional; whether the persona has a physical embodiment (robots/IoT)
@@ -167,7 +167,7 @@ Note: `personaType` is deprecated — use `role` instead.
 - Section references use `§` prefix: `§1`, `§2`, etc. — never use `S1`, `S2`
 - Priority ordering: **Safety > Honesty > Helpfulness**
 - The generator (`lib/generator/index.js`) includes a compliance check that rejects `persona.json` boundaries attempting to loosen constitutional constraints
-- The generator also validates `evolution.boundaries`: `immutableTraits` must be a string array (non-empty, max 100 chars each), and formality bounds must be in range -10 to 10 with `minFormality < maxFormality` (negative values allow below-baseline constraints, e.g. `minFormality: -3` = "can drift up to 3 units more casual than baseline")
+- The generator also validates `evolution.instance.boundaries` (P23+; old flat `evolution.boundaries` is auto-promoted by `normalizeEvolutionInput()` shim): `immutableTraits` must be a string array (non-empty, max 100 chars each), and formality bounds must be in range -10 to 10 with `minFormality < maxFormality` (negative values allow below-baseline constraints, e.g. `minFormality: -3` = "can drift up to 3 units more casual than baseline")
 
 ### Self-Awareness System
 
@@ -179,7 +179,7 @@ The generator injects a unified **Self-Awareness** section (`### Self-Awareness`
 
 3. **Body** (unconditional) — Every persona knows it exists within a host environment. The **Signal Protocol**, **Pending Commands** queue, and cross-conversation **State Sync** are the runtime expression of the Body's `interface` dimension — together they form the persona's nervous system. Includes the **Signal Protocol** (bidirectional demand protocol: runner interface `openpersona state signal <slug> <type>` or local interface `node scripts/state-sync.js signal <type>`, both write to the host's feedback directory and return any pending host response; path resolved runner-agnostically via `OPENCLAW_HOME` / `OPENPERSONA_HOME`). Signal categories: `scheduling`, `file_io`, `tool_missing`, `capability_gap`, `resource_limit`, `agent_communication`. Every persona also knows it has a **Pending Commands** queue (`state.json → pendingCommands`) for receiving async host instructions between conversations, and an A2A Agent Card (`agent-card.json`) for discovery via ACN and A2A-compatible platforms. When `body.runtime` is declared, specific platform/channels/credentials/resources are also injected.
 
-4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.boundaries`). Significant events are appended to `state.json`'s `eventLog` array (capped at 50). Each entry: `type` (one of `relationship_signal` | `mood_shift` | `trait_emergence` | `interest_discovery` | `milestone` | `speaking_style_drift`), `trigger` (1-sentence description), `delta` (what changed), `source` (attribution, e.g. `"conversation"`), `timestamp` (auto-added by `state-sync.js` write if absent). `soul/self-narrative.md` records major growth moments in the persona's own first-person voice. When `evolution.sources` are declared (formerly `evolution.channels`, deprecated), the persona knows its external evolution signal sources. When `evolution.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
+4. **Growth** (conditional, when `evolutionEnabled`) — At conversation start, the persona reads its evolution state, applies `evolvedTraits`/`speakingStyleDrift`/`interests`/`mood`, and respects hard constraints (`immutableTraits`, formality bounds from `evolution.instance.boundaries`). Significant events are appended to `state.json`'s `eventLog` array (capped at 50). Each entry: `type` (one of `relationship_signal` | `mood_shift` | `trait_emergence` | `interest_discovery` | `milestone` | `speaking_style_drift`), `trigger` (1-sentence description), `delta` (what changed), `source` (attribution, e.g. `"conversation"`), `timestamp` (auto-added by `state-sync.js` write if absent). `soul/self-narrative.md` records major growth moments in the persona's own first-person voice. When `evolution.instance.sources` are declared (old flat `evolution.sources` / `evolution.channels` are auto-promoted by the generator shim), the persona knows its external evolution signal sources. When `evolution.instance.influenceBoundary` is declared (with non-empty rules), the persona knows its external influence policy and processes incoming `persona_influence` suggestions accordingly.
 
 ### Generated Skill Pack Structure
 
@@ -229,7 +229,7 @@ This is the runtime expression of `body.interface`: it describes how a persona *
 
 ### Runner Integration Protocol
 
-Any agent runner integrates with OpenPersona personas via three CLI commands. The runner calls these at conversation boundaries — the persona's state is managed automatically without the runner knowing about installation paths or file layout:
+Any agent runner integrates with OpenPersona personas via four CLI commands. The runner calls these at conversation boundaries — the persona's state is managed automatically without the runner knowing about installation paths or file layout:
 
 ```bash
 # Before conversation starts — inject state into agent context
@@ -240,6 +240,9 @@ openpersona state write <slug> '<json-patch>'
 
 # On-demand — emit capability/resource signal to host
 openpersona state signal <slug> <type> '[payload-json]'
+
+# Soul-Memory Bridge — promote recurring eventLog patterns to evolvedTraits
+openpersona state promote <slug> [--dry-run]
 ```
 
 **Lookup**: registry path first (`~/.openpersona/persona-registry.json`), falls back to `~/.openpersona/personas/persona-<slug>/` then legacy `~/.openclaw/skills/persona-<slug>/`.
@@ -273,7 +276,10 @@ Reserved `type` values: `capability_unlock` (dormant skill now available), `cont
 
 Key implementation details:
 - Soft-ref detection: `lib/generator/index.js` checks each skill/faculty/body/source for `install` field + missing local definition
-- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Canonical list maintained in `lib/generator/derived.js` (currently 68 entries). Key examples: `hasSoftRefSkills`, `hasDormantCapabilities`, `isDigitalTwin`, `hasEvolutionBoundaries`, `hasInfluenceBoundary`, `hasEconomyFaculty`, `hasSurvivalPolicy`, `allowedTools`, `backstory`, `roleFoundation`, `heartbeat`, `bodyFramework`
+- All self-awareness flags are derived fields — they MUST be in the `DERIVED_FIELDS` array to prevent leaking into `persona.json` output. Canonical list maintained in `lib/generator/derived.js` (currently 70 entries). Key examples: `hasSoftRefSkills`, `hasDormantCapabilities`, `isDigitalTwin`, `hasEvolutionBoundaries`, `hasInfluenceBoundary`, `hasSkillTrustPolicy`, `skillMinTrustLevel`, `hasEconomyFaculty`, `hasSurvivalPolicy`, `allowedTools`, `backstory`, `roleFoundation`, `heartbeat`, `bodyFramework`
+- `computeDerivedFields(persona, context)` **returns** a plain `derived` object (does NOT mutate persona, except normalizing `persona.role`). Caller (`derivedPhase`) applies it via `Object.assign(persona, derived)` for Mustache rendering. This keeps the function testable and documents its API surface via return value.
+- `GeneratorContext` separates **structural Faculties** (`loadedFaculties`) from **systemic Aspects** (`loadedAspects`). Economy is loaded into `loadedAspects` via `loadEconomy()`, never into `loadedFaculties`. This reflects the architectural distinction: Faculties are in 4-layer structure; Economy is one of the 5 systemic concepts. `derivedPhase` and `emitPhase` both consume `loadedAspects` independently.
+- **`normalizeEvolutionInput(persona)` call order**: In `validatePhase`, it runs BEFORE `validatePersona()` — both calls are now explicit in `index.js`. `validatePersona()` no longer calls it internally. This makes the step sequence visible at the call site.
 - `version` and `author` are **NOT** derived — they are persona utility fields preserved in output `persona.json` (with defaults `'0.1.0'` / `'openpersona'` if not declared)
 - `rhythm` is **NOT** a derived field — it is a cross-cutting input field preserved in the output `persona.json` (runner reads `rhythm.heartbeat` and `rhythm.circadian` directly). The flat `heartbeat` field IS derived (stripped) because it is the old top-level path superseded by `rhythm.heartbeat`.
 - `hasExpectedCapabilities` (in `skill.template.md`) deliberately excludes heartbeat — heartbeat is behavioral awareness, not an installable capability
@@ -282,9 +288,9 @@ Key implementation details:
 
 `openpersona fork <parent-slug> --as <new-slug>` derives a child persona from an installed parent. Implementation in `bin/cli.js`.
 
-**What is inherited:** `evolution.boundaries`, faculties, skills, `body.runtime` — the constraint layer stays intact.
+**What is inherited:** `evolution.instance.boundaries` (old flat `evolution.boundaries` also supported via shim), faculties, skills, `body.runtime` — the constraint layer stays intact.
 
-**What is discarded:** `soul/state.json` (reset to blank), `soul/self-narrative.md` (initialized empty) — fresh runtime state.
+**What is discarded:** `state.json` (reset to blank — at pack root), `soul/self-narrative.md` (initialized empty) — fresh runtime state.
 
 **`soul/lineage.json`** is written with:
 - `parent` — parent slug
@@ -377,12 +383,12 @@ When bumping versions, update ALL of these locations.
 
 ```bash
 npm test                    # Run all tests
-node --test tests/generator.test.js  # Run specific test file
+node --test tests/generator-core.test.js  # Run specific test file
 ```
 
 - Uses **Node.js native test runner** (`node:test` + `node:assert`)
 - Tests create temp directories in `os.tmpdir()` and clean up after themselves
-- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution sources (soft-ref detection, dormant awareness, SKILL.md rendering; formerly "channels"), schema compatibility (new grouped soul format, old flat format backward compat, additionalAllowedTools merge, economy.enabled activation, social field parameterization, body.runtime.framework/platform compat, evolution.sources/channels compat), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion), state-sync script (read/write/signal commands, deep merge, immutable fields, stateHistory snapshot anti-bloat, signals.json 200-entry cap, invalid type rejection, evolution constraint gate: immutableTraits filter + formality clamp + stage single-step validation + all-blocked wipe prevention + unknown-stage recovery), CLI state commands (registry lookup, read/write/signal integration, error handling, unknown slug, missing patch), vitality report (buildReportData safe defaults, wallet address format, state.json mapping, heartbeat config, weeklyConversations zero value, financialTier fallback, renderVitalityHtml HTML output, pending commands conditional rendering)
+- Key test coverage: persona generation, constitution injection, compliance checks, faculty handling, skill resolution, external install, soul evolution, heartbeat sync, unified self-awareness (Identity, Capabilities, Signal Protocol, Growth, evolution boundaries, stageBehaviors, derived field exclusion), evolution governance (formality/immutableTraits validation, stateHistory, evolve-report), evolution sources (soft-ref detection, dormant awareness, SKILL.md rendering; formerly "channels"), schema compatibility (new grouped soul format, old flat format backward compat, additionalAllowedTools merge, economy.enabled activation, social field parameterization, body.runtime.framework/platform compat, evolution.sources/channels compat, **P23**: normalizeEvolutionInput old-flat→nested promotion + channels alias migration, validateEvolutionPack engine enum + triggerAfterEvents integer, validateEvolutionFaculty activationChannels enum, validateEvolutionBody/Skill boolean types, full generate round-trip with nested evolution format), influence boundary (schema validation, compliance checks, template injection, derived field exclusion), agent card + ACN config (field mapping, faculty-to-skill aggregation, manifest references), ERC-8004 (wallet_address format, onchain.erc8004 structure), persona fork (lineage.json fields, constraint inheritance, state reset), eventLog (appending, 50-entry cap), self-narrative (generation, update preservation), economy faculty (vitality scoring, FHS dimensions, schema migration, guard/hook/query scripts, derived field exclusion), state-sync script (read/write/signal commands, deep merge, immutable fields, stateHistory snapshot anti-bloat, signals.json 200-entry cap, invalid type rejection, evolution constraint gate: immutableTraits filter + formality clamp + stage single-step validation + all-blocked wipe prevention + unknown-stage recovery), CLI state commands (registry lookup, read/write/signal integration, error handling, unknown slug, missing patch), vitality report (buildReportData safe defaults, wallet address format, state.json mapping, heartbeat config, weeklyConversations zero value, financialTier fallback, renderVitalityHtml HTML output, pending commands conditional rendering), **P24** skill pack refinement (scanConstitutionKeywords: safety/identity/boundary patterns; loadMeta/writeMeta: defaults + round-trip + malformed-JSON fallback; bumpRevision: patch increment + malformed input; bootstrapBehaviorGuide: cold-start from flat + grouped soul format, idempotency; emitRefinement: threshold guard; applyRefinement: constitution compliance gate rejection; refine entry point: disabled pack guard + unknown slug; forkPersona parentPackRevision: written when parent has meta, omitted when absent), **P1** memory as soul infrastructure (memory.js update/supersededBy chain: new entry created + old marked superseded + retrieve/search/stats exclude superseded; promoteToInstinct: interest_discovery/trait_emergence/mood_shift threshold grouping + immutableTraits gate + idempotency + evidenceCount; fork memory inheritance: copy policy copies memories.jsonl to child memory dir + none policy leaves child empty; OPENCLAW_HOME env override for test isolation), **P4-A** skill trust gate (validateEvolutionSkill minTrustLevel enum check; state-sync writeState: capability_unlock trust filter + trust order: verified>community>unverified + all-blocked wipe-prevention + capability_gap signal emission; soul-awareness-body Skill Trust Policy block rendering; derived field exclusion: hasSkillTrustPolicy + skillMinTrustLevel), **schema-drift** detection (`tests/schema-drift.test.js`: SKILL_TRUST_LEVELS ↔ skills[].trust.enum + evolution.skill.minTrustLevel.enum; EVOLUTION_PACK_ENGINES ↔ evolution.pack.engine.enum; EVOLUTION_ACTIVATION_CHANNELS ↔ activationChannels.items.enum; soul required fields cross-check)
 - **All tests must pass before committing**
 
 ## Adding a New Faculty

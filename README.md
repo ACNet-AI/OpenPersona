@@ -57,16 +57,18 @@ Then say to your agent: _"Help me create a Samantha persona"_ — it will gather
 - **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
 - **🛡️ Influence Boundary** — Declarative access control for external personality influence: who can affect which dimensions, with what drift limits. Safety-first (default: reject all)
 - **🌐 Evolution Sources** — Connect personas to shared evolution ecosystems (e.g. EvoMap) via soft-ref pattern: declared at generation time, activated at runtime
+- **🔐 Skill Trust Gate** — Declare a `trust` level (`verified`/`community`/`unverified`) on each skill entry and set `evolution.skill.minTrustLevel` to gate `capability_unlock` commands at runtime; blocked skills emit a `capability_gap` signal automatically
 - **🔌 A2A Agent Card** — Every persona generates an A2A-compliant `agent-card.json` and `acn-config.json`, enabling discovery and registration in ACN and any A2A-compatible platform
 - **⛓️ ERC-8004 On-Chain Identity** — Every persona gets a deterministic EVM wallet address and on-chain identity config for Base mainnet registration via the ERC-8004 Identity Registry
 - **💰 Economy & Vitality** — Track inference costs, runtime expenses, and income; compute a Financial Health Score (FHS) across four dimensions; tier-aware behavior adaptation (`suspended`→`critical`→`optimizing`→`normal`)
-- **🧠 Cross-Session Memory** — Pluggable memory faculty for persistent recall across conversations (local, Mem0, Zep)
+- **🧠 Cross-Session Memory** — Pluggable memory faculty for persistent recall across conversations (local, Mem0, Zep); memory supersession (`update` command chains entries with `supersededBy` — prevents self-contradiction); Soul-Memory Bridge promotes recurring `eventLog` patterns to `evolvedTraits` via `openpersona state promote`
+- **🔧 Skill Pack Refinement** — `openpersona refine` closes the persona improvement loop: Soul behavior-guide bootstrap + constitution compliance scan, Skill gate-checked installs, Social auto-sync on every change
 - **🔄 Context Handoff** — Seamless context transfer when switching personas: conversation summary, pending tasks, emotional state
 - **🎭 Persona Switching** — Install multiple personas, switch instantly (the Pantheon)
 - **🍴 Persona Fork** — Derive a specialized child persona from any installed parent, inheriting constraint layer while starting fresh on runtime state
 - **🗣️ Multimodal Capabilities** — Voice Faculty (TTS), Selfie Skill (image generation), Music Skill (composition), Reminder Skill, Memory Faculty (cross-session recall)
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
-- **🧠 Lifecycle Protocol** — `body.interface` nervous system: Signal Protocol (persona→host requests), Pending Commands queue (host→persona async instructions), and State Sync (cross-conversation persistence via `openpersona state` CLI + `scripts/state-sync.js`)
+- **⚡ Lifecycle Protocol** — `body.interface` nervous system: Signal Protocol (persona→host requests), Pending Commands queue (host→persona async instructions), and State Sync (cross-conversation persistence via `openpersona state` CLI + `scripts/state-sync.js`)
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
 - **📦 One-Command Install** — `npx openpersona install samantha` and you're live — browse all personas at [openpersona-frontend.vercel.app](https://openpersona-frontend.vercel.app)
 
@@ -94,7 +96,7 @@ flowchart TB
   end
 ```
 
-- **Soul** — Persona definition (constitution.md + persona.json + state.json) — all in `soul/` directory
+- **Soul** — Persona definition: `persona.json` + `state.json` live at pack root; `soul/` holds `injection.md`, `constitution.md`, and evolution artifacts (`self-narrative.md`, `lineage.json`)
 - **Body** — Substrate of existence — four dimensions: `physical` (optional — robots/IoT), `runtime` (REQUIRED — platform/channels/credentials/resources), `appearance` (optional — avatar/3D model), `interface` (optional — the runtime contract: Signal Protocol + Pending Commands + State Sync; the persona's **nervous system**). Body is never null; digital agents have a virtual body (runtime-only).
 - **Faculty** — General software capabilities organized by dimension: Expression, Sense, Cognition
 - **Skill** — Professional skills: local definitions in `layers/skills/`, or external via [acnlabs/persona-skills](https://github.com/acnlabs/persona-skills) / skills.sh (`install` field)
@@ -105,7 +107,7 @@ Every persona automatically inherits a shared **constitution** (`layers/soul/con
 
 ### Soul Evolution (★Experimental)
 
-Personas with `evolution.enabled: true` grow dynamically through interaction. The `state.json` file (at pack root) tracks relationship stages, mood shifts, evolved traits, speaking style drift, interests, and milestones.
+Personas with `evolution.instance.enabled: true` grow dynamically through interaction. The `state.json` file (at pack root) tracks relationship stages, mood shifts, evolved traits, speaking style drift, interests, and milestones.
 
 **Evolution Boundaries** — Governance constraints to keep evolution safe:
 
@@ -118,10 +120,12 @@ The generator validates these boundaries at build time, rejecting invalid config
 
 ```json
 "evolution": {
-  "enabled": true,
-  "sources": [
-    { "name": "evomap", "install": "url:https://evomap.ai/skill.md", "description": "Shared capability evolution marketplace" }
-  ]
+  "instance": {
+    "enabled": true,
+    "sources": [
+      { "name": "evomap", "install": "url:https://evomap.ai/skill.md", "description": "Shared capability evolution marketplace" }
+    ]
+  }
 }
 ```
 
@@ -131,12 +135,14 @@ The persona is aware of its evolution sources at generation time. The actual sou
 
 ```json
 "evolution": {
-  "influenceBoundary": {
-    "defaultPolicy": "reject",
-    "rules": [
-      { "dimension": "mood", "allowFrom": ["channel:evomap", "persona:*"], "maxDrift": 0.3 },
-      { "dimension": "interests", "allowFrom": ["channel:evomap"], "maxDrift": 0.2 }
-    ]
+  "instance": {
+    "influenceBoundary": {
+      "defaultPolicy": "reject",
+      "rules": [
+        { "dimension": "mood", "allowFrom": ["channel:evomap", "persona:*"], "maxDrift": 0.3 },
+        { "dimension": "interests", "allowFrom": ["channel:evomap"], "maxDrift": 0.2 }
+      ]
+    }
   }
 }
 ```
@@ -181,16 +187,22 @@ persona-samantha/
 ├── SKILL.md              ← Four-layer index (## Soul / ## Body / ## Faculty / ## Skill)
 ├── persona.json          ← Persona declaration (root; canonical location since v0.21)
 ├── state.json            ← Evolution state (when enabled)
+├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
+├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
 ├── soul/                 ← Soul layer artifacts
 │   ├── injection.md      ← Soul injection for host integration
 │   ├── constitution.md   ← Universal ethical foundation
+│   ├── behavior-guide.md       ← Domain-specific behavior instructions (when behaviorGuide declared)
+│   ├── behavior-guide.meta.json← Pack refinement cycle metadata: packRevision, lastRefinedAt (written by openpersona refine, not initial generation)
 │   ├── self-narrative.md ← First-person growth storytelling (when evolution enabled)
 │   └── lineage.json      ← Fork lineage + constitution hash (when forked)
+├── economy/              ← Economy aspect data files (when economy.enabled: true)
+│   ├── economic-identity.json  ← AgentBooks identity bootstrap
+│   └── economic-state.json     ← Initial financial state
 ├── references/           ← On-demand detail docs
-│   └── <faculty>.md      ← Per-faculty usage instructions
-├── agent-card.json       ← A2A Agent Card — discoverable via ACN and A2A platforms
-├── acn-config.json       ← ACN registration config (fill owner + endpoint at runtime)
-├── scripts/              ← Implementation scripts (varies by preset)
+│   ├── <faculty>.md      ← Per-faculty usage instructions
+│   └── SIGNAL-PROTOCOL.md ← Host-side Signal Protocol integration guide
+├── scripts/              ← Implementation scripts
 │   └── state-sync.js     ← Lifecycle Protocol implementation (read/write/signal)
 └── assets/               ← Static assets (avatar/, reference/, templates/)
 ```
@@ -204,6 +216,7 @@ persona-samantha/
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
 | **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
+| **avatar** | expression | External avatar runtime bridge (image / 3D / motion / voice) with graceful text-only fallback | HeyGen (via `clawhub:avatar-runtime`) | `AVATAR_RUNTIME_URL`, `AVATAR_API_KEY` |
 | **memory** | cognition | Cross-session memory with provider-pluggable backend | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
 
 ### Built-in Skills
@@ -236,12 +249,13 @@ Faculties in `persona.json` use object format with optional per-persona tuning:
 ]
 ```
 
-Skills in `persona.json` use string or object format:
+Skills in `persona.json` use object format. The optional `trust` field declares the skill's trust level, checked at runtime against `evolution.skill.minTrustLevel`:
 
 ```json
 "skills": [
-  { "name": "music" },
-  { "name": "selfie" }
+  { "name": "music", "trust": "verified" },
+  { "name": "selfie", "trust": "community" },
+  { "name": "web-search", "install": "clawhub:web-search", "trust": "unverified" }
 ]
 ```
 
@@ -441,9 +455,7 @@ npx openpersona create --config ./persona.json --install
 
 ### The `behaviorGuide` Field
 
-The optional `behaviorGuide` field lets you define domain-specific behavior instructions in markdown. This content is included directly in the generated SKILL.md, giving the agent concrete instructions on _how_ to perform each capability.
-
-Without `behaviorGuide`, the SKILL.md only contains general identity and personality guidelines. With it, the agent gets actionable, domain-specific instructions.
+The optional `behaviorGuide` field embeds domain-specific behavior instructions (markdown) directly into the generated `SKILL.md`. Without it, SKILL.md contains only general identity and personality guidelines. Use `openpersona refine` to evolve the behavior guide over time.
 
 ## Persona Switching — The Pantheon
 
@@ -495,12 +507,14 @@ openpersona publish        Publish to ClawHub
 openpersona reset          Reset soul evolution state
 openpersona export         Export a persona to a portable zip archive
 openpersona import         Import a persona from a zip archive
+openpersona refine         Skill Pack Refinement — emit/apply behavior-guide improvements
 openpersona evolve-report  ★Experimental: Show evolution report for a persona
 openpersona acn-register   Register a persona with ACN network
 openpersona state          Read/write persona state and emit signals (Lifecycle Protocol)
+openpersona state promote  Soul-Memory Bridge — promote recurring eventLog patterns to evolvedTraits
 openpersona vitality score Print machine-readable Vitality score (used by Survival Policy)
 openpersona vitality report Render human-readable HTML Vitality report
-openpersona canvas          Generate a Living Canvas persona profile page (P14 Phase 1)
+openpersona canvas         Generate a Living Canvas persona profile page
 ```
 
 ### Persona Fork
@@ -511,7 +525,7 @@ Derive a specialized child persona from any installed parent:
 npx openpersona fork samantha --as samantha-jp
 ```
 
-The child persona inherits the parent's constraint layer (`evolution.boundaries`, faculties, skills, `body.runtime`) but starts with a fresh evolution state (`state.json` reset, `self-narrative.md` blank). A `soul/lineage.json` file records the parent slug, constitution SHA-256 hash, generation depth, and forward-compatible placeholders for future on-chain lineage tracking.
+The child persona inherits the parent's constraint layer (`evolution.instance.boundaries`, faculties, skills, `body.runtime`) but starts with a fresh evolution state (`state.json` reset, `self-narrative.md` blank). A `soul/lineage.json` file records the parent slug, constitution SHA-256 hash, generation depth, and forward-compatible placeholders for future on-chain lineage tracking.
 
 ### Key Options
 
@@ -541,18 +555,21 @@ presets/                # Assembled products — complete persona bundles
   ai-girlfriend/        #   Luna — selfie + music skills + voice + evolution
   life-assistant/       #   Alex — reminder skill
   health-butler/        #   Vita — reminder skill
+  stoic-mentor/         #   Marcus — digital twin of Marcus Aurelius, soul evolution
+  base/                 #   Blank-slate meta-persona (recommended starting point)
 layers/                 # Four-layer module source pool
   soul/                 #   Soul layer: constitution.md (universal values)
   body/                 #   Body layer modules (physical/runtime/appearance)
   faculties/            #   Faculty layer modules
     voice/              #     expression — TTS voice synthesis
+    avatar/             #     expression — avatar appearance & Live2D/VRM support
     memory/             #     cognition — cross-session memory (local/Mem0/Zep)
   skills/               #   Skill layer modules (built-in skills)
     selfie/             #     AI selfie generation (fal.ai)
     music/              #     AI music composition (ElevenLabs)
     reminder/           #     Reminders and task management
 aspects/                # Five systemic concepts (cross-cutting, non-layer)
-  economy/              #   Economic accountability & Vitality scoring
+  economy/              #   Economic accountability & Vitality scoring (AgentBooks)
   evolution/            #   Soul evolution state & governance
   vitality/             #   Multi-dimension health aggregation
   social/               #   ACN/A2A/ERC-8004 on-chain identity
@@ -561,13 +578,26 @@ schemas/                # Spec documents and JSON schemas
 templates/              # Mustache rendering templates
 bin/                    # CLI entry point
 lib/                    # Core logic modules
-  generator.js          #   Core persona generation
-  evolution.js          #   Evolution governance & evolve-report
-  vitality-report.js    #   Vitality HTML report — data aggregation + Mustache rendering
-  installer.js          #   Persona install + fire-and-forget telemetry
-  downloader.js         #   Direct download from acnlabs/persona-skills or GitHub
-demo/                   # Pre-generated demos (vitality-report.html)
-tests/                  # Tests (404 passing)
+  generator/            #   Core generation pipeline (7-phase: clone→validate→load→derive→prepare→render→emit)
+    index.js            #     Orchestrator + GeneratorContext
+    validate.js         #     Generate Gate (hard-reject constraint checks)
+    derived.js          #     Derived template variable computation (returns plain object)
+    body.js             #     Body section builder
+    social.js           #     Agent Card + ACN config builders
+    economy.js          #     Economy aspect loader + initial state writer
+  lifecycle/            #   Persona lifecycle management
+    installer.js        #     Install to ~/.openpersona (Install Gate: constitution hash check)
+    forker.js           #     Fork (derive child from parent + lineage.json)
+    switcher.js         #     Switch active persona + handoff generation
+    refine.js           #     Skill Pack Refinement (behavior-guide bootstrap + compliance scan)
+  state/                #   Runtime state management
+    runner.js           #     Persona directory resolution + state-sync delegation
+    evolution.js        #     Evolution governance (evolve-report + promoteToInstinct)
+  registry/             #   Local persona registry (~/.openpersona/persona-registry.json)
+  remote/               #   External service calls (ClawHub, ACN)
+  report/               #   Vitality + Canvas HTML report generation
+demo/                   # Pre-generated demos (vitality-report.html, architecture.html)
+tests/                  # Tests (477 passing)
 ```
 
 ## Development

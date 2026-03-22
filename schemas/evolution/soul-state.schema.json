@@ -89,7 +89,7 @@
           "type": "number",
           "minimum": -10,
           "maximum": 10,
-          "description": "Drift from baseline formality (0 = baseline; positive = more formal; negative = more casual). Scale matches evolution.boundaries.minFormality/maxFormality (-10 to +10)."
+          "description": "Drift from baseline formality (0 = baseline; positive = more formal; negative = more casual). Scale matches evolution.instance.boundaries.minFormality/maxFormality (-10 to +10); old flat evolution.boundaries is also supported via generator shim."
         },
         "emoji_frequency": {
           "type": "number",

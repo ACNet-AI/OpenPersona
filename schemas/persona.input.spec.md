@@ -139,6 +139,7 @@ Everything else has defaults or is omitted gracefully. A minimal persona:
 - `immutableTraits` entries filtered from `evolvedTraits` patches
 - `speakingStyleDrift.formality` clamped to `[minFormality, maxFormality]`
 - `relationship.stage` validated for single-step forward-only progression
+- `capability_unlock` pendingCommands filtered against `evolution.skill.minTrustLevel`; blocked commands emit a `capability_gap` signal (`trust_below_threshold`)
 
 ---
 
@@ -243,8 +244,13 @@ The input schema is enforced by the generator's Generate Gate (`lib/generator/va
 Hard rejections:
 - Missing required soul fields
 - `slug` not matching `^[a-z0-9-]+$`
-- `evolution.boundaries` format violations
-- `evolution.influenceBoundary.rules` format violations
+- `evolution.instance.boundaries` format violations (old flat `evolution.boundaries` is auto-promoted by shim before validation)
+- `evolution.instance.influenceBoundary.rules` format violations (old flat `evolution.influenceBoundary` is auto-promoted by shim)
+- `evolution.pack.engine` unknown enum value
+- `evolution.faculty.activationChannels` unknown enum values
+- `evolution.body.allowRuntimeExpansion` / `allowModelSwap` non-boolean
+- `evolution.skill.allowNewInstall` / `allowUpgrade` / `allowUninstall` non-boolean
+- `evolution.skill.minTrustLevel` unknown value (must be `verified` | `community` | `unverified`)
 - `soul.character.boundaries` (v0.17+) or `boundaries` (flat format) attempting to loosen constitutional constraints (§3, §6)
 
 The JSON schema (`schemas/persona.input.schema.json`) can be used for editor validation (VS Code, JetBrains) before running the generator.

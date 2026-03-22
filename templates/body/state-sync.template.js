@@ -85,6 +85,7 @@ function writeState(patchJson) {
     // apply declared policy, clamp/filter violations rather than rejecting the whole patch.
     const personaJsonPath = path.join(PERSONA_DIR, 'persona.json');
     let evolutionBoundaries = null;
+    let evolutionSkillPolicy = null;
     if (fs.existsSync(personaJsonPath)) {
       try {
         const personaData = JSON.parse(fs.readFileSync(personaJsonPath, 'utf-8'));
@@ -92,6 +93,7 @@ function writeState(patchJson) {
         // fall back to evolution.boundaries for pre-P23 persona.json files.
         const evo = personaData.evolution || {};
         evolutionBoundaries = (evo.instance && evo.instance.boundaries) || evo.boundaries || null;
+        evolutionSkillPolicy = evo.skill || null;
       } catch { /* graceful degradation — skip enforcement if persona.json is unreadable */ }
     }
 
@@ -108,7 +110,7 @@ function writeState(patchJson) {
         if (rest.evolvedTraits.length < before) {
           console.error('state-sync: [evolution-gate] ' + (before - rest.evolvedTraits.length)
             + ' evolvedTraits entr' + (before - rest.evolvedTraits.length === 1 ? 'y' : 'ies')
-            + ' blocked — trait is declared immutable in evolution.boundaries.immutableTraits');
+            + ' blocked — trait is declared immutable in evolution.instance.boundaries.immutableTraits (or legacy evolution.boundaries.immutableTraits)');
           // If all proposed traits were blocked, remove the key entirely rather than
           // applying an empty array — prevents wiping existing evolved state.
           if (rest.evolvedTraits.length === 0) {
@@ -154,6 +156,54 @@ function writeState(patchJson) {
           console.error('state-sync: [evolution-gate] ' + stageViolation);
           const { stage: _blocked, ...restRelationship } = rest.relationship;
           rest.relationship = restRelationship;
+        }
+      }
+    }
+
+    // Skill Trust Gate — filter incoming capability_unlock pendingCommands that fail minTrustLevel.
+    // Runs when new commands are written to the queue (patch.pendingCommands is a non-empty array).
+    // Trust hierarchy: verified > community > unverified.
+    // Blocked commands are dropped from the patch and a capability_gap signal is emitted.
+    const TRUST_ORDER = ['unverified', 'community', 'verified'];
+    if (Array.isArray(rest.pendingCommands) && rest.pendingCommands.length > 0
+        && evolutionSkillPolicy && evolutionSkillPolicy.minTrustLevel) {
+      const minIdx = TRUST_ORDER.indexOf(evolutionSkillPolicy.minTrustLevel);
+      if (minIdx >= 0) {
+        const blocked = [];
+        rest.pendingCommands = rest.pendingCommands.filter((cmd) => {
+          if (!cmd || cmd.type !== 'capability_unlock') return true;
+          const skillTrust = (cmd.payload && cmd.payload.trust) || 'unverified';
+          const trustIdx = TRUST_ORDER.indexOf(skillTrust);
+          if (trustIdx < minIdx) { blocked.push(cmd); return false; }
+          return true;
+        });
+        for (const cmd of blocked) {
+          const skillName = (cmd.payload && cmd.payload.skill) || 'unknown';
+          const trust = (cmd.payload && cmd.payload.trust) || 'unverified';
+          console.error('state-sync: [skill-trust-gate] capability_unlock blocked for "' + skillName
+            + '" (trust: ' + trust + ', required: ' + evolutionSkillPolicy.minTrustLevel + ')');
+          try {
+            const sig = {
+              type: 'capability_gap',
+              slug: state.personaSlug || state.slug || 'unknown',
+              timestamp: new Date().toISOString(),
+              payload: { skill: skillName, reason: 'trust_below_threshold',
+                required: evolutionSkillPolicy.minTrustLevel, actual: trust },
+            };
+            let sigs = [];
+            if (fs.existsSync(SIGNALS_PATH)) {
+              try { sigs = JSON.parse(fs.readFileSync(SIGNALS_PATH, 'utf-8')); if (!Array.isArray(sigs)) sigs = []; } catch {}
+            }
+            sigs.push(sig);
+            if (sigs.length > 200) sigs = sigs.slice(-200);
+            fs.mkdirSync(path.dirname(SIGNALS_PATH), { recursive: true });
+            fs.writeFileSync(SIGNALS_PATH, JSON.stringify(sigs, null, 2));
+          } catch {}
+        }
+        // If all commands were blocked, drop the key entirely — prevents wiping pre-existing
+        // queue entries that haven't been processed yet (mirrors P17 evolvedTraits[] fix).
+        if (rest.pendingCommands.length === 0) {
+          delete rest.pendingCommands;
         }
       }
     }

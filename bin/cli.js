@@ -18,7 +18,7 @@ const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/lifecycle/contributor');
 const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
 const { registerWithAcn } = require('../lib/remote/registrar');
-const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, shellEscape } = require('../lib/utils');
+const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, printWarning, shellEscape } = require('../lib/utils');
 const { loadRegistry } = require('../lib/registry');
 const { resolvePersonaDir, runStateSyncCommand } = require('../lib/state/runner');
 const { forkPersona } = require('../lib/lifecycle/forker');
@@ -420,6 +420,24 @@ program
     }
   });
 
+// ── Pack refinement (P24) ─────────────────────────────────────────────────────
+
+program
+  .command('refine <slug>')
+  .description('Refine persona skill pack from accumulated experience (pack-level evolution)')
+  .option('--emit',      'Signal path Step A: check threshold and emit refinement_request signal')
+  .option('--apply',     'Signal path Step B: read signal response and apply refinement')
+  .option('--from-pool', 'AutoSkill path: pull from shared aggregation pool (requires aggregation: opt-in)')
+  .action(async (slug, options) => {
+    const { refine } = require('../lib/lifecycle/refine');
+    try {
+      await refine(slug, { emit: options.emit, apply: options.apply, fromPool: options.fromPool });
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
 // ── State management commands (runner integration protocol) ──────────────────
 //
 // These commands are the standard interface for any agent runner to manage
@@ -456,6 +474,63 @@ stateCmd
     const args = ['signal', type];
     if (payload) args.push(payload);
     runStateSyncCommand(slug, args);
+  });
+
+stateCmd
+  .command('promote <slug>')
+  .description('Soul-Memory Bridge: scan eventLog for recurring patterns and promote them to evolvedTraits')
+  .option('--dry-run', 'Preview promotions without writing to state')
+  .action((slug, opts) => {
+    const { promoteToInstinct } = require('../lib/state/evolution');
+
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
+
+    const personaPath = resolveSoulFile(personaDir, 'persona.json');
+    const statePath   = resolveSoulFile(personaDir, 'state.json');
+
+    if (!personaPath || !fs.existsSync(personaPath)) {
+      printError(`persona.json not found in ${personaDir}`);
+      process.exit(1);
+    }
+
+    let persona, state;
+    try {
+      persona = JSON.parse(fs.readFileSync(personaPath, 'utf-8'));
+      state   = statePath && fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf-8')) : {};
+    } catch (err) {
+      printError(`promote: failed to read persona state: ${err.message}`);
+      process.exit(1);
+    }
+
+    const eventLog      = state.eventLog     || [];
+    const existingTraits = state.evolvedTraits || [];
+
+    if (eventLog.length === 0) {
+      printWarning(`promote: no eventLog entries found for ${slug} — nothing to promote`);
+      return;
+    }
+
+    const newTraits = promoteToInstinct(eventLog, persona, existingTraits);
+
+    if (newTraits.length === 0) {
+      printInfo(`promote: no patterns reached threshold — evolvedTraits unchanged`);
+      return;
+    }
+
+    if (opts.dryRun) {
+      printInfo(`promote: ${newTraits.length} trait(s) would be promoted (dry run):`);
+      for (const t of newTraits) printInfo(`  + ${t.trait}  (${t.evidenceCount} events)`);
+      return;
+    }
+
+    const updatedTraits = [...existingTraits, ...newTraits];
+    runStateSyncCommand(slug, ['write', JSON.stringify({ evolvedTraits: updatedTraits })]);
+    printSuccess(`promote: promoted ${newTraits.length} trait(s) to evolvedTraits for ${slug}:`);
+    for (const t of newTraits) printSuccess(`  + ${t.trait}  (${t.evidenceCount} events)`);
   });
 
 // ─── Vitality ─────────────────────────────────────────────────────────────────
