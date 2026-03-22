@@ -30,6 +30,10 @@ const MEMORY_FILE = path.join(BASE_PATH, 'memories.jsonl');
 
 const VALID_TYPES = ['preference', 'personal_fact', 'interest_signal', 'emotional_moment', 'milestone', 'general'];
 
+// Superseded memories are excluded from retrieval and search.
+// The chain is: old.supersededBy = newId (one-directional, irreversible).
+function isSuperseded(memory) { return Boolean(memory.supersededBy); }
+
 // --- Argument parsing ---
 
 function parseArgs(argv) {
@@ -37,7 +41,7 @@ function parseArgs(argv) {
   if (args.length === 0) return showHelp();
 
   const command = args[0];
-  const opts = { command, content: '', tags: [], importance: 0.5, type: 'general', limit: 10, since: null, id: null };
+  const opts = { command, content: '', tags: [], importance: null, type: null, limit: 10, since: null, id: null };
   let i = 1;
 
   if ((command === 'store' || command === 'search') && args[1] && !args[1].startsWith('--')) {
@@ -48,12 +52,17 @@ function parseArgs(argv) {
     opts.id = args[1];
     i = 2;
   }
+  if (command === 'update' && args[1] && !args[1].startsWith('--')) {
+    opts.id = args[1];
+    i = 2;
+    if (args[2] && !args[2].startsWith('--')) { opts.content = args[2]; i = 3; }
+  }
 
   while (i < args.length) {
     switch (args[i]) {
       case '--tags':       opts.tags = (args[++i] || '').split(',').map(t => t.trim()).filter(Boolean); break;
-      case '--importance': { const v = parseFloat(args[++i]); opts.importance = isNaN(v) ? 0.5 : Math.max(0, Math.min(1, v)); break; }
-      case '--type':       opts.type = args[++i] || 'general'; break;
+      case '--importance': { const v = parseFloat(args[++i]); opts.importance = isNaN(v) ? null : Math.max(0, Math.min(1, v)); break; }
+      case '--type':       opts.type = args[++i] || null; break;
       case '--limit':     { const v = parseInt(args[++i], 10); opts.limit = isNaN(v) || v < 1 ? 10 : v; break; }
       case '--since':      opts.since = args[++i] || null; break;
       default: break;
@@ -82,9 +91,14 @@ Commands:
   search <query>        Search memories by content
     --limit <N>         Max results (default: 10)
 
+  update <memory-id> [new-content]   Supersede an existing memory with updated information
+    --tags <csv>        Replace tags (default: inherit from original)
+    --importance <0-1>  Replace importance weight (default: inherit from original)
+    --type <type>       Replace type (default: inherit from original)
+
   forget <memory-id>    Delete a specific memory
 
-  stats                 Show memory store statistics
+  stats                 Show memory store statistics (includes superseded count)
 
 Environment:
   MEMORY_PROVIDER    local (default), mem0, zep
@@ -138,17 +152,18 @@ function cmdStore(opts) {
     console.error('[ERROR] No content provided');
     process.exit(1);
   }
-  if (!VALID_TYPES.includes(opts.type)) {
-    console.error(`[ERROR] Invalid type "${opts.type}". Valid: ${VALID_TYPES.join(', ')}`);
+  const type = opts.type || 'general';
+  if (!VALID_TYPES.includes(type)) {
+    console.error(`[ERROR] Invalid type "${type}". Valid: ${VALID_TYPES.join(', ')}`);
     process.exit(1);
   }
 
   const memory = {
     id: 'mem_' + crypto.randomBytes(8).toString('hex'),
-    type: opts.type,
+    type,
     content: opts.content,
     tags: opts.tags,
-    importance: opts.importance,
+    importance: opts.importance ?? 0.5,
     timestamp: new Date().toISOString(),
     accessCount: 0,
     lastAccessed: null,
@@ -158,9 +173,52 @@ function cmdStore(opts) {
   console.log(JSON.stringify({ success: true, action: 'store', memory }));
 }
 
+function cmdUpdate(opts) {
+  if (!opts.id) { console.error('[ERROR] No memory ID provided'); process.exit(1); }
+
+  const all = readAllMemories();
+  const idx = all.findIndex(m => m.id === opts.id);
+  if (idx === -1) {
+    console.log(JSON.stringify({ success: false, action: 'update', error: `Memory ${opts.id} not found` }));
+    process.exit(1);
+  }
+
+  const old = all[idx];
+
+  if (isSuperseded(old)) {
+    console.log(JSON.stringify({ success: false, action: 'update', error: `Memory ${opts.id} is already superseded — update the replacement entry instead` }));
+    process.exit(1);
+  }
+
+  // Validate type if explicitly provided
+  const resolvedType = opts.type || old.type || 'general';
+  if (!VALID_TYPES.includes(resolvedType)) {
+    console.error(`[ERROR] Invalid type "${opts.type}". Valid: ${VALID_TYPES.join(', ')}`);
+    process.exit(1);
+  }
+
+  const newMemory = {
+    id: 'mem_' + crypto.randomBytes(8).toString('hex'),
+    type: resolvedType,
+    content: opts.content || old.content,
+    tags: opts.tags.length > 0 ? opts.tags : (old.tags || []),
+    importance: opts.importance !== null ? opts.importance : (old.importance ?? 0.5),
+    timestamp: new Date().toISOString(),
+    accessCount: 0,
+    lastAccessed: null,
+    supersedes: opts.id,        // forward pointer: this memory replaces <id>
+  };
+
+  all[idx] = { ...old, supersededBy: newMemory.id }; // mark old as superseded
+  all.push(newMemory);
+  writeAllMemories(all);
+
+  console.log(JSON.stringify({ success: true, action: 'update', superseded: opts.id, memory: newMemory }));
+}
+
 function cmdRetrieve(opts) {
   const now = Date.now();
-  let memories = readAllMemories();
+  let memories = readAllMemories().filter(m => !isSuperseded(m)); // exclude superseded
 
   if (opts.tags.length > 0) {
     memories = memories.filter(m =>
@@ -200,7 +258,7 @@ function cmdSearch(opts) {
 
   const now = Date.now();
   const query = opts.content.toLowerCase();
-  let memories = readAllMemories();
+  let memories = readAllMemories().filter(m => !isSuperseded(m)); // exclude superseded
 
   memories = memories
     .map(m => {
@@ -242,9 +300,11 @@ function cmdForget(opts) {
 }
 
 function cmdStats() {
-  const memories = readAllMemories();
+  const all = readAllMemories();
+  const memories = all.filter(m => !isSuperseded(m));
+  const supersededCount = all.length - memories.length;
   if (memories.length === 0) {
-    console.log(JSON.stringify({ success: true, action: 'stats', totalMemories: 0, topTags: [], oldestMemory: null, newestMemory: null, avgImportance: 0 }));
+    console.log(JSON.stringify({ success: true, action: 'stats', totalMemories: 0, supersededCount, topTags: [], oldestMemory: null, newestMemory: null, avgImportance: 0 }));
     return;
   }
 
@@ -270,6 +330,7 @@ function cmdStats() {
     success: true,
     action: 'stats',
     totalMemories: memories.length,
+    supersededCount,
     topTags,
     oldestMemory: sorted[0].timestamp,
     newestMemory: sorted[sorted.length - 1].timestamp,
@@ -298,6 +359,7 @@ function main() {
 
   switch (opts.command) {
     case 'store':    return cmdStore(opts);
+    case 'update':   return cmdUpdate(opts);
     case 'retrieve': return cmdRetrieve(opts);
     case 'search':   return cmdSearch(opts);
     case 'forget':   return cmdForget(opts);
@@ -312,4 +374,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { readAllMemories, writeAllMemories, appendMemory, timeDecayScore, VALID_TYPES, main };
+module.exports = { readAllMemories, writeAllMemories, appendMemory, timeDecayScore, isSuperseded, VALID_TYPES, main };
