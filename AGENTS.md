@@ -4,9 +4,11 @@ Instructions for AI coding agents working on the OpenPersona codebase.
 
 ## Project Overview
 
-OpenPersona 是一个人格体生命周期框架——负责 AI agent 人格体的声明、生成、约束执行与演化。它采用开放的四层模型（Soul / Body / Faculty / Skill），将 `persona.json` 声明编译为可移植的 SKILL.md 技能包，兼容任何 agent（Cursor、Claude Code、Codex、ZeroClaw、OpenClaw 等 30+ 个，通过 `npx skills add` 安装）。CLI 管理功能（install/switch/uninstall）默认集成 OpenClaw。
+OpenPersona is a persona lifecycle framework: it declares, generates, enforces, and evolves AI agent personas. It uses an open four-layer model (Soul / Body / Faculty / Skill), compiles `persona.json` into portable SKILL.md skill packs, and works with any agent (Cursor, Claude Code, Codex, ZeroClaw, OpenClaw, and 30+ others via `npx skills add`). CLI management (install / switch / uninstall) defaults to OpenClaw integration.
 
 **Key distinction:** This repo is the *framework itself*, not a persona. The `skills/open-persona/SKILL.md` is a meta-skill for *using* the framework; this file guides *developing* it.
+
+`ROADMAP.md` is listed in `.gitignore` and is not part of the published tree — keep a local copy for maintainer planning if you use it.
 
 ## Setup
 
@@ -108,14 +110,14 @@ skills/open-persona/    ← Meta-skill for AI agents using the framework
 
 ### Architectural Kernel
 
-**OpenPersona 是一个人格体生命周期框架**——负责 AI agent 人格体的声明、生成、约束执行与演化。
+**OpenPersona is a persona lifecycle framework** — it declares, generates, enforces, and evolves AI agent personas.
 
-完整架构用 **4+5+3** 表达：
-- **4 Layers** — Soul / Body / Faculty / Skill：人格体的结构组成（它**是什么**）
-- **5 Concepts** — Evolution / Economy / Vitality / Social / Rhythm：横跨所有层的系统行为（它**如何运作**）
-- **3 Gates** — Generate / Install / Runtime：约束执行机制（它**如何被保护**）
+The full architecture is expressed as **4+5+3**:
+- **4 Layers** — Soul / Body / Faculty / Skill: structural composition of a persona (what it **is**)
+- **5 Concepts** — Evolution / Economy / Vitality / Social / Rhythm: systemic behavior across layers (how it **operates**)
+- **3 Gates** — Generate / Install / Runtime: constraint enforcement (how it **is protected**)
 
-其架构内核可以用一句话表达：**一份声明，三重执行。**
+In one sentence: **One declaration, enforced at three gates.**
 
 **The Promise:** A persona's constraints are declared once in `persona.json` and cannot be bypassed at any point in its lifecycle. This is OpenPersona's identity claim — without it, the framework is just a prompt generator.
 

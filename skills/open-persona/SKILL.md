@@ -140,7 +140,7 @@ If the user needs a capability not found in any ecosystem:
 - **Evolve Report:** `npx openpersona evolve-report <slug>` — formatted evolution report (relationship, mood, traits, drift, interests, milestones, eventLog, self-narrative, state history)
 - **Vitality Score:** `npx openpersona vitality score <slug>` — machine-readable `VITALITY_REPORT` (tier, score, diagnosis, trend)
 - **Vitality Report:** `npx openpersona vitality report <slug> [--output <file>]` — human-readable HTML Vitality report
-- **Living Canvas:** `npx openpersona vitality canvas <slug> [--output <file>] [--open]` — self-contained HTML persona profile page showing all four layers, evolved traits timeline, relationship stage, and A2A "Talk" button when endpoint is available (current CLI path: `vitality canvas`; architecturally a standalone persona interface — see ROADMAP)
+- **Living Canvas:** `npx openpersona vitality canvas <slug> [--output <file>] [--open]` — self-contained HTML persona profile page showing all four layers, evolved traits timeline, relationship stage, and A2A "Talk" button when endpoint is available (current CLI path: `vitality canvas`; architecturally a standalone persona interface — a top-level `npx openpersona canvas` command is planned)
 
 #### Evolution Tools
 - **Soul-Memory Bridge:** `openpersona state promote <slug> [--dry-run]` — promote recurring eventLog patterns to `evolvedTraits` → see [Evolution](#evolution)

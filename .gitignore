@@ -23,6 +23,9 @@ coverage/
 UI/
 *.pen
 
+# Local maintainer roadmap (not published with the repo)
+ROADMAP.md
+
 # Generated demo artifacts
 demo/vitality-report.html
 .living-canvas-persona-assets
