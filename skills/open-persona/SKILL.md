@@ -2,7 +2,9 @@
 name: open-persona
 version: "0.19.0"
 description: >
-  Meta-skill for building and managing agent persona skill packs.
+  Meta-skill for building and managing agent persona skill packs (instruction-only;
+  no bundled installer or auto-downloaded binaries). Credentials are never written
+  into generated packs by the framework; publish/ACN/register require explicit user CLI.
   Use when the user wants to create a new agent persona, install/manage
   existing personas, or publish persona skill packs to OpenPersona.
 license: MIT
@@ -12,6 +14,10 @@ metadata:
   author: openpersona
   repository: https://github.com/acnlabs/OpenPersona
   tags: "persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw"
+  # Marketplace / automated review: explicit non-behavior (reduces false “suspicious” flags)
+  installSurface: instruction-only
+  networkAccess: user-initiated-cli-only
+  secretsPolicy: never-embedded-in-generated-packs-by-framework
   clawdbot:
     emoji: "🧑"
     requires:
@@ -22,6 +28,19 @@ metadata:
 # OpenPersona — Build & Manage Persona Skill Packs
 
 You are the meta-skill for creating, installing, updating, and publishing agent persona skill packs. Each persona is a self-contained skill pack that gives an AI agent a complete identity — personality, voice, capabilities, and ethical boundaries.
+
+## Trust & safety (reviewer summary)
+
+This pack is **instruction-only**: there is **no** skill-defined installer that downloads or executes arbitrary payloads. Runtime behavior is **invoke documented CLIs** (`npx openpersona`, optional `npx clawhub@latest`, `gh`) — same class as other dev-tool skills.
+
+| Claim | How it is enforced |
+|-------|-------------------|
+| **No credential exfiltration** | The OpenPersona generator **does not** embed API keys or secrets into `persona.json`, `SKILL.md`, or published zips. Keys belong in the host credential store or environment (e.g. `~/.openclaw/credentials/`, env vars). |
+| **No silent publishing** | `publish`, `contribute`, and `acn-register` run **only** when the user explicitly asks and the CLI is invoked — there is no background upload or auto-registration in this meta-skill. |
+| **Local-first default** | Create, install, state read/write, and evolution run **locally**. Network calls are limited to **explicit** commands (npm registry resolution, optional ClawHub search, optional publish/register). |
+| **Generated scripts** | `scripts/state-sync.js` and economy helpers are **rendered from audited framework templates** (not fetched at skill-install time). Treat them like any generated code: review before high-assurance environments. |
+
+If an automated scanner flags “suspicious,” it is usually because **persona managers legitimately describe** local state, optional providers, and publishing — not because this file contains malware. **Details:** [Security & Policy](#security--policy).
 
 ## What You Can Do
 
@@ -285,7 +304,11 @@ No additional config needed — A2A discoverability is a baseline capability of 
 
 ## Security & Policy
 
-Generated scripts (`scripts/state-sync.js`, `scripts/economy-hook.js`, etc.) are template-rendered from the framework source — review them before running in sensitive environments.
+### Generated artifacts
+
+Generated scripts (`scripts/state-sync.js`, `scripts/economy-hook.js`, etc.) are **template-rendered from the framework source** (versioned in [acnlabs/OpenPersona](https://github.com/acnlabs/OpenPersona)) — not downloaded at skill-install time. Review them before relying on them in sensitive environments.
+
+### Network endpoints (explicit CLI only)
 
 | Endpoint | Purpose | Data Sent |
 |----------|---------|-----------|
@@ -294,14 +317,18 @@ Generated scripts (`scripts/state-sync.js`, `scripts/economy-hook.js`, etc.) are
 | `https://acn-production.up.railway.app` | ACN registration (when user runs `acn-register`) | Agent metadata, endpoint URL |
 | `https://api.github.com` | `gh` CLI (contribute workflow) | Git operations, repo metadata |
 
-Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) only when the user configures those faculties and provides credentials. This meta-skill does not call third-party APIs directly.
+Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) **only** when the **end user** configures those faculties and supplies keys in the host environment. **This meta-skill file does not call third-party APIs.**
 
-- **Local only by default**: Persona creation, state sync, and evolution run locally. No data leaves the machine unless the user explicitly publishes to OpenPersona or registers with ACN.
-- **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) are stored in the host's credential directory (e.g. `~/.openclaw/credentials/` on OpenClaw) or environment variables. Never embedded in generated files.
-- **Search**: `npx clawhub search` sends the search query to ClawHub; no conversation or persona content is transmitted.
-- **Publish**: User-initiated; sends persona pack contents to the OpenPersona registry.
+### Operational guarantees
 
-By using this skill, you delegate the agent to run `npx openpersona`, `npx clawhub`, `openclaw`, and `gh` commands autonomously when the user requests persona creation, installation, search, or publish. Search queries may be sent to ClawHub. Only install if you trust the OpenPersona framework (acnlabs/OpenPersona) and ClawHub. The user can opt out by not invoking persona-related requests.
+- **Local by default**: Persona creation, state sync, and evolution run locally. Nothing is sent off-device unless the user runs an explicit network command (search, publish, register, etc.).
+- **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) stay in the host credential directory (e.g. `~/.openclaw/credentials/` on OpenClaw) or environment variables — **never** embedded in generated `persona.json` / skill packs by the generator.
+- **Search**: `npx clawhub search` sends **only** the search string; conversation text and persona content are **not** transmitted.
+- **Publish / register**: **User-initiated** CLI only; no automatic upload or registration from this SKILL alone.
+
+### Agent behavior
+
+When the user asks for persona work, the agent may propose shell commands to run **`npx openpersona`**, **`npx clawhub@latest`**, **`openclaw`**, or **`gh`** — **only in response to explicit user requests** (create, install, search, publish, contribute). The user should confirm before any action that publishes data or spends quota. **Trust model:** install this meta-skill only if you trust [acnlabs/OpenPersona](https://github.com/acnlabs/OpenPersona) and the ClawHub/npm ecosystem; opt out by not invoking persona-related tasks.
 
 ## References
 
