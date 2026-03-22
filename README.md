@@ -36,7 +36,9 @@ _Open the same HTML files locally from `demo/` if you prefer (no network). See [
 - [Development](#development)
 - [License](#license)
 
-_Agent-oriented manual (workflows, 4+5+3 detail, runner protocol, references): [`skills/open-persona/SKILL.md`](skills/open-persona/SKILL.md)._
+**Reading order (this file):** [Quick Start](#quick-start) → [Key Features](#key-features) (capability overview) → [Four-Layer Architecture](#four-layer-architecture) (layers + Soul Evolution deep-dive) → reference blocks ([Presets](#preset-personas) through [Switching](#persona-switching--the-pantheon)) → [CLI Commands](#cli-commands) → [Directory Structure](#directory-structure) / [Development](#development).
+
+_Agent workflows, runner protocol, and full 4+5+3 operational detail: [`skills/open-persona/SKILL.md`](skills/open-persona/SKILL.md)._
 
 ## Quick Start
 
