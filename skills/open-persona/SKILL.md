@@ -1,6 +1,6 @@
 ---
 name: open-persona
-version: "0.19.0"
+version: "0.20.0"
 description: >
   Meta-skill for building and managing agent persona skill packs (instruction-only;
   no bundled installer or auto-downloaded binaries). Credentials are never written
@@ -59,7 +59,7 @@ OpenPersona uses a **4+5+3** model: **4 Layers** (Soul · Body · Faculty · Ski
 
 ## Available Presets
 
-The default preset is **`base`** — a blank-slate meta-persona with voice faculty + reminder skill, evolution enabled. Recommended starting point for any new persona.
+The default preset is **`base`** — a blank-slate meta-persona with memory + voice faculties, evolution enabled, no pre-built skills. Recommended starting point for any new persona.
 
 ```bash
 npx openpersona create --preset base --install
@@ -80,7 +80,7 @@ npx openpersona create   # interactive wizard, defaults to base
 ### Soul
 
 - **Required:** `soul.identity.{personaName, slug, bio}` + `soul.character.{personality, speakingStyle}`
-- **Recommended:** `soul.identity.role`, `soul.aesthetic.{creature, emoji, age, vibe}`, `soul.character.{background, boundaries, capabilities}`
+- **Recommended:** `soul.identity.role`, `soul.aesthetic.{creature, emoji, age, vibe}`, `soul.character.{background, boundaries}`
 - **Optional:** `soul.identity.{sourceIdentity, constitutionAddendum}`, `soul.aesthetic.referenceImage`, `soul.character.behaviorGuide`
 
 **The `role` field** defines the persona's relationship to the user. Common values: `companion` (default), `assistant`, `character`, `brand`, `pet`, `mentor`, `therapist`, `coach`, `collaborator`, `guardian`, `entertainer`, `narrator`. Custom values are welcome.
@@ -315,6 +315,7 @@ Generated scripts (`scripts/state-sync.js`, `scripts/economy-hook.js`, etc.) are
 | Endpoint | Purpose | Data Sent |
 |----------|---------|-----------|
 | `https://registry.npmjs.org` | Resolve `npx openpersona`, `npx clawhub@latest` | Package name only (no user data) |
+| `https://openpersona-frontend.vercel.app` | `openpersona search` — persona directory API | Search query (user-provided keywords) |
 | `https://clawhub.ai` | Search skills via `npx clawhub search` | Search query (user-provided keywords) |
 | `https://acn-production.up.railway.app` | ACN registration (when user runs `acn-register`) | Agent metadata, endpoint URL |
 | `https://api.github.com` | `gh` CLI (contribute workflow) | Git operations, repo metadata |
@@ -325,7 +326,7 @@ Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) **only**
 
 - **Local by default**: Persona creation, state sync, and evolution run locally. Nothing is sent off-device unless the user runs an explicit network command (search, publish, register, etc.).
 - **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) stay in the host credential directory (e.g. `~/.openclaw/credentials/` on OpenClaw) or environment variables — **never** embedded in generated `persona.json` / skill packs by the generator.
-- **Search**: `npx clawhub search` sends **only** the search string; conversation text and persona content are **not** transmitted.
+- **Search**: `openpersona search` sends **only** the search query to the OpenPersona directory API (`openpersona-frontend.vercel.app`); `npx clawhub search` sends **only** the search string to ClawHub. Conversation text and persona content are **not** transmitted in either case.
 - **Publish / register**: **User-initiated** CLI only; no automatic upload or registration from this SKILL alone.
 
 ### Agent behavior
