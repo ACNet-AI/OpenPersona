@@ -3,6 +3,8 @@
  *
  * Validates that the base preset generates a skill pack that satisfies
  * every required capability declared in schemas/baseline.json.
+ * Also validates that warnBaselineCompliance() emits the expected warnings
+ * when a custom persona.json is below the P11-grade baseline.
  */
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
@@ -10,6 +12,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs-extra');
 const { generate } = require('../lib/generator');
+const { validatePersona, normalizeEvolutionInput } = require('../lib/generator/validate');
 
 const BASELINE = require('../schemas/baseline.json');
 const BASE_PRESET = require('../presets/base/persona.json');
@@ -150,6 +153,58 @@ describe('Universal Materials Baseline — base preset conformance', () => {
         );
       });
     }
+  });
+
+  describe('warnBaselineCompliance — Generate Gate baseline warnings', () => {
+    function captureStderr(fn) {
+      const messages = [];
+      const original = process.stderr.write.bind(process.stderr);
+      process.stderr.write = (msg) => { messages.push(msg); return true; };
+      try { fn(); } finally { process.stderr.write = original; }
+      return messages.join('');
+    }
+
+    function minimalPersona(overrides = {}) {
+      return Object.assign({
+        personaName: 'Test',
+        slug: 'test',
+        bio: 'test persona',
+        personality: 'neutral',
+        speakingStyle: 'plain',
+        faculties: [{ name: 'memory' }],
+        evolution: { instance: { enabled: true, boundaries: { immutableTraits: ['honest'], minFormality: -2, maxFormality: 4 } } },
+      }, overrides);
+    }
+
+    it('warns when memory faculty is missing', () => {
+      const persona = minimalPersona({ faculties: [] });
+      normalizeEvolutionInput(persona);
+      const stderr = captureStderr(() => validatePersona(persona));
+      assert.ok(stderr.includes('memory faculty not declared'), `expected memory baseline warning, got: ${stderr}`);
+    });
+
+    it('warns when evolution is enabled but boundaries are missing', () => {
+      const persona = minimalPersona({
+        evolution: { instance: { enabled: true } },
+      });
+      normalizeEvolutionInput(persona);
+      const stderr = captureStderr(() => validatePersona(persona));
+      assert.ok(stderr.includes('evolution.instance.boundaries is not declared'), `expected boundaries warning, got: ${stderr}`);
+    });
+
+    it('no baseline warning when evolution is disabled (boundaries not required)', () => {
+      const persona = minimalPersona({ evolution: { instance: { enabled: false } } });
+      normalizeEvolutionInput(persona);
+      const stderr = captureStderr(() => validatePersona(persona));
+      assert.ok(!stderr.includes('evolution.instance.boundaries'), `unexpected boundaries warning when evolution disabled: ${stderr}`);
+    });
+
+    it('no baseline warnings for a fully compliant persona', () => {
+      const persona = minimalPersona();
+      normalizeEvolutionInput(persona);
+      const stderr = captureStderr(() => validatePersona(persona));
+      assert.ok(!stderr.includes('baseline warning'), `unexpected baseline warnings: ${stderr}`);
+    });
   });
 
   describe('baseline.json schema sanity', () => {
