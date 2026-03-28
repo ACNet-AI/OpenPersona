@@ -61,6 +61,30 @@ Everything else has defaults or is omitted gracefully. A minimal persona:
 
 ---
 
+## Baseline Defaults (Auto-Injected)
+
+`persona.json` is a **delta on top of the P11-grade baseline** defined in `schemas/baseline.json`. The generator automatically fills in missing required capabilities before validation runs — you only need to declare what differs from the baseline.
+
+| Capability | Default | When injected | Override |
+|-----------|---------|--------------|---------|
+| `memory` faculty | `{"name": "memory"}` | Always — when no `memory` entry exists in `faculties` | Declare `{"name": "memory", "provider": "mem0", ...}` to configure explicitly |
+
+When memory is auto-injected, the generator emits a notice to stderr:
+```
+[openpersona] baseline: memory faculty auto-injected (not declared in persona.json).
+Add {"name": "memory"} to faculties to configure it explicitly.
+```
+
+**Baseline warnings (non-blocking):**
+
+| Condition | Warning |
+|-----------|---------|
+| `evolution.instance.enabled: true` but no `evolution.instance.boundaries` | Warns that drift constraints are undeclared. Add `boundaries` with `immutableTraits` and formality bounds. |
+
+Warnings do not block generation — they surface quality gaps so you can decide whether to address them.
+
+---
+
 ## Field Reference
 
 ### Four-Layer Fields

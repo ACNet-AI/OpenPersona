@@ -610,7 +610,7 @@ lib/                    # Core logic modules
   remote/               #   External service calls (ClawHub, ACN)
   report/               #   Vitality + Canvas HTML report generation
 demo/                   # Static demos + scripts — see demo/README.md (vitality-report, architecture, living-canvas)
-tests/                  # Tests (513 passing)
+tests/                  # Tests (519 passing)
 ```
 
 ## Development
