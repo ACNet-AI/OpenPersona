@@ -281,7 +281,7 @@
         "license: MIT / Apache / MIT-0 / ISC or equivalent permissive license",
         "identity: sources entry must include url + author + auditedVersion + lastVerifiedAt — slug alone is insufficient (slug re-registration and deletion risk)"
       ],
-      "rationale": "宁缺毋滥 — an empty sources block is honest; an unvetted reference creates false confidence. Architectural mismatch is NOT a reason to reject — if a skill passes all 4 criteria, the adoption pattern is soft-ref + Soul-layer bridge. OpenPersona provides the constraint system; the community skill provides the capability."
+      "rationale": "Less is more — an empty sources block is honest; an unvetted reference creates false confidence. Architectural mismatch is NOT a reason to reject — if a skill passes all 4 criteria, the adoption pattern is soft-ref + Soul-layer bridge. OpenPersona provides the constraint system; the community skill provides the capability."
     }
   }
 }

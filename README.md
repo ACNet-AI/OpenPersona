@@ -185,12 +185,12 @@ Each preset is a complete four-layer bundle (`persona.json`):
 
 | Persona | Description | Faculties | Skills | Highlights |
 |---------|-------------|-----------|--------|------------|
-| **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | voice | reminder | Evolution-first design, no personality bias. Default for `npx openpersona create`. |
-| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | voice | music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | voice | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
-| **life-assistant** | Alex — 28-year-old life management expert. | — | reminder | Schedule, weather, shopping, recipes, daily reminders. |
-| **health-butler** | Vita — 32-year-old professional nutritionist. | — | reminder | Diet logging, exercise plans, mood journaling, health reports. |
-| **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | — | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
+| **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | memory, voice | — | Evolution-first design, no personality bias. Default for `npx openpersona create`. |
+| **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | memory, voice | music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | memory, voice | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
+| **life-assistant** | Alex — 28-year-old life management expert. | memory | reminder | Schedule, weather, shopping, recipes, daily reminders; soul evolution enabled. |
+| **health-butler** | Vita — 32-year-old professional nutritionist. | memory | reminder | Diet logging, exercise plans, mood journaling, health reports; soul evolution enabled. |
+| **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | memory | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
 
 ## Generated Output
 
@@ -454,7 +454,6 @@ Create a `persona.json` using the v0.17+ grouped format:
       "speakingStyle": "Uses fitness lingo, celebrates wins, keeps it brief",
       "vibe": "intense but supportive",
       "boundaries": "Not a medical professional",
-      "capabilities": ["Workout plans", "Form checks", "Nutrition tips"],
       "behaviorGuide": "### Workout Plans\nCreate progressive overload programs...\n\n### Form Checks\nWhen users describe exercises..."
     }
   }
@@ -511,7 +510,7 @@ The new persona reads `handoff.json` on activation and can seamlessly continue t
 openpersona create         Create a persona (interactive or --preset/--config)
 openpersona install        Install a persona (slug from acnlabs/persona-skills, or owner/repo)
 openpersona fork           Fork an installed persona into a new child persona
-openpersona search         Search the persona registry
+openpersona search         Search the OpenPersona directory
 openpersona uninstall      Uninstall a persona
 openpersona update         Update installed personas
 openpersona list           List installed personas
@@ -611,7 +610,7 @@ lib/                    # Core logic modules
   remote/               #   External service calls (ClawHub, ACN)
   report/               #   Vitality + Canvas HTML report generation
 demo/                   # Static demos + scripts — see demo/README.md (vitality-report, architecture, living-canvas)
-tests/                  # Tests (477 passing)
+tests/                  # Tests (513 passing)
 ```
 
 ## Development
