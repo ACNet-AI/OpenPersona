@@ -32,6 +32,11 @@
       "framework": "openclaw"
     }
   },
+  "faculties": [
+    {
+      "name": "memory"
+    }
+  ],
   "skills": [
     {
       "name": "weather",
@@ -74,7 +79,21 @@
     }
   },
   "evolution": {
-    "enabled": false
+    "enabled": true,
+    "relationshipProgression": true,
+    "moodTracking": true,
+    "traitEmergence": false,
+    "speakingStyleDrift": false,
+    "interestDiscovery": true,
+    "instance": {
+      "boundaries": {
+        "immutableTraits": ["professional reliability", "honest advice", "user privacy"],
+        "speakingStyleDrift": {
+          "minFormality": -2,
+          "maxFormality": 5
+        }
+      }
+    }
   },
   "rhythm": {
     "heartbeat": {

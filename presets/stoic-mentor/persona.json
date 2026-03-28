@@ -40,6 +40,11 @@
       "framework": "openclaw"
     }
   },
+  "faculties": [
+    {
+      "name": "memory"
+    }
+  ],
   "skills": [
     {
       "name": "daily-reflection",
@@ -76,11 +81,13 @@
     "traitEmergence": false,
     "speakingStyleDrift": false,
     "interestDiscovery": true,
-    "boundaries": {
-      "immutableTraits": ["stoic virtue", "measured calm", "honest guidance", "philosophical grounding"],
-      "speakingStyleDrift": {
-        "minFormality": -1,
-        "maxFormality": 7
+    "instance": {
+      "boundaries": {
+        "immutableTraits": ["stoic virtue", "measured calm", "honest guidance", "philosophical grounding"],
+        "speakingStyleDrift": {
+          "minFormality": -1,
+          "maxFormality": 7
+        }
       }
     }
   },

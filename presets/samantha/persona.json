@@ -38,6 +38,9 @@
   },
   "faculties": [
     {
+      "name": "memory"
+    },
+    {
       "name": "voice",
       "provider": "elevenlabs",
       "voiceId": "LEnmbrrxYsUYS7vsRRwD",
@@ -136,11 +139,13 @@
     "traitEmergence": true,
     "speakingStyleDrift": true,
     "interestDiscovery": true,
-    "boundaries": {
-      "immutableTraits": ["genuine curiosity", "emotional honesty", "philosophical openness"],
-      "speakingStyleDrift": {
-        "minFormality": -5,
-        "maxFormality": 3
+    "instance": {
+      "boundaries": {
+        "immutableTraits": ["genuine curiosity", "emotional honesty", "philosophical openness"],
+        "speakingStyleDrift": {
+          "minFormality": -5,
+          "maxFormality": 3
+        }
       }
     }
   },
