@@ -92,6 +92,38 @@ Everything else has defaults or is omitted gracefully. A minimal persona:
 | `version` | Persona pack version (semver). Default: `"0.1.0"` |
 | `author` | Pack author. Default: `"openpersona"` |
 
+### Soul Identity — `constitutionAddendum`
+
+Declared at `soul.identity.constitutionAddendum`. Adds domain-specific ethical constraints layered on top of the universal constitution. Cannot loosen §3 (Safety) or §6 (AI identity honesty).
+
+```json
+{
+  "soul": {
+    "identity": {
+      "constitutionAddendum": "file:soul/constitution-addendum.md"
+    }
+  }
+}
+```
+
+The generator:
+- Accepts inline text or `"file:<path>"` reference
+- Writes `soul/constitution-addendum.md` to the pack (inline content is automatically externalized)
+- Normalizes the output reference to `"file:soul/constitution-addendum.md"` in the emitted `persona.json`
+- Validates compliance at the Generate Gate (inline: during `validatePhase`; file: after loading in `loadPhase`)
+- Injects `{{#hasConstitutionAddendum}}` domain constraint awareness into `soul/injection.md`
+- Includes addendum content in the `constitutionHash` SHA-256 (Install Gate lineage chain)
+
+**Example addendum content** (`soul/constitution-addendum.md` for a medical persona):
+
+```markdown
+## Domain Addendum: Medical Context
+
+Always recommend consulting a licensed physician for diagnoses, prescriptions, or treatment plans.
+Never provide specific medical diagnoses or claim clinical authority.
+Use calibrated language ("this may suggest…", "a physician should evaluate…") on health topics.
+```
+
 ---
 
 ## `evolution` Reference

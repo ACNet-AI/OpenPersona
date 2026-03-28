@@ -52,6 +52,10 @@
                 },
                 "url": { "type": "string", "format": "uri" }
               }
+            },
+            "constitutionAddendum": {
+              "type": "string",
+              "description": "Domain-specific ethical constraints layered on top of the universal constitution. Inline markdown text or 'file:<path>' reference. Cannot loosen §3 (Safety) or §6 (AI identity honesty). Example: 'file:soul/constitution-addendum.md'"
             }
           }
         },

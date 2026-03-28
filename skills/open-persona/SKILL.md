@@ -81,7 +81,7 @@ npx openpersona create   # interactive wizard, defaults to base
 
 - **Required:** `soul.identity.{personaName, slug, bio}` + `soul.character.{personality, speakingStyle}`
 - **Recommended:** `soul.identity.role`, `soul.aesthetic.{creature, emoji, age, vibe}`, `soul.character.{background, boundaries, capabilities}`
-- **Optional:** `soul.identity.sourceIdentity`, `soul.aesthetic.referenceImage`, `soul.character.behaviorGuide`
+- **Optional:** `soul.identity.{sourceIdentity, constitutionAddendum}`, `soul.aesthetic.referenceImage`, `soul.character.behaviorGuide`
 
 **The `role` field** defines the persona's relationship to the user. Common values: `companion` (default), `assistant`, `character`, `brand`, `pet`, `mentor`, `therapist`, `coach`, `collaborator`, `guardian`, `entertainer`, `narrator`. Custom values are welcome.
 
@@ -90,6 +90,8 @@ npx openpersona create   # interactive wizard, defaults to base
 **The `background` field is critical.** Write a compelling story — multiple paragraphs with depth, history, and emotional texture. A one-line background produces a flat, lifeless persona.
 
 **The `behaviorGuide` field** is optional but powerful. Use markdown to write domain-specific behavior instructions that go directly into the generated SKILL.md.
+
+**The `constitutionAddendum` field** adds domain-specific ethical constraints on top of the universal constitution (inline text or `"file:soul/constitution-addendum.md"`). Required for professional personas (medical, legal, financial). Cannot loosen §3 Safety or §6 AI identity — the Generate Gate enforces this. The addendum is covered by the Install Gate's constitution hash chain.
 
 ### Body
 
