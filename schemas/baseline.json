@@ -30,10 +30,10 @@
     "body": {
       "description": "Substrate of existence — how the persona lives in the world",
       "required": [
-        "body.runtime.framework",
         "scripts/state-sync.js"
       ],
       "optional": [
+        "body.runtime.framework",
         "body.runtime.channels",
         "body.runtime.resources",
         "body.runtime.credentials",
@@ -42,6 +42,7 @@
         "body.appearance.model3d",
         "body.physical"
       ],
+      "note": "body.runtime.framework is optional because its value is runner-specific (openclaw, cursor, claude-code, codex, etc.) — the framework cannot provide a universal default. scripts/state-sync.js is always auto-generated regardless of body declarations.",
       "dormant": [
         "body.interface"
       ]

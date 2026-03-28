@@ -155,7 +155,7 @@ describe('Universal Materials Baseline — base preset conformance', () => {
     }
   });
 
-  describe('warnBaselineCompliance — Generate Gate baseline warnings', () => {
+  describe('baseline defaults — auto-injection and compliance warnings', () => {
     function captureStderr(fn) {
       const messages = [];
       const original = process.stderr.write.bind(process.stderr);
@@ -176,11 +176,68 @@ describe('Universal Materials Baseline — base preset conformance', () => {
       }, overrides);
     }
 
-    it('warns when memory faculty is missing', () => {
-      const persona = minimalPersona({ faculties: [] });
-      normalizeEvolutionInput(persona);
-      const stderr = captureStderr(() => validatePersona(persona));
-      assert.ok(stderr.includes('memory faculty not declared'), `expected memory baseline warning, got: ${stderr}`);
+    it('memory faculty auto-injected when not declared (via generate)', async () => {
+      const persona = {
+        personaName: 'NoMemory',
+        slug: 'no-memory',
+        bio: 'persona without memory declared',
+        personality: 'neutral',
+        speakingStyle: 'plain',
+        faculties: [{ name: 'voice' }],
+      };
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-memory-inject-'));
+      try {
+        const { skillDir } = await generate(persona, tmpDir);
+        const outPersona = await fs.readJson(path.join(skillDir, 'persona.json'));
+        const faculties = outPersona.faculties || [];
+        const hasMemory = faculties.some((f) => (f.name || f) === 'memory');
+        assert.ok(hasMemory, 'memory faculty must be auto-injected when not declared');
+      } finally {
+        await fs.remove(tmpDir);
+      }
+    });
+
+    it('memory auto-injection emits a baseline notice to stderr', async () => {
+      const persona = {
+        personaName: 'NoMemory2',
+        slug: 'no-memory-2',
+        bio: 'persona without memory',
+        personality: 'neutral',
+        speakingStyle: 'plain',
+      };
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-memory-notice-'));
+      let stderrOutput = '';
+      const original = process.stderr.write.bind(process.stderr);
+      process.stderr.write = (msg) => { stderrOutput += msg; return true; };
+      try {
+        await generate(persona, tmpDir);
+      } finally {
+        process.stderr.write = original;
+        await fs.remove(tmpDir);
+      }
+      assert.ok(stderrOutput.includes('memory faculty auto-injected'), `expected baseline notice, got: ${stderrOutput}`);
+    });
+
+    it('no memory injection when memory is already declared', async () => {
+      const persona = {
+        personaName: 'HasMemory',
+        slug: 'has-memory',
+        bio: 'persona with memory declared',
+        personality: 'neutral',
+        speakingStyle: 'plain',
+        faculties: [{ name: 'memory', provider: 'mem0' }],
+      };
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-has-memory-'));
+      let stderrOutput = '';
+      const original = process.stderr.write.bind(process.stderr);
+      process.stderr.write = (msg) => { stderrOutput += msg; return true; };
+      try {
+        await generate(persona, tmpDir);
+      } finally {
+        process.stderr.write = original;
+        await fs.remove(tmpDir);
+      }
+      assert.ok(!stderrOutput.includes('memory faculty auto-injected'), 'must not inject memory when already declared');
     });
 
     it('warns when evolution is enabled but boundaries are missing', () => {

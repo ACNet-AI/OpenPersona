@@ -138,7 +138,8 @@ describe('four-layer architecture', () => {
     assert.ok(skillMd.includes('## Soul'), 'Soul section always present');
     assert.ok(skillMd.includes('## Body'), 'Body section always present');
     assert.ok(skillMd.includes('Digital-only'), 'Digital-only body for persona without body');
-    assert.ok(!skillMd.includes('## Faculty'), 'No Faculty section when no faculties');
+    // memory faculty is auto-injected by applyBaselineDefaults(), so Faculty section is always present
+    assert.ok(skillMd.includes('## Faculty'), 'Faculty section always present (memory auto-injected)');
     assert.ok(!skillMd.includes('## Skill\n'), 'No Skill section when no skills');
 
     await fs.remove(TMP);
