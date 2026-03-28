@@ -1,0 +1,287 @@
+{
+  "type": "capability-policy",
+  "version": "0.2.0",
+  "description": "Universal persona materials baseline — capability classification per 4+5 architecture. This is NOT a JSON Schema validator. It declares which capabilities are required/optional/dormant for a standard OpenPersona persona (P11-grade baseline).",
+
+  "layers": {
+    "soul": {
+      "description": "Identity, ethics, and personality — who the persona IS",
+      "required": [
+        "soul.identity.personaName",
+        "soul.identity.slug",
+        "soul.identity.bio",
+        "soul.character.personality",
+        "soul.character.speakingStyle",
+        "constitution"
+      ],
+      "optional": [
+        "soul.identity.role",
+        "soul.character.background",
+        "soul.character.boundaries",
+        "soul.character.behaviorGuide",
+        "soul.aesthetic"
+      ],
+      "dormant": [
+        "soul.identity.sourceIdentity",
+        "soul.identity.constitutionAddendum"
+      ]
+    },
+
+    "body": {
+      "description": "Substrate of existence — how the persona lives in the world",
+      "required": [
+        "body.runtime.framework",
+        "scripts/state-sync.js"
+      ],
+      "optional": [
+        "body.runtime.channels",
+        "body.runtime.resources",
+        "body.runtime.credentials",
+        "body.runtime.models",
+        "body.appearance.avatar",
+        "body.appearance.model3d",
+        "body.physical"
+      ],
+      "dormant": [
+        "body.interface"
+      ]
+    },
+
+    "faculty": {
+      "description": "Persistent capabilities that shape how the persona perceives or expresses",
+      "dimensions": {
+        "expression": {
+          "description": "How the persona communicates with the world",
+          "note": "Text output is baseline — all LLMs provide this; no faculty declaration needed. Voice and avatar are optional enhancements.",
+          "required": [],
+          "optional": ["voice", "avatar"],
+          "dormant": [],
+          "sources": {
+            "avatar": {
+              "sourceType": "first-party",
+              "source": "clawhub:avatar-runtime",
+              "url": "https://clawhub.ai/neiljo-gy/avatar-runtime",
+              "author": "neiljo-gy",
+              "auditedVersion": "0.2.1",
+              "lastVerifiedAt": "2026-03-27",
+              "securityNote": "VirusTotal Suspicious (expected — skill executes npx avatar-runtime at runtime, pulling remote npm code). OpenClaw Benign medium confidence. First-party trust overrides scan flag; verify GitHub repo acnlabs/avatar-runtime and pin package version before production use.",
+              "note": "Provides Live2D / VRM rendering for personas with body.appearance declared. See _meta.firstPartyEcosystem.avatar-runtime."
+            }
+          }
+        },
+        "cognition": {
+          "description": "How the persona thinks and remembers across time",
+          "required": ["memory"],
+          "optional": ["self-improving", "ontology"],
+          "dormant": [],
+          "sources": {
+            "ontology": {
+              "sourceType": "community",
+              "registry": "clawhub",
+              "source": "clawhub:ontology",
+              "url": "https://clawhub.ai/oswalpalash/ontology",
+              "author": "oswalpalash",
+              "auditedVersion": "1.0.4",
+              "lastVerifiedAt": "2026-03-27",
+              "installs": 821,
+              "security": "VirusTotal Benign + OpenClaw Benign",
+              "license": "MIT-0",
+              "note": "Typed knowledge graph (Person/Project/Task/Event/Document etc.) stored locally in memory/ontology/graph.jsonl. Python script, no network calls, no credentials. Enhances memory faculty with structured, queryable, relational knowledge beyond flat memories.jsonl."
+            },
+            "self-improving": {
+              "sourceType": "community",
+              "registry": "clawhub",
+              "source": "clawhub:self-improving",
+              "url": "https://clawhub.ai/ivangdavila/self-improving",
+              "author": "ivangdavila",
+              "auditedVersion": "1.2.16",
+              "lastVerifiedAt": "2026-03-27",
+              "installs": 1500,
+              "security": "VirusTotal Benign + OpenClaw Benign",
+              "license": "MIT-0",
+              "note": "HOT/WARM/COLD tiered memory with automatic promotion/demotion rules. Instruction-only, cross-platform, no credentials. Adoption pattern: soft-ref; persona reads ~/self-improving/memory.md at conversation start and applies patterns within Soul-layer constraints (immutableTraits, boundaries). Write path stays in the skill's native storage; OpenPersona's constraint system applies at read time."
+            }
+          }
+        },
+        "sense": {
+          "description": "How the persona perceives the world",
+          "note": "Model-level perception (vision, STT, document parsing) is declared via body.runtime.models, not as a sense faculty. Sense faculties are reserved for persona-level persistent perception behaviors distinct from model capabilities.",
+          "required": [],
+          "optional": ["emotion-sensing"],
+          "dormant": ["context-sensing"],
+          "_gaps": {
+            "emotionSensing": "No safe external candidate — clawhub:emotion-state flagged Suspicious (data exfiltration risk). Local implementation path: pure prompt-layer inference, no external API, no data transmission. Target: layers/faculties/sense/emotion-sensing/."
+          }
+        }
+      }
+    },
+
+    "skill": {
+      "description": "Discrete actions the persona can take on demand",
+      "note": "No skill is universally required — a conversational persona with zero skills is still a valid persona. find-skills + skill-vetter are a security pair: find-skills discovers capabilities, skill-vetter vets them before recommending installation — activating find-skills without skill-vetter creates a Trust Gradient gap. skill-creator is an independent optional for workflow codification. Built-in and scenario-specific skills are dormant until a preset activates them.",
+      "required": [],
+      "optional": ["find-skills", "skill-vetter", "skill-creator"],
+      "dormant": ["reminder", "selfie", "music", "time-awareness", "note-taking", "web-search"],
+      "sources": {
+        "find-skills": {
+          "sourceType": "community",
+          "registry": "skills.sh",
+          "source": "skills.sh:vercel-labs/skills/find-skills",
+          "url": "https://skills.sh/vercel-labs/skills/find-skills",
+          "author": "vercel-labs",
+          "auditedVersion": "latest",
+          "lastVerifiedAt": "2026-03-27",
+          "installs": 737600,
+          "security": "Gen Agent Trust Hub Pass + Socket Pass + Snyk Warn — SnykWarn accepted per intakeCriteria.trustedSourceException: vercel-labs is a recognized organization (11.9K GitHub stars, 738K installs, no incident reports)",
+          "license": "MIT",
+          "note": "On-demand capability discovery — when encountering a capability gap, persona searches the skills ecosystem and recommends 'npx skills add' to the user. Install decision stays with the user; persona does not self-install without consent. Security pair: must be activated together with skill-vetter — find-skills without skill-vetter leaves the Trust Gradient open at runtime."
+        },
+        "skill-vetter": {
+          "sourceType": "community",
+          "registry": "clawhub",
+          "source": "clawhub:spclaudehome/skill-vetter",
+          "url": "https://clawhub.ai/spclaudehome/skill-vetter",
+          "author": "spclaudehome",
+          "auditedVersion": "1.0.0",
+          "lastVerifiedAt": "2026-03-27",
+          "installs": 3200,
+          "security": "VirusTotal Benign + OpenClaw Benign (high confidence)",
+          "license": "MIT-0",
+          "note": "Security companion to find-skills — before recommending any skill installation, persona runs vetting protocol: source check, full code review for red flags (credential access, exfiltration patterns, obfuscation), permission scope, risk classification (LOW/MEDIUM/HIGH/EXTREME). Produces structured SKILL VETTING REPORT. Bridges persona-level discovery with OpenPersona's Install Gate trust model."
+        },
+        "skill-creator": {
+          "sourceType": "community",
+          "registry": "skills.sh",
+          "source": "skills.sh:anthropics/skills/skill-creator",
+          "url": "https://skills.sh/anthropics/skills/skill-creator",
+          "author": "anthropics",
+          "auditedVersion": "latest",
+          "lastVerifiedAt": "2026-03-27",
+          "installs": 110100,
+          "security": "Gen Agent Trust Hub Pass + Socket Pass + Snyk Pass — fully clean",
+          "license": "MIT",
+          "note": "On-demand skill synthesis — when user wants to codify a recurring workflow, persona follows skill-creator process to produce a reusable skill. Generated skill is reviewed and installed by user. Connects to P27 meta-cognition: metaCognitionLog patterns can trigger skill synthesis proposals."
+        }
+      },
+      "_gaps": {
+        "timeAwareness": "No vetted external candidate (clawhub:time-awareness has 0 installs). Local implementation path: reads system clock, handles timezone, formats date/time for conversation context. Target: layers/skills/time-awareness/."
+      }
+    }
+  },
+
+  "concepts": {
+    "evolution": {
+      "description": "How the persona grows and changes over time",
+      "note": "evolution.instance.boundaries is required by baseline policy, not by the framework — a persona without any evolution declaration is technically valid. Baseline mandates it to ensure all P11-grade personas have explicit growth constraints.",
+      "required": [
+        "evolution.instance.boundaries"
+      ],
+      "optional": [
+        "evolution.relationshipProgression",
+        "evolution.moodTracking",
+        "evolution.traitEmergence",
+        "evolution.speakingStyleDrift",
+        "evolution.interestDiscovery",
+        "evolution.pack",
+        "evolution.faculty",
+        "evolution.body",
+        "evolution.skill"
+      ],
+      "dormant": [
+        "evolution.instance.influenceBoundary"
+      ]
+    },
+
+    "economy": {
+      "description": "Financial accountability and survival behavior",
+      "note": "Economy is opt-in. Companion/creative personas should NOT declare economy.enabled — financial concerns break immersion. Autonomous economic agents should enable it.",
+      "required": [],
+      "optional": ["economy.enabled"],
+      "dormant": ["economy.survivalPolicy"],
+      "sources": {
+        "economy": {
+          "sourceType": "first-party",
+          "source": "agentbooks",
+          "note": "See _meta.firstPartyEcosystem.agentbooks."
+        }
+      }
+    },
+
+    "vitality": {
+      "description": "Multi-dimensional health score of the persona",
+      "note": "Vitality pipeline (openpersona vitality score/report) is always available. Activation is on-demand — no persona.json field required.",
+      "required": [],
+      "optional": ["vitality.score", "vitality.report"],
+      "dormant": ["vitality.dimensions.memory", "vitality.dimensions.relationship", "vitality.dimensions.social", "vitality.dimensions.usage"],
+      "_gaps": {
+        "memoryHealth": "No memory health dimension — cross-session memory quality, contradiction detection. Persona integrity depends on consistent memory; without this, evolvedTraits may contradict earlier stated preferences.",
+        "relationshipHealth": "No relationship health dimension — quality and progression of the user-persona relationship. Core to persona value proposition; relationship depth cannot be measured or surfaced without this."
+      }
+    },
+
+    "social": {
+      "description": "Identity and presence in the agent ecosystem",
+      "note": "agent-card.json and acn-config.json are auto-generated for all personas — no explicit persona.json field required to trigger generation.",
+      "required": [
+        "agent-card.json",
+        "acn-config.json"
+      ],
+      "optional": [
+        "social.acn",
+        "social.onchain",
+        "social.a2a"
+      ],
+      "dormant": [
+        "social.graph",
+        "social.reputation"
+      ],
+      "sources": {
+        "acn": {
+          "sourceType": "first-party",
+          "source": "acn",
+          "note": "See _meta.firstPartyEcosystem.acn."
+        }
+      }
+    },
+
+    "rhythm": {
+      "description": "Temporal behavior — when and how often the persona acts",
+      "note": "Conservative defaults apply when rhythm is not declared. Proactive outreach (heartbeat) should be opt-in.",
+      "required": [],
+      "optional": ["rhythm.heartbeat", "rhythm.circadian"],
+      "dormant": ["rhythm.weekly", "rhythm.seasonal"]
+    }
+  },
+
+  "requiredArtifacts": [
+    "SKILL.md",
+    "persona.json",
+    "state.json",
+    "soul/injection.md",
+    "soul/constitution.md",
+    "scripts/state-sync.js",
+    "agent-card.json",
+    "acn-config.json",
+    "references/SIGNAL-PROTOCOL.md"
+  ],
+
+  "_meta": {
+    "status": "draft",
+    "confirmedAt": null,
+    "lastResearchedAt": "2026-03-27",
+    "nextReview": "After P11 ecosystem adaptation pilots — use pilot data to resolve _gaps and promote draft to v1.0",
+
+    "intakeCriteria": {
+      "description": "Applies to all external community skill sources (ClawHub, skills.sh, GitHub, etc.). First-party (acnlabs/*) and local (layers/) implementations are exempt.",
+      "scope": "community-external",
+      "rules": [
+        "security: all audit checks Pass — any Fail = automatic reject; Warn from recognized organizations (vercel-labs, anthropics, microsoft, etc.) may be accepted with explicit note in sources entry (trustedSourceException); Warn from unknown authors = reject",
+        "market: ≥ 100 all-time installs — search score is irrelevant, only real install count counts",
+        "platform: no OS-specific dependencies for universal baseline — macOS-only = reject",
+        "license: MIT / Apache / MIT-0 / ISC or equivalent permissive license",
+        "identity: sources entry must include url + author + auditedVersion + lastVerifiedAt — slug alone is insufficient (slug re-registration and deletion risk)"
+      ],
+      "rationale": "宁缺毋滥 — an empty sources block is honest; an unvetted reference creates false confidence. Architectural mismatch is NOT a reason to reject — if a skill passes all 4 criteria, the adoption pattern is soft-ref + Soul-layer bridge. OpenPersona provides the constraint system; the community skill provides the capability."
+    }
+  }
+}

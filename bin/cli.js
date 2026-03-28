@@ -18,8 +18,7 @@ const publishAdapter = require('../lib/publisher');
 const { contribute } = require('../lib/lifecycle/contributor');
 const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
 const { registerWithAcn } = require('../lib/remote/registrar');
-const { OP_SKILLS_DIR, OPENCLAW_HOME, resolveSoulFile, printError, printSuccess, printInfo, printWarning, shellEscape } = require('../lib/utils');
-const { loadRegistry } = require('../lib/registry');
+const { OP_PERSONA_HOME, resolveSoulFile, printError, printSuccess, printInfo, printWarning } = require('../lib/utils');
 const { resolvePersonaDir, runStateSyncCommand } = require('../lib/state/runner');
 const { forkPersona } = require('../lib/lifecycle/forker');
 const { exportPersona, importPersona } = require('../lib/lifecycle/porter');
@@ -44,7 +43,7 @@ program
   .option('--preset <name>', 'Use preset (base, samantha, ai-girlfriend, life-assistant, health-butler, stoic-mentor)')
   .option('--config <path>', 'Load external persona.json')
   .option('--output <dir>', 'Output directory', process.cwd())
-  .option('--install', 'Install to OpenClaw after generation')
+  .option('--install', 'Install to ~/.openpersona after generation')
   .option('--dry-run', 'Preview only, do not write files')
   .action(async (options) => {
     let persona = {};
@@ -149,11 +148,10 @@ program
 
 program
   .command('search <query>')
-  .description('Search personas in registry')
-  .option('--registry <name>', 'Registry', 'acnlabs')
-  .action(async (query, options) => {
+  .description('Search personas in the OpenPersona directory')
+  .action(async (query) => {
     try {
-      await search(query, options.registry);
+      await search(query);
     } catch (e) {
       printError(e.message);
       process.exit(1);
@@ -221,7 +219,7 @@ program
   .option('--personality <keywords>', 'Override personality (comma-separated)')
   .option('--reason <text>', 'Fork reason, written into lineage.json', 'specialization')
   .option('--output <dir>', 'Output directory', process.cwd())
-  .option('--install', 'Install to OpenClaw after generation')
+  .option('--install', 'Install to ~/.openpersona after generation')
   .action(async (parentSlug, options) => {
     try {
       const { skillDir, lineage } = await forkPersona(parentSlug, {
@@ -547,7 +545,7 @@ vitalityCmd
     const { JsonFileAdapter } = require('agentbooks/adapters/json-file');
 
     const dataPath = process.env.AGENTBOOKS_DATA_PATH
-      || path.join(OPENCLAW_HOME, 'economy', `persona-${slug}`);
+      || path.join(OP_PERSONA_HOME, 'economy', `persona-${slug}`);
 
     const adapter = new JsonFileAdapter(dataPath);
     let report;
