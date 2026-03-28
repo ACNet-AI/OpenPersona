@@ -56,7 +56,7 @@ If `openpersona vitality score <slug>` is unavailable, fall back to `node script
 
 ## AgentBooks State Schema
 
-Economy data lives in `~/.openclaw/economy/persona-<slug>/`:
+Economy data lives in `~/.openpersona/economy/persona-<slug>/`:
 
 - **`economic-state.json`** — ledger, income statement, balance sheet, `burnRateHistory` (max 30 entries: `{timestamp, dailyRateEstimate, periodExpenses}`)
 - **`economic-identity.json`** — provider config, model pricing, wallet address
