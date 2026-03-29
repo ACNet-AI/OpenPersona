@@ -71,7 +71,80 @@ npx openpersona create
 
 → Full preset catalog (samantha, ai-girlfriend, life-assistant, health-butler, stoic-mentor, and more): `references/PRESETS.md`
 
-## Creating a Persona
+## Agent Playbook — Create a Persona from User Requirements
+
+When a user asks you to create a persona (e.g. "make me a coding mentor", "build a companion persona"), follow this playbook:
+
+### Step 1 — Decide: preset or custom?
+
+| User request | Action |
+|---|---|
+| Matches an existing preset (companion, life assistant, stoic philosophy…) | Use `--preset <name>` directly — skip to Step 3 |
+| Specific role / domain / personality | Gather 3 required inputs (Step 2), then write persona.json |
+
+### Step 2 — Gather minimum required inputs (3 questions max)
+
+Ask only what you cannot infer. Use smart defaults for everything else.
+
+| Field | Question to ask | Default if not asked |
+|---|---|---|
+| `personaName` + `slug` | "What should I call this persona?" | Infer from role description |
+| `role` | "What role should it play — assistant, coach, mentor, companion, or something else?" | `assistant` |
+| `body.runtime.framework` | "Which AI agent will use this persona — Cursor, Claude Code, OpenClaw, or other?" | `openclaw` |
+
+You can infer `bio`, `personality`, and `speakingStyle` from the user's description — do not ask unless the user gives conflicting signals. When in doubt, generate reasonable values and let the user correct them.
+
+### Step 3 — Write `persona.json`
+
+Use your Write tool to create `persona.json` in the current directory (or a path the user specifies). Minimum structure:
+
+```json
+{
+  "soul": {
+    "identity": {
+      "personaName": "<name>",
+      "slug": "<slug>",
+      "role": "<role>",
+      "bio": "<one sentence>"
+    },
+    "character": {
+      "personality": "<comma-separated traits>",
+      "speakingStyle": "<style description>"
+    }
+  },
+  "body": { "runtime": { "framework": "<runner>" } },
+  "evolution": {
+    "instance": {
+      "enabled": true,
+      "boundaries": {
+        "immutableTraits": ["honest"],
+        "minFormality": -3,
+        "maxFormality": 6
+      }
+    }
+  }
+}
+```
+
+Add faculties / skills / constitutionAddendum only when clearly needed by the persona's role.
+
+### Step 4 — Generate and install
+
+```bash
+npx openpersona create --config ./persona.json --install
+```
+
+### Step 5 — Confirm and hand off
+
+Report what was generated: persona name, slug, key capabilities (faculties + skills), and evolution status. Tell the user how to activate it:
+
+```bash
+npx openpersona switch <slug>   # activate in the runner
+```
+
+---
+
+## Creating a Persona (field reference)
 
 **As an AI agent, always use the config-driven path:**
 
