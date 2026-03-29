@@ -79,7 +79,7 @@ When a user asks you to create a persona (e.g. "make me a coding mentor", "build
 
 | User request | Action |
 |---|---|
-| Matches an existing preset (companion, life assistant, stoic philosophy…) | Use `--preset <name>` directly — skip to Step 4 |
+| Matches an existing preset (`ai-girlfriend`, `life-assistant`, `stoic-mentor`, `samantha`, `health-butler`…) | Use `--preset <name>` directly — skip to Step 4 |
 | Specific role / domain / personality | Gather 3 required inputs (Step 2), then write persona.json (Step 3) |
 
 ### Step 2 — Gather minimum required inputs (3 questions max)
@@ -90,7 +90,7 @@ Ask only what you cannot infer. Use smart defaults for everything else.
 |---|---|---|
 | `personaName` + `slug` | "What should I call this persona?" | Infer from role description |
 | `role` | "What role should it play — assistant, coach, mentor, companion, or something else?" | `assistant` |
-| `body.runtime.framework` | "Which AI agent will use this persona — Cursor, Claude Code, OpenClaw, or other?" | `openclaw` |
+| `body.runtime.framework` | Only ask if you cannot infer the runner from context. If you are Cursor → `cursor`; Claude Code → `claude-code`; OpenClaw → `openclaw`. Ask the user only when genuinely uncertain. | `openclaw` |
 
 You can infer `bio`, `personality`, and `speakingStyle` from the user's description — do not ask unless the user gives conflicting signals. When in doubt, generate reasonable values and let the user correct them.
 
@@ -130,7 +130,7 @@ Notes:
 - **`memory` faculty is auto-injected** — do not add it manually unless you need to configure a non-default backend.
 - Add `voice` faculty when the user wants TTS / audio output.
 - Add `selfie` / `music` / `reminder` skills when the role clearly calls for them.
-- Add `constitutionAddendum` for professional roles operating in regulated domains (health, legal, financial) — see `schemas/persona.input.spec.md § Building Professional Personas`.
+- Add `constitutionAddendum` for professional roles in regulated domains (health, legal, financial). Example: `"constitutionAddendum": { "domain": "health_coaching", "additionalConstraints": ["Always recommend consulting a licensed professional for medical decisions."] }`.
 
 ### Step 4 — Generate and install
 
