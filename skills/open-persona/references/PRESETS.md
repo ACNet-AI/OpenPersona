@@ -10,14 +10,16 @@ npx openpersona create   # defaults to base
 
 ## Available Presets
 
-| Preset | Persona | Faculties | Skills | Best For |
-|--------|---------|-----------|--------|----------|
+| Preset | Persona | Faculties | Built-in Skills | Best For |
+|--------|---------|-----------|-----------------|----------|
 | `base` | **Base — Meta-persona (recommended starting point)** | memory, voice | — | Blank-slate with all core capabilities; personality emerges through interaction (evolution enabled) |
-| `samantha` | Samantha — Inspired by the movie *Her* | memory, voice | music | Deep conversation, emotional connection (evolution enabled) |
-| `ai-girlfriend` | Luna — Pianist turned developer | memory, voice | selfie, music | Visual + audio companion with rich personality (evolution enabled) |
-| `life-assistant` | Alex — Life management expert | memory | reminder | Schedule, weather, shopping, daily tasks (evolution enabled) |
-| `health-butler` | Vita — Professional nutritionist | memory | reminder | Diet, exercise, mood, health tracking (evolution enabled) |
-| `stoic-mentor` | Marcus — Digital twin of Marcus Aurelius | memory | — | Stoic philosophy, daily reflection, mentorship (evolution enabled) |
+| `samantha` | Samantha — Inspired by the movie *Her* | memory, voice | music | Deep conversation, emotional connection; includes soft-ref skills for web-search, creative-writing, workspace-digest (evolution enabled) |
+| `ai-girlfriend` | Luna — Pianist turned developer | memory, voice, vision† | selfie, music | Visual + audio companion; vision faculty is a soft ref (clawhub:vision-faculty); includes music-recommend soft ref (evolution enabled) |
+| `life-assistant` | Alex — Life management expert | memory | reminder | Schedule, weather, shopping, daily tasks; includes soft-ref skills for weather, task-manager, shopping-list, recipe-search, web-search (evolution enabled) |
+| `health-butler` | Vita — Professional nutritionist | memory | reminder | Diet, exercise, mood, health tracking; includes soft-ref skills for diet-tracker, exercise-planner, mood-journal, health-report, web-search (evolution enabled) |
+| `stoic-mentor` | Marcus — Digital twin of Marcus Aurelius | memory | — | Stoic philosophy, daily reflection; includes soft-ref skills for daily-reflection, meditations-reference, web-search (evolution enabled) |
+
+_† Soft reference — requires external install to activate. The persona is aware of dormant capabilities and will gracefully degrade when they are unavailable._
 
 ## Preset Details
 

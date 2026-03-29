@@ -228,7 +228,7 @@ A career coach persona can give advice, suggest strategies, and review materials
   },
   "faculties": [
     { "name": "memory" },
-    { "name": "voice", "config": { "ttsProvider": "openai", "voiceId": "nova" } }
+    { "name": "voice", "provider": "openai", "voiceId": "nova" }
   ],
   "evolution": {
     "instance": {

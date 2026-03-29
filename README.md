@@ -187,7 +187,7 @@ Each preset is a complete four-layer bundle (`persona.json`):
 |---------|-------------|-----------|--------|------------|
 | **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | memory, voice | — | Evolution-first design, no personality bias. Default for `npx openpersona create`. |
 | **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | memory, voice | music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | memory, voice | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | memory, voice, vision† | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. Vision faculty is a soft ref (clawhub:vision-faculty). |
 | **life-assistant** | Alex — 28-year-old life management expert. | memory | reminder | Schedule, weather, shopping, recipes, daily reminders; soul evolution enabled. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | memory | reminder | Diet logging, exercise plans, mood journaling, health reports; soul evolution enabled. |
 | **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | memory | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
