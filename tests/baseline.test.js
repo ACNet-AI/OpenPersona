@@ -262,6 +262,13 @@ describe('Universal Materials Baseline — base preset conformance', () => {
       assert.ok(!stderr.includes('evolution.instance.enabled is not true'), `unexpected warning: ${stderr}`);
     });
 
+    it('no enabled-missing warning when evolution.instance.enabled is explicitly false', () => {
+      // enabled: false is intentional — user knows evolution is off, do not warn
+      const persona = minimalPersona({ evolution: { instance: { enabled: false } } });
+      const stderr = captureStderr(() => normalizeEvolutionInput(persona));
+      assert.ok(!stderr.includes('evolution.instance.enabled is not true'), `unexpected warning for explicit false: ${stderr}`);
+    });
+
     it('warns when evolution is enabled but boundaries are missing', () => {
       const persona = minimalPersona({
         evolution: { instance: { enabled: true } },
