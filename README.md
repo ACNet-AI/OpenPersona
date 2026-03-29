@@ -64,6 +64,70 @@ git clone https://github.com/acnlabs/OpenPersona.git ~/.openclaw/skills/open-per
 
 Then say to your agent: _"Help me create a Samantha persona"_ — it will gather requirements, recommend faculties, and generate the persona.
 
+### Minimum Viable Persona
+
+The smallest working `persona.json` requires five fields:
+
+```json
+{
+  "soul": {
+    "identity": {
+      "personaName": "Alex",
+      "slug": "alex",
+      "bio": "A thoughtful assistant who adapts to the user's needs"
+    },
+    "character": {
+      "personality": "Curious, direct, and honest",
+      "speakingStyle": "Clear and concise; adapts tone to context"
+    }
+  }
+}
+```
+
+From these five fields, the generator produces a complete, fully functional skill pack:
+
+| What you declare | What OpenPersona auto-generates |
+|---|---|
+| `personaName`, `slug`, `bio` | Identity + A2A Agent Card + ACN config + deterministic wallet address |
+| `personality`, `speakingStyle` | Soul injection (`soul/injection.md`) with Self-Awareness (identity, body, capabilities) |
+| _(nothing)_ | `memory` faculty — auto-injected; cross-session recall works out of the box |
+| _(nothing)_ | Universal constitution (`soul/constitution.md`) — Safety > Honesty > Helpfulness |
+| _(nothing)_ | `scripts/state-sync.js` — Body nervous system; `read` / `write` / `signal` commands |
+| _(nothing)_ | `SKILL.md` — Agent-facing index with all four layer headings |
+
+**Add one line to connect to your agent runner:**
+
+```json
+{
+  "body": { "runtime": { "framework": "openclaw" } }
+}
+```
+
+Replace `"openclaw"` with your runner: `"cursor"`, `"claude-code"`, `"codex"`, or any custom value — the framework is runner-agnostic.
+
+**Add one block to enable personality growth:**
+
+```json
+{
+  "evolution": {
+    "instance": {
+      "enabled": true,
+      "boundaries": {
+        "immutableTraits": ["honest", "curious"],
+        "minFormality": -3,
+        "maxFormality": 6
+      }
+    }
+  }
+}
+```
+
+This unlocks relationship progression, mood tracking, trait emergence, and speaking style drift — all governed by the boundaries you declare.
+
+**The three gates enforce everything else automatically:** Generate Gate rejects invalid declarations; Install Gate verifies constitution integrity; Runtime Gate enforces evolution bounds during `state-sync.js` writes. You declare once, the framework enforces everywhere.
+
+> **Next step:** Use a preset (`--preset base`) to skip the above and start with memory + voice + evolution already wired.
+
 ## Key Features
 
 - **🧬 Soul Evolution** — Personas grow dynamically through interaction: relationship stages, mood shifts, evolved traits, with governance boundaries and rollback snapshots (★Experimental)
