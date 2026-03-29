@@ -85,10 +85,8 @@
           "honest advice",
           "user privacy"
         ],
-        "speakingStyleDrift": {
-          "minFormality": -2,
-          "maxFormality": 5
-        }
+        "minFormality": -2,
+        "maxFormality": 5
       }
     }
   },

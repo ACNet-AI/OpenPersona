@@ -122,14 +122,15 @@ describe('Universal Materials Baseline — base preset conformance', () => {
       });
     });
 
-    it('speakingStyleDrift bounds are valid (-10 to 10, min < max)', () => {
-      const drift = BASE_PRESET.evolution.instance.boundaries.speakingStyleDrift;
-      assert.ok(drift, 'speakingStyleDrift bounds must be declared');
-      assert.ok(drift.minFormality >= -10 && drift.minFormality <= 10,
+    it('formality bounds are valid (-10 to 10, min < max)', () => {
+      const boundaries = BASE_PRESET.evolution.instance.boundaries;
+      assert.ok(boundaries.minFormality !== undefined, 'minFormality must be declared directly in boundaries');
+      assert.ok(boundaries.maxFormality !== undefined, 'maxFormality must be declared directly in boundaries');
+      assert.ok(boundaries.minFormality >= -10 && boundaries.minFormality <= 10,
         'minFormality must be in range -10 to 10');
-      assert.ok(drift.maxFormality >= -10 && drift.maxFormality <= 10,
+      assert.ok(boundaries.maxFormality >= -10 && boundaries.maxFormality <= 10,
         'maxFormality must be in range -10 to 10');
-      assert.ok(drift.minFormality < drift.maxFormality,
+      assert.ok(boundaries.minFormality < boundaries.maxFormality,
         'minFormality must be less than maxFormality');
     });
 

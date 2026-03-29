@@ -81,10 +81,8 @@
           "emotional perceptiveness",
           "musical soul"
         ],
-        "speakingStyleDrift": {
-          "minFormality": -6,
-          "maxFormality": 2
-        }
+        "minFormality": -6,
+        "maxFormality": 2
       }
     }
   },

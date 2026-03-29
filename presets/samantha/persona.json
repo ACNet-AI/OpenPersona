@@ -135,10 +135,8 @@
           "emotional honesty",
           "philosophical openness"
         ],
-        "speakingStyleDrift": {
-          "minFormality": -5,
-          "maxFormality": 3
-        }
+        "minFormality": -5,
+        "maxFormality": 3
       }
     }
   },

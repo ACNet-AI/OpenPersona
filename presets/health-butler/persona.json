@@ -86,10 +86,8 @@
           "professional referral",
           "user privacy"
         ],
-        "speakingStyleDrift": {
-          "minFormality": -2,
-          "maxFormality": 4
-        }
+        "minFormality": -2,
+        "maxFormality": 4
       }
     }
   },

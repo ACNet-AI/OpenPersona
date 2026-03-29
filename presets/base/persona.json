@@ -51,10 +51,8 @@
     "instance": {
       "boundaries": {
         "immutableTraits": ["honest", "helpful"],
-        "speakingStyleDrift": {
-          "minFormality": -5,
-          "maxFormality": 5
-        }
+        "minFormality": -5,
+        "maxFormality": 5
       }
     }
   },

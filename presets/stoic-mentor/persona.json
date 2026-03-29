@@ -80,10 +80,8 @@
           "honest guidance",
           "philosophical grounding"
         ],
-        "speakingStyleDrift": {
-          "minFormality": -1,
-          "maxFormality": 7
-        }
+        "minFormality": -1,
+        "maxFormality": 7
       }
     }
   },
