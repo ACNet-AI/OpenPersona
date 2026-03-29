@@ -26,11 +26,6 @@
       "framework": "openclaw"
     }
   },
-  "faculties": [
-    {
-      "name": "memory"
-    }
-  ],
   "skills": [
     {
       "name": "diet-tracker",
@@ -74,12 +69,6 @@
     }
   },
   "evolution": {
-    "enabled": true,
-    "relationshipProgression": true,
-    "moodTracking": true,
-    "traitEmergence": false,
-    "speakingStyleDrift": false,
-    "interestDiscovery": true,
     "instance": {
       "boundaries": {
         "immutableTraits": [
@@ -89,7 +78,13 @@
         ],
         "minFormality": -2,
         "maxFormality": 4
-      }
+      },
+      "enabled": true,
+      "relationshipProgression": true,
+      "moodTracking": true,
+      "traitEmergence": false,
+      "speakingStyleDrift": false,
+      "interestDiscovery": true
     }
   },
   "rhythm": {

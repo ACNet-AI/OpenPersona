@@ -27,9 +27,6 @@
   },
   "faculties": [
     {
-      "name": "memory"
-    },
-    {
       "name": "voice"
     },
     {
@@ -68,12 +65,6 @@
     }
   },
   "evolution": {
-    "enabled": true,
-    "relationshipProgression": true,
-    "moodTracking": true,
-    "traitEmergence": true,
-    "speakingStyleDrift": true,
-    "interestDiscovery": true,
     "instance": {
       "boundaries": {
         "immutableTraits": [
@@ -83,7 +74,13 @@
         ],
         "minFormality": -6,
         "maxFormality": 2
-      }
+      },
+      "enabled": true,
+      "relationshipProgression": true,
+      "moodTracking": true,
+      "traitEmergence": true,
+      "speakingStyleDrift": true,
+      "interestDiscovery": true
     }
   },
   "rhythm": {

@@ -90,10 +90,10 @@ describe('Universal Materials Baseline — base preset conformance', () => {
   });
 
   describe('Faculty layer — cognition (memory required)', () => {
-    it('memory faculty is declared in base preset', () => {
+    it('memory faculty is NOT manually declared in base preset (auto-injected)', () => {
       const faculties = BASE_PRESET.faculties || [];
       const hasMemory = faculties.some(f => f.name === 'memory');
-      assert.ok(hasMemory, 'base preset must declare memory faculty');
+      assert.ok(!hasMemory, 'base preset should not manually declare memory — it is auto-injected by the generator');
     });
 
     it('memory faculty appears in generated SKILL.md', async () => {

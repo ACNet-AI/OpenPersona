@@ -27,9 +27,6 @@
   },
   "faculties": [
     {
-      "name": "memory"
-    },
-    {
       "name": "voice",
       "provider": "elevenlabs",
       "voiceId": "LEnmbrrxYsUYS7vsRRwD",
@@ -122,12 +119,6 @@
     }
   },
   "evolution": {
-    "enabled": true,
-    "relationshipProgression": true,
-    "moodTracking": true,
-    "traitEmergence": true,
-    "speakingStyleDrift": true,
-    "interestDiscovery": true,
     "instance": {
       "boundaries": {
         "immutableTraits": [
@@ -137,7 +128,13 @@
         ],
         "minFormality": -5,
         "maxFormality": 3
-      }
+      },
+      "enabled": true,
+      "relationshipProgression": true,
+      "moodTracking": true,
+      "traitEmergence": true,
+      "speakingStyleDrift": true,
+      "interestDiscovery": true
     }
   },
   "rhythm": {

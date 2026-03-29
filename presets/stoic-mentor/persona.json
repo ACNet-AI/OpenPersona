@@ -31,11 +31,6 @@
       "framework": "openclaw"
     }
   },
-  "faculties": [
-    {
-      "name": "memory"
-    }
-  ],
   "skills": [
     {
       "name": "daily-reflection",
@@ -66,12 +61,6 @@
     }
   },
   "evolution": {
-    "enabled": true,
-    "relationshipProgression": true,
-    "moodTracking": false,
-    "traitEmergence": false,
-    "speakingStyleDrift": false,
-    "interestDiscovery": true,
     "instance": {
       "boundaries": {
         "immutableTraits": [
@@ -82,7 +71,13 @@
         ],
         "minFormality": -1,
         "maxFormality": 7
-      }
+      },
+      "enabled": true,
+      "relationshipProgression": true,
+      "moodTracking": false,
+      "traitEmergence": false,
+      "speakingStyleDrift": false,
+      "interestDiscovery": true
     }
   },
   "rhythm": {
