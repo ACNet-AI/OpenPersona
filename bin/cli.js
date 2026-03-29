@@ -69,7 +69,7 @@ program
         message: 'How would you like to create your persona?',
         choices: [
           { name: 'Base        — blank-slate with memory + voice + evolution (recommended)', value: 'base' },
-          { name: 'Preset      — pick a pre-built character (samantha, coach, life-assistant…)', value: 'preset' },
+          { name: 'Preset      — pick a pre-built character (samantha, stoic-mentor, life-assistant…)', value: 'preset' },
           { name: 'From scratch — guided wizard', value: 'custom' },
         ],
       }]);
@@ -193,8 +193,8 @@ program
           },
         ]);
 
-        const role = answers.role === 'other' ? answers.roleCustom : answers.role;
-        const framework = answers.framework === 'other' ? answers.frameworkCustom : answers.framework;
+        const role = answers.role === 'other' ? (answers.roleCustom || '').trim() || 'assistant' : answers.role;
+        const framework = answers.framework === 'other' ? (answers.frameworkCustom || '').trim() : answers.framework;
         const faculties = [
           { name: 'memory' },
           ...(answers.extraFaculties || []).map((name) => ({ name })),
@@ -246,7 +246,7 @@ program
         printInfo('Dry run — preview only, no files written.');
         printInfo(`Would generate: persona-${flatSlug || slugify(flatName)}/`);
         printInfo(`  SKILL.md, soul/, references/, agent-card.json, acn-config.json, scripts/, state.json`);
-        if (persona.evolution?.enabled) {
+        if (persona.evolution?.enabled || persona.evolution?.instance?.enabled) {
           printInfo(`  soul/self-narrative.md (★Experimental — evolution enabled)`);
         }
         const faculties = (persona.faculties || []).map((f) => (typeof f === 'string' ? f : f.name));
