@@ -174,7 +174,7 @@ program
           {
             type: 'checkbox',
             name: 'extraFaculties',
-            message: 'Additional faculties (memory is always included):',
+            message: 'Optional faculties (memory is auto-included by the framework):',
             choices: [
               { name: 'voice — text-to-speech (ElevenLabs / OpenAI TTS)', value: 'voice' },
             ],
@@ -206,10 +206,7 @@ program
 
         const role = answers.role === 'other' ? (answers.roleCustom || '').trim() || 'assistant' : answers.role;
         const framework = answers.framework === 'other' ? (answers.frameworkCustom || '').trim() : answers.framework;
-        const faculties = [
-          { name: 'memory' },
-          ...(answers.extraFaculties || []).map((name) => ({ name })),
-        ];
+        const faculties = (answers.extraFaculties || []).map((name) => ({ name }));
         const skills = (answers.skills || []).map((name) => ({ name }));
         const immutableTraits = answers.immutableTraits
           ? answers.immutableTraits.split(',').map((t) => t.trim()).filter(Boolean)
@@ -229,8 +226,8 @@ program
             },
           },
           ...(framework ? { body: { runtime: { framework } } } : {}),
-          faculties,
-          skills,
+          ...(faculties.length ? { faculties } : {}),
+          ...(skills.length ? { skills } : {}),
           ...(answers.evolutionEnabled ? {
             evolution: {
               instance: {
