@@ -79,8 +79,8 @@ When a user asks you to create a persona (e.g. "make me a coding mentor", "build
 
 | User request | Action |
 |---|---|
-| Matches an existing preset (companion, life assistant, stoic philosophy…) | Use `--preset <name>` directly — skip to Step 3 |
-| Specific role / domain / personality | Gather 3 required inputs (Step 2), then write persona.json |
+| Matches an existing preset (companion, life assistant, stoic philosophy…) | Use `--preset <name>` directly — skip to Step 4 |
+| Specific role / domain / personality | Gather 3 required inputs (Step 2), then write persona.json (Step 3) |
 
 ### Step 2 — Gather minimum required inputs (3 questions max)
 
@@ -117,7 +117,7 @@ Use your Write tool to create `persona.json` in the current directory (or a path
     "instance": {
       "enabled": true,
       "boundaries": {
-        "immutableTraits": ["honest"],
+        "immutableTraits": ["honest", "curious"],
         "minFormality": -3,
         "maxFormality": 6
       }
@@ -126,12 +126,20 @@ Use your Write tool to create `persona.json` in the current directory (or a path
 }
 ```
 
-Add faculties / skills / constitutionAddendum only when clearly needed by the persona's role.
+Notes:
+- **`memory` faculty is auto-injected** — do not add it manually unless you need to configure a non-default backend.
+- Add `voice` faculty when the user wants TTS / audio output.
+- Add `selfie` / `music` / `reminder` skills when the role clearly calls for them.
+- Add `constitutionAddendum` for professional roles operating in regulated domains (health, legal, financial) — see `schemas/persona.input.spec.md § Building Professional Personas`.
 
 ### Step 4 — Generate and install
 
 ```bash
+# If you wrote persona.json (custom path):
 npx openpersona create --config ./persona.json --install
+
+# If you chose a preset (preset path):
+npx openpersona create --preset <name> --install
 ```
 
 ### Step 5 — Confirm and hand off
