@@ -241,6 +241,27 @@ describe('Universal Materials Baseline — base preset conformance', () => {
       assert.ok(!stderrOutput.includes('memory faculty auto-injected'), 'must not inject memory when already declared');
     });
 
+    it('warns when evolution.instance is declared without enabled: true', () => {
+      // Simulate the bug we fixed in all 6 presets: instance.boundaries present but enabled missing
+      const persona = minimalPersona({
+        evolution: { instance: { boundaries: { immutableTraits: ['honest'], minFormality: -2, maxFormality: 4 } } },
+      });
+      // normalizeEvolutionInput short-circuits because evo.instance is defined
+      const stderr = captureStderr(() => normalizeEvolutionInput(persona));
+      assert.ok(
+        stderr.includes('evolution.instance.enabled is not true'),
+        `expected enabled-missing warning, got: ${stderr}`
+      );
+    });
+
+    it('no enabled-missing warning when evolution.instance.enabled is true', () => {
+      const persona = minimalPersona({
+        evolution: { instance: { enabled: true, boundaries: { immutableTraits: ['honest'], minFormality: -2, maxFormality: 4 } } },
+      });
+      const stderr = captureStderr(() => normalizeEvolutionInput(persona));
+      assert.ok(!stderr.includes('evolution.instance.enabled is not true'), `unexpected warning: ${stderr}`);
+    });
+
     it('warns when evolution is enabled but boundaries are missing', () => {
       const persona = minimalPersona({
         evolution: { instance: { enabled: true } },
