@@ -44,7 +44,7 @@ If an automated scanner flags “suspicious,” it is usually because **persona 
 
 ## What You Can Do
 
-1. **Create Persona** — Through conversation, gather 4-layer fields and generate a skill pack (`npx openpersona create`); includes advising on faculties/skills, searching ClawHub / skills.sh for external skills, and writing custom SKILL.md files for missing capabilities
+1. **Create Persona** — Through conversation, gather requirements and generate a skill pack; write `persona.json` then run `npx openpersona create --config ./persona.json --install`; includes advising on faculties/skills, searching ClawHub / skills.sh for external skills, and writing custom SKILL.md files for missing capabilities
 2. **Find & Install Personas** — `npx openpersona search <query>` to discover community personas; `npx openpersona install <slug>` or `npx openpersona install <owner/repo>` to install
 3. **Manage Personas** — List, update, fork, switch, reset, export/import installed personas
 4. **Publish Persona** — Publish a GitHub-hosted persona pack to [OpenPersona](https://openpersona-frontend.vercel.app/) (the vertical persona directory); optionally also to ClawHub / skills.sh
@@ -178,7 +178,7 @@ npx openpersona create --preset base --install   # skip wizard, use base preset
 - **Recommended:** `soul.identity.role`, `soul.aesthetic.{creature, emoji, age, vibe}`, `soul.character.{background, boundaries}`
 - **Optional:** `soul.identity.{sourceIdentity, constitutionAddendum}`, `soul.aesthetic.referenceImage`, `soul.character.behaviorGuide`
 
-**The `role` field** defines the persona's relationship to the user. Common values: `companion` (default), `assistant`, `character`, `brand`, `pet`, `mentor`, `therapist`, `coach`, `collaborator`, `guardian`, `entertainer`, `narrator`. Custom values are welcome.
+**The `role` field** defines the persona's relationship to the user. Common values: `assistant`, `companion`, `coach`, `mentor`, `character`, `brand`, `pet`, `therapist`, `collaborator`, `guardian`, `entertainer`, `narrator`. Custom values are welcome. Default when not specified: `assistant`.
 
 **The `sourceIdentity` field** marks the persona as a digital twin of a real-world entity (person, animal, character, brand, historical figure). When present, the generator injects disclosure obligations and faithfulness constraints.
 
@@ -197,7 +197,9 @@ npx openpersona create --preset base --install   # skip wizard, use base preset
 
 ### Faculty
 
-Faculties are always-active persistent capabilities. Declared as an object array: `[{ "name": "voice", "provider": "elevenlabs" }, { "name": "memory" }]`
+Faculties are always-active persistent capabilities. Declared as an object array: `[{ "name": "voice", "provider": "elevenlabs" }]`
+
+> **`memory` is auto-injected** — do not add it manually unless you need to configure a non-default backend. It is always present in the generated pack.
 
 - **`voice`** (`expression`) — TTS voice synthesis; requires `provider` (e.g. `elevenlabs`) + `ELEVENLABS_API_KEY`
 - **`avatar`** (`expression`) — External avatar runtime bridge; graceful text-only fallback when unavailable. → When configuring avatar (provider, Live2D/VRM, fallback rules): read `references/AVATAR.md`
