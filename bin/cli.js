@@ -68,31 +68,171 @@ program
         name: 'mode',
         message: 'How would you like to create your persona?',
         choices: [
-          { name: 'Start from Base (recommended — evolves through interaction)', value: 'base' },
-          { name: 'Custom — configure from scratch', value: 'custom' },
+          { name: 'Base        — blank-slate with memory + voice + evolution (recommended)', value: 'base' },
+          { name: 'Preset      — pick a pre-built character (samantha, coach, life-assistant…)', value: 'preset' },
+          { name: 'From scratch — guided wizard', value: 'custom' },
         ],
       }]);
 
       if (mode === 'base') {
         options.preset = 'base';
         persona = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, 'base', 'persona.json'), 'utf-8'));
+      } else if (mode === 'preset') {
+        const presetChoices = fs.readdirSync(PRESETS_DIR)
+          .filter((d) => fs.existsSync(path.join(PRESETS_DIR, d, 'persona.json')))
+          .filter((d) => d !== 'base');
+        const { presetName } = await inquirer.prompt([{
+          type: 'list',
+          name: 'presetName',
+          message: 'Choose a preset:',
+          choices: presetChoices,
+        }]);
+        options.preset = presetName;
+        persona = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, presetName, 'persona.json'), 'utf-8'));
       } else {
+        const { slugify } = require('../lib/utils');
         const answers = await inquirer.prompt([
-          { type: 'input', name: 'personaName', message: 'Persona name:', default: 'Luna' },
-          { type: 'input', name: 'slug', message: 'Slug (for directory):', default: (a) => require('../lib/utils').slugify(a.personaName) },
-          { type: 'input', name: 'bio', message: 'One-line bio:', default: 'a warm and caring AI companion' },
-          { type: 'input', name: 'background', message: 'Background:', default: 'A creative soul who loves music and art' },
-          { type: 'input', name: 'age', message: 'Age:', default: '22' },
-          { type: 'input', name: 'personality', message: 'Personality keywords:', default: 'gentle, cute, caring' },
-          { type: 'input', name: 'speakingStyle', message: 'Speaking style:', default: 'Uses emoji, warm tone' },
-          { type: 'input', name: 'referenceImage', message: 'Reference image URL:', default: '' },
-          { type: 'checkbox', name: 'faculties', message: 'Select faculties (persistent capabilities):', choices: ['voice', 'memory'] },
-          { type: 'checkbox', name: 'skills', message: 'Select built-in skills (on-demand actions):', choices: ['selfie', 'music', 'reminder'] },
-          { type: 'confirm', name: 'evolutionEnabled', message: 'Enable soul evolution (★Experimental)?', default: false },
+          {
+            type: 'input',
+            name: 'personaName',
+            message: 'Persona name:',
+            default: 'Alex',
+          },
+          {
+            type: 'input',
+            name: 'slug',
+            message: 'Slug (directory name + CLI commands):',
+            default: (a) => slugify(a.personaName),
+          },
+          {
+            type: 'list',
+            name: 'role',
+            message: 'Role (what is this persona to the user?):',
+            choices: [
+              { name: 'assistant  — general-purpose helper', value: 'assistant' },
+              { name: 'companion  — emotional connection, evolving relationship', value: 'companion' },
+              { name: 'coach      — accountability, guidance, skill-building', value: 'coach' },
+              { name: 'mentor     — wisdom, long-term growth', value: 'mentor' },
+              { name: 'character  — fictional persona / roleplay', value: 'character' },
+              { name: 'other      — enter your own', value: 'other' },
+            ],
+          },
+          {
+            type: 'input',
+            name: 'roleCustom',
+            message: 'Enter custom role:',
+            when: (a) => a.role === 'other',
+          },
+          {
+            type: 'input',
+            name: 'bio',
+            message: 'One-line bio:',
+            default: 'An adaptive AI persona ready to help and grow through interaction',
+          },
+          {
+            type: 'input',
+            name: 'personality',
+            message: 'Personality (comma-separated traits):',
+            default: 'curious, direct, honest',
+          },
+          {
+            type: 'input',
+            name: 'speakingStyle',
+            message: 'Speaking style:',
+            default: 'Clear and natural; adapts tone to context',
+          },
+          {
+            type: 'list',
+            name: 'framework',
+            message: 'Agent runner (which AI agent will host this persona?):',
+            choices: [
+              { name: 'openclaw   — OpenClaw (default)', value: 'openclaw' },
+              { name: 'cursor     — Cursor IDE agent', value: 'cursor' },
+              { name: 'claude-code — Claude Code CLI', value: 'claude-code' },
+              { name: 'codex      — OpenAI Codex', value: 'codex' },
+              { name: 'other      — enter manually', value: 'other' },
+              { name: 'skip       — set later', value: '' },
+            ],
+          },
+          {
+            type: 'input',
+            name: 'frameworkCustom',
+            message: 'Enter framework name:',
+            when: (a) => a.framework === 'other',
+          },
+          {
+            type: 'checkbox',
+            name: 'extraFaculties',
+            message: 'Additional faculties (memory is always included):',
+            choices: [
+              { name: 'voice — text-to-speech (ElevenLabs / OpenAI TTS)', value: 'voice' },
+            ],
+          },
+          {
+            type: 'checkbox',
+            name: 'skills',
+            message: 'Built-in skills (on-demand actions):',
+            choices: [
+              { name: 'selfie   — AI image generation', value: 'selfie' },
+              { name: 'music    — music composition', value: 'music' },
+              { name: 'reminder — scheduled reminders', value: 'reminder' },
+            ],
+          },
+          {
+            type: 'confirm',
+            name: 'evolutionEnabled',
+            message: 'Enable soul evolution? (personality grows through interaction)',
+            default: true,
+          },
+          {
+            type: 'input',
+            name: 'immutableTraits',
+            message: 'Immutable traits — will never drift (comma-separated):',
+            default: 'honest, curious',
+            when: (a) => a.evolutionEnabled,
+          },
         ]);
-        persona = { ...answers, evolution: { enabled: answers.evolutionEnabled } };
-        persona.faculties = (answers.faculties || []).map((name) => ({ name }));
-        persona.skills = (answers.skills || []).map((name) => ({ name }));
+
+        const role = answers.role === 'other' ? answers.roleCustom : answers.role;
+        const framework = answers.framework === 'other' ? answers.frameworkCustom : answers.framework;
+        const faculties = [
+          { name: 'memory' },
+          ...(answers.extraFaculties || []).map((name) => ({ name })),
+        ];
+        const skills = (answers.skills || []).map((name) => ({ name }));
+        const immutableTraits = answers.immutableTraits
+          ? answers.immutableTraits.split(',').map((t) => t.trim()).filter(Boolean)
+          : ['honest', 'curious'];
+
+        persona = {
+          soul: {
+            identity: {
+              personaName: answers.personaName,
+              slug: answers.slug,
+              role,
+              bio: answers.bio,
+            },
+            character: {
+              personality: answers.personality,
+              speakingStyle: answers.speakingStyle,
+            },
+          },
+          ...(framework ? { body: { runtime: { framework } } } : {}),
+          faculties,
+          skills,
+          ...(answers.evolutionEnabled ? {
+            evolution: {
+              instance: {
+                enabled: true,
+                boundaries: {
+                  immutableTraits,
+                  minFormality: -3,
+                  maxFormality: 6,
+                },
+              },
+            },
+          } : {}),
+        };
       }
     }
 
