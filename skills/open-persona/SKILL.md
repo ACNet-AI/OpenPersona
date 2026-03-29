@@ -62,18 +62,32 @@ OpenPersona uses a **4+5+3** model: **4 Layers** (Soul · Body · Faculty · Ski
 The default preset is **`base`** — a blank-slate meta-persona with memory + voice faculties, evolution enabled, no pre-built skills. Recommended starting point for any new persona.
 
 ```bash
+# Agent / scripted usage (always use --preset or --config):
 npx openpersona create --preset base --install
-# or just:
-npx openpersona create   # interactive wizard, defaults to base
+
+# Human / terminal usage (interactive wizard):
+npx openpersona create
 ```
 
 → Full preset catalog (samantha, ai-girlfriend, life-assistant, health-butler, stoic-mentor, and more): `references/PRESETS.md`
 
 ## Creating a Persona
 
-**Two entry points:**
-- **Interactive** (recommended for beginners): `npx openpersona create` — interactive wizard, no file needed
-- **Config-driven** (recommended for agents): gather the fields below → write `persona.json` → run `npx openpersona create --config ./persona.json --install`
+**As an AI agent, always use the config-driven path:**
+
+```bash
+# Step 1 — write persona.json (gather fields below, then write the file)
+# Step 2 — generate + install
+npx openpersona create --config ./persona.json --install
+```
+
+> **Why:** Running `npx openpersona create` without flags launches an interactive wizard that requires a TTY. In agent environments there is no TTY — the process will exit with an error. Always pass `--config` or `--preset`.
+
+**Human / terminal users** can omit flags to get the interactive wizard:
+```bash
+npx openpersona create          # wizard: choose Base / Preset / From scratch
+npx openpersona create --preset base --install   # skip wizard, use base preset
+```
 
 `persona.json` declares all 4 layers in a single file. Gather inputs by layer:
 

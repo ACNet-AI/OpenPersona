@@ -63,6 +63,17 @@ program
       }
       persona = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     } else {
+      // Non-interactive guard: agents and CI environments have no TTY.
+      // Hanging on prompts is worse than a clear error — fail fast.
+      if (!process.stdin.isTTY) {
+        printError(
+          'No --preset or --config provided and stdin is not a TTY (non-interactive environment).\n' +
+          '  Agent usage:   npx openpersona create --config ./persona.json --install\n' +
+          '  Preset usage:  npx openpersona create --preset base --install\n' +
+          '  Human wizard:  run in an interactive terminal without flags'
+        );
+        process.exit(1);
+      }
       const { mode } = await inquirer.prompt([{
         type: 'list',
         name: 'mode',
