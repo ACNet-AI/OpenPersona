@@ -142,6 +142,8 @@ npx openpersona create --config ./persona.json --install
 npx openpersona create --preset <name> --install
 ```
 
+> **Agent note:** Always pass `--config` or `--preset`. Running `npx openpersona create` without flags launches an interactive wizard that requires a TTY — in agent environments there is no TTY and the process will exit with an error.
+
 ### Step 5 — Confirm and hand off
 
 Report what was generated: persona name, slug, key capabilities (faculties + skills), and evolution status. Tell the user how to activate it:
@@ -152,25 +154,9 @@ npx openpersona switch <slug>   # activate in the runner
 
 ---
 
-## Creating a Persona (field reference)
+## Field Reference — `persona.json` by Layer
 
-**As an AI agent, always use the config-driven path:**
-
-```bash
-# Step 1 — write persona.json (gather fields below, then write the file)
-# Step 2 — generate + install
-npx openpersona create --config ./persona.json --install
-```
-
-> **Why:** Running `npx openpersona create` without flags launches an interactive wizard that requires a TTY. In agent environments there is no TTY — the process will exit with an error. Always pass `--config` or `--preset`.
-
-**Human / terminal users** can omit flags to get the interactive wizard:
-```bash
-npx openpersona create          # wizard: choose Base / Preset / From scratch
-npx openpersona create --preset base --install   # skip wizard, use base preset
-```
-
-`persona.json` declares all 4 layers in a single file. Gather inputs by layer:
+`persona.json` declares all 4 layers in a single file. Use this as a lookup when writing Step 3 above. Gather inputs by layer:
 
 ### Soul
 
@@ -221,8 +207,6 @@ To find external skills: check local `layers/skills/`, search ClawHub via `npx c
 **`additionalAllowedTools`** — extra tool permissions beyond what faculties contribute automatically.
 
 For `rhythm` (heartbeat + circadian) configuration → see [Systemic Concepts → Rhythm](#rhythm)
-
-Once all fields are gathered, write `persona.json` and run `npx openpersona create --config ./persona.json --install`.
 
 ### Creating Custom Skills
 
