@@ -388,7 +388,7 @@ describe('P23 evolution multi-dimensional expansion', () => {
       evolution: {
         instance: {
           enabled: true,
-          boundaries: { immutableTraits: ['curious'], speakingStyleDrift: { minFormality: -2, maxFormality: 4 } },
+          boundaries: { immutableTraits: ['curious'], minFormality: -2, maxFormality: 4 },
           sources: [{ name: 'test-src' }],
         },
         pack: { enabled: false, engine: 'signal', triggerAfterEvents: 20 },
