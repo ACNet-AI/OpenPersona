@@ -22,7 +22,10 @@
   },
   "body": {
     "runtime": {
-      "framework": "openclaw"
+      "framework": "openclaw",
+      "modalities": [
+        { "type": "voice", "provider": "elevenlabs", "inputProvider": "whisper" }
+      ]
     }
   },
   "faculties": [

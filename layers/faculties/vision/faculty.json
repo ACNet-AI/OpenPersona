@@ -1,0 +1,17 @@
+{
+  "name": "vision",
+  "dimension": "sense",
+  "description": "Visual perception — interpret images, screenshots, diagrams, and video frames natively via the model's vision capability. No external API required; provider declared in body.runtime.modalities.",
+  "allowedTools": ["Bash(node scripts/state-sync.js signal capability_gap:*)"],
+  "envVars": [],
+  "triggers": [
+    "look at this",
+    "what do you see",
+    "describe this image",
+    "analyze this screenshot",
+    "read this diagram",
+    "what's in this photo",
+    "can you see this"
+  ],
+  "files": ["SKILL.md"]
+}

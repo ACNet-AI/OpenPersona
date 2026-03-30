@@ -22,7 +22,18 @@
   },
   "body": {
     "runtime": {
-      "framework": "openclaw"
+      "framework": "openclaw",
+      "modalities": [
+        {
+          "type": "voice",
+          "provider": "elevenlabs",
+          "inputProvider": "whisper"
+        },
+        {
+          "type": "vision",
+          "provider": "claude-vision"
+        }
+      ]
     }
   },
   "faculties": [
@@ -30,8 +41,7 @@
       "name": "voice"
     },
     {
-      "name": "vision",
-      "install": "clawhub:vision-faculty"
+      "name": "vision"
     }
   ],
   "skills": [

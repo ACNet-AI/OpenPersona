@@ -172,6 +172,28 @@
                 }
               }
             },
+            "modalities": {
+              "type": "array",
+              "description": "Declared digital I/O modalities the runtime supports. Each entry is a shorthand string (e.g. 'voice') or an object with type + optional provider config. Known types: text (baseline, implicit), voice (TTS+STT → auto-injects voice faculty), vision, document, location, emotion, sensor. Type is an open string — custom values are allowed. Physical modalities (motion, haptic, hardware sensor) belong in body.physical.capabilities, not here.",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "required": ["type"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "type": { "type": "string", "description": "Modality type (open string — not a closed enum). Known: text, voice, vision, document, location, emotion, sensor." },
+                      "provider": { "type": "string", "description": "Primary technology provider for this modality (e.g. 'elevenlabs' for voice TTS, 'claude-vision' for vision)." },
+                      "inputProvider": { "type": "string", "description": "Input-direction provider when different from output (e.g. 'whisper' for voice STT)." },
+                      "outputProvider": { "type": "string", "description": "Output-direction provider when declared separately from input." },
+                      "direction": { "type": "string", "enum": ["input", "output", "both"], "description": "I/O direction for this modality. Default: 'both'." },
+                      "config": { "type": "object", "additionalProperties": true, "description": "Provider-specific configuration object." }
+                    }
+                  }
+                ]
+              }
+            },
             "resources": {
               "type": "array",
               "items": { "type": "string" },
@@ -236,11 +258,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Faculty identifier (e.g. 'voice', 'memory', 'selfie', 'reminder', 'music', or custom)"
+            "description": "Faculty identifier. Built-in: 'memory' (cognition, auto-injected), 'voice' (expression, auto-injected when voice modality declared), 'vision' (sense, auto-injected when vision modality declared), 'emotion-sensing' (sense, explicit opt-in), 'avatar' (expression, external install). Custom faculty names are supported."
           },
           "install": {
             "type": "string",
-            "description": "Install source for external faculties (e.g. 'clawhub:vision-faculty')"
+            "description": "Install source for external/soft-ref faculties with no local definition (e.g. 'clawhub:avatar-runtime'). Built-in faculties (memory, voice, vision, emotion-sensing) have local definitions — omit install for them."
           }
         }
       }

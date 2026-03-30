@@ -68,11 +68,16 @@ Everything else has defaults or is omitted gracefully. A minimal persona:
 | Capability | Default | When injected | Override |
 |-----------|---------|--------------|---------|
 | `memory` faculty | `{"name": "memory"}` | Always — when no `memory` entry exists in `faculties` | Declare `{"name": "memory", "provider": "mem0", ...}` to configure explicitly |
+| `voice` faculty | `{"name": "voice"}` | When `body.runtime.modalities` contains a `voice` entry and `voice` is not already in `faculties` | Declare `{"name": "voice", "provider": "elevenlabs", ...}` to configure explicitly |
+| `vision` faculty | `{"name": "vision"}` | When `body.runtime.modalities` contains a `vision` entry and `vision` is not already in `faculties` | Declare `{"name": "vision"}` explicitly to prevent auto-injection (rarely needed) |
 
-When memory is auto-injected, the generator emits a notice to stderr:
+> `emotion-sensing` faculty is **not** auto-injected — it must be explicitly declared in `faculties`. It provides affective perception as a persistent behavioral capability; not all personas should have it by default.
+
+When capabilities are auto-injected, the generator emits notices to stderr:
 ```
 [openpersona] baseline: memory faculty auto-injected (not declared in persona.json).
-Add {"name": "memory"} to faculties to configure it explicitly.
+[openpersona] baseline: voice faculty auto-injected from body.runtime.modalities declaration.
+[openpersona] baseline: vision faculty auto-injected from body.runtime.modalities declaration.
 ```
 
 **Baseline warnings (non-blocking):**
@@ -80,6 +85,7 @@ Add {"name": "memory"} to faculties to configure it explicitly.
 | Condition | Warning |
 |-----------|---------|
 | `evolution.instance.enabled: true` but no `evolution.instance.boundaries` | Warns that drift constraints are undeclared. Add `boundaries` with `immutableTraits` and formality bounds. |
+| `evolution.instance` declared but `evolution.instance.enabled` is not `true` | Warns that evolution will be silently disabled. |
 
 Warnings do not block generation — they surface quality gaps so you can decide whether to address them.
 

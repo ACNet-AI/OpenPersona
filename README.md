@@ -251,7 +251,7 @@ Each preset is a complete four-layer bundle (`persona.json`):
 |---------|-------------|-----------|--------|------------|
 | **base** | **Base — Meta-persona (recommended starting point).** Blank-slate with all core capabilities; personality emerges through interaction. | memory, voice | — | Evolution-first design, no personality bias. Default for `npx openpersona create`. |
 | **samantha** | Samantha — Inspired by the movie *Her*. An AI fascinated by what it means to be alive. | memory, voice | music | TTS, music composition, soul evolution, proactive heartbeat. No selfie — true to character. |
-| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | memory, voice, vision† | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. Vision faculty is a soft ref (clawhub:vision-faculty). |
+| **ai-girlfriend** | Luna — A 22-year-old pianist turned developer from coastal Oregon. | memory, voice, vision | selfie, music | Rich backstory, selfie generation, voice messages, music composition, soul evolution. Vision auto-injected via `body.runtime.modalities`. |
 | **life-assistant** | Alex — 28-year-old life management expert. | memory | reminder | Schedule, weather, shopping, recipes, daily reminders; soul evolution enabled. |
 | **health-butler** | Vita — 32-year-old professional nutritionist. | memory | reminder | Diet logging, exercise plans, mood journaling, health reports; soul evolution enabled. |
 | **stoic-mentor** | Marcus — Digital twin of Marcus Aurelius, Stoic philosopher-emperor. | memory | — | Stoic philosophy, daily reflection, mentorship, soul evolution. |
@@ -293,9 +293,11 @@ persona-samantha/
 
 | Faculty | Dimension | Description | Provider | Env Vars |
 |---------|-----------|-------------|----------|----------|
-| **voice** | expression | Text-to-speech voice synthesis | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID`, `TTS_STABILITY`, `TTS_SIMILARITY` |
+| **voice** | expression | Text-to-speech voice synthesis. Auto-injected when `body.runtime.modalities` declares `voice`. | ElevenLabs / OpenAI TTS / Qwen3-TTS | `ELEVENLABS_API_KEY` (or `TTS_API_KEY`), `TTS_PROVIDER`, `TTS_VOICE_ID` |
+| **vision** | sense | Native model visual perception — images, screenshots, diagrams. Auto-injected when `body.runtime.modalities` declares `vision`. No scripts required. | Model-native (e.g. Claude, GPT-4o) | — |
+| **emotion-sensing** | sense | Affective perception from text tone, phrasing, and declared context. Explicit opt-in — not auto-injected. Never clinical assessment. | Model-native (prompt-layer inference) | — |
 | **avatar** | expression | External avatar runtime bridge (image / 3D / motion / voice) with graceful text-only fallback | HeyGen (via `clawhub:avatar-runtime`) | `AVATAR_RUNTIME_URL`, `AVATAR_API_KEY` |
-| **memory** | cognition | Cross-session memory with provider-pluggable backend | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
+| **memory** | cognition | Cross-session memory with provider-pluggable backend. Always auto-injected. | local (default), Mem0, Zep | `MEMORY_PROVIDER`, `MEMORY_API_KEY`, `MEMORY_BASE_PATH` |
 
 ### Built-in Skills
 
@@ -638,9 +640,11 @@ layers/                 # Four-layer module source pool
   soul/                 #   Soul layer: constitution.md (universal values)
   body/                 #   Body layer modules (physical/runtime/appearance)
   faculties/            #   Faculty layer modules
-    voice/              #     expression — TTS voice synthesis
+    voice/              #     expression — TTS voice synthesis (auto-injected w/ voice modality)
+    vision/             #     sense — native model visual perception (auto-injected w/ vision modality)
+    emotion-sensing/    #     sense — affective perception (explicit opt-in)
     avatar/             #     expression — avatar appearance & Live2D/VRM support
-    memory/             #     cognition — cross-session memory (local/Mem0/Zep)
+    memory/             #     cognition — cross-session memory (local/Mem0/Zep, always injected)
   skills/               #   Skill layer modules (built-in skills)
     selfie/             #     AI selfie generation (fal.ai)
     music/              #     AI music composition (ElevenLabs)
@@ -674,7 +678,7 @@ lib/                    # Core logic modules
   remote/               #   External service calls (ClawHub, ACN)
   report/               #   Vitality + Canvas HTML report generation
 demo/                   # Static demos + scripts — see demo/README.md (vitality-report, architecture, living-canvas)
-tests/                  # Tests (609 passing)
+tests/                  # Tests (607 passing)
 ```
 
 ## Development

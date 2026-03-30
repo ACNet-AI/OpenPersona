@@ -84,7 +84,7 @@ layers/faculties/voice/
 | Dimension | Meaning | Examples |
 |-----------|---------|---------|
 | `expression` | Changes how the persona outputs — voice, appearance, animated presence | `voice`, `avatar` |
-| `sense` | Adds perception channels — what the persona can receive and process | *(reserved for future: camera, microphone, vision)* |
+| `sense` | Adds perception channels — what the persona can receive and process | `vision`, `emotion-sensing` |
 | `cognition` | Extends memory, reasoning, or self-management capabilities | `memory` |
 
 ---
@@ -127,6 +127,8 @@ When a faculty is active, the generator:
 |---------|-----------|---------------|-------------------|
 | `voice` | expression | ElevenLabs TTS (+ experimental OpenAI TTS, Qwen3-TTS) | No (scripts bundled) |
 | `avatar` | expression | HeyGen real-time 3D/video avatar bridge | Yes — `clawhub:avatar-runtime` |
+| `vision` | sense | Native model visual perception (images, screenshots, diagrams); auto-injected when `body.runtime.modalities` declares `vision` | No (model-native; no scripts) |
+| `emotion-sensing` | sense | Affective perception from text tone, voice, and declared context; empathy calibration; never clinical assessment | No (model-native; no scripts) |
 | `memory` | cognition | Cross-session episodic/semantic store (local JSON default; Mem0/Zep optional) | No (scripts bundled) |
 
 > **Not Faculties:** `selfie`, `music`, and `reminder` are **Skills** — on-demand discrete tasks. Declare them under `skills` in `persona.json`. They live in `layers/skills/` and follow the `skill.json` contract (`files`, `allowedTools`, `triggers`). The `avatar` Faculty is distinct from `selfie`: `avatar` = persistent animated presence (changes what the persona *is*); `selfie` = on-demand photo generation (what the persona *can do*).

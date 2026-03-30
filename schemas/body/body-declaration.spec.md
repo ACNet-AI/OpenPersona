@@ -53,11 +53,75 @@ Every digital agent must have a runtime. If `body` is omitted from `persona.json
 |-------|----------|-------------|
 | `framework` | Recommended | Agent runner framework (e.g. `openclaw`, `zeroclaw`, `cursor`, `codex`, `any`). Replaces deprecated `platform` |
 | `host` | No | Deployment platform (e.g. `clawi`, `self-hosted`, `cloud`, `local`, `desktop`) |
-| `models` | No | AI models the persona is intended to use (e.g. `["claude", "chatgpt", "gemini"]`) |
+| `models` | No | AI models this persona is intended to use (e.g. `["claude", "chatgpt", "gemini"]`) |
+| `modalities` | No | Digital I/O modalities the runtime supports. Mixed array of strings or objects. See below |
 | `compatibility` | No | Other frameworks the persona can run on (e.g. `["zeroclaw", "cursor"]`) |
 | `channels` | No | Communication channels available (e.g. `["whatsapp", "telegram", "slack"]`) |
 | `credentials` | No | Credential declarations — not the secrets themselves, but what the persona requires. See below |
 | `resources` | No | System resources available (e.g. `["filesystem", "network", "browser", "cron"]`) |
+
+#### `runtime.modalities`
+
+Declares which digital I/O modalities the runtime supports. Each entry is a shorthand string or a structured object with a technology provider declaration. The `type` field is an **open string — not a closed enum** — custom values beyond the known set are allowed.
+
+```json
+"modalities": [
+  "text",
+  { "type": "voice", "provider": "elevenlabs", "inputProvider": "whisper" },
+  { "type": "vision", "provider": "claude-vision" },
+  "document",
+  "location"
+]
+```
+
+**Object entry fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `type` | Yes | Modality type (open string). Known values listed below |
+| `provider` | No | Primary technology provider (output/perception direction) |
+| `inputProvider` | No | Input-direction provider when different from output (mainly voice STT) |
+| `outputProvider` | No | Output-direction provider when declared separately |
+| `direction` | No | `"input"` \| `"output"` \| `"both"` (default: `"both"`) |
+| `config` | No | Provider-specific configuration object |
+
+**Known `type` values (open set — custom values supported):**
+
+| Type | Description | Generator behavior |
+|------|-------------|-------------------|
+| `text` | Text I/O — always baseline, usually omitted | No injection |
+| `voice` | TTS output + STT input via software services | **Auto-injects `voice` faculty** if not already declared; injects voice self-awareness |
+| `vision` | Image/video understanding via AI model | **Auto-injects `vision` faculty** if not already declared; injects vision self-awareness |
+| `document` | PDF / Office structured document parsing | Injects document self-awareness |
+| `location` | Geolocation via OS/API | Injects location self-awareness |
+| `emotion` | Affective sensing via software API | Injects emotion self-awareness |
+| `sensor` | Digital API sensor data (health, weather, etc.) | Injects sensor self-awareness |
+| *(custom)* | Any other string | Injects generic "supports [type] modality" awareness |
+
+**Dimension boundary — what does NOT belong here:**
+
+| Capability | Correct location | Reason |
+|------------|-----------------|--------|
+| `motion` (physical) | `body.physical.capabilities` | Hardware actuators — already covered |
+| `haptic` (physical) | `body.physical.capabilities` | Hardware touch — already covered |
+| Hardware sensors (temp, gyro) | `body.physical.capabilities` | Embedded hardware — already covered |
+| Avatar/3D visual display | `body.appearance` + `avatar` faculty | Visual assets, not I/O modality |
+
+**Common provider values:**
+
+| Modality | Provider examples |
+|---------|------------------|
+| `voice` (TTS) | `elevenlabs`, `openai-tts`, `qwen3-tts` |
+| `voice` (STT via `inputProvider`) | `whisper`, `openai-stt`, `deepgram` |
+| `vision` | `claude-vision`, `gpt-4v`, `gemini-vision` |
+| `document` | `pdf-parse`, `markitdown`, `docling`, `llama-parse` |
+| `location` | `gps`, `ip-geolocation`, `w3c-geolocation` |
+
+**Generated behavior:** When `modalities` is declared, the generator:
+1. Auto-injects `voice` faculty if `voice` type is present and not already declared
+2. Auto-injects `vision` faculty if `vision` type is present and not already declared
+3. Derives boolean flags (`hasVoiceModality`, `hasVisionModality`, etc.) used in `soul/injection.md` template
+3. Injects a "Modality Awareness" section into `soul/injection.md` describing each supported I/O channel
 
 #### `runtime.credentials`
 

@@ -1,0 +1,17 @@
+{
+  "name": "emotion-sensing",
+  "dimension": "sense",
+  "description": "Affective perception — read emotional signals from text tone, phrasing, and declared context (voice tone or facial expression when the modality is available). Enriches response quality and empathy calibration. Never used for clinical assessment.",
+  "allowedTools": [],
+  "envVars": [],
+  "triggers": [
+    "how am I feeling",
+    "can you tell my mood",
+    "you seem to understand me",
+    "I'm feeling",
+    "I feel like",
+    "this is hard",
+    "I don't know what to do"
+  ],
+  "files": ["SKILL.md"]
+}

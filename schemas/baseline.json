@@ -34,6 +34,7 @@
       ],
       "optional": [
         "body.runtime.framework",
+        "body.runtime.modalities",
         "body.runtime.channels",
         "body.runtime.resources",
         "body.runtime.credentials",
@@ -106,12 +107,12 @@
         },
         "sense": {
           "description": "How the persona perceives the world",
-          "note": "Model-level perception (vision, STT, document parsing) is declared via body.runtime.models, not as a sense faculty. Sense faculties are reserved for persona-level persistent perception behaviors distinct from model capabilities.",
+          "note": "Model-level I/O capabilities (vision, STT, document parsing) are declared via body.runtime.modalities, not as sense faculties. Sense faculties define persona-level persistent perception behaviors on top of those runtime capabilities — how the persona uses them behaviorally. vision faculty is auto-injected when body.runtime.modalities declares a vision entry.",
           "required": [],
-          "optional": ["emotion-sensing"],
+          "optional": ["vision", "emotion-sensing"],
           "dormant": ["context-sensing"],
           "_gaps": {
-            "emotionSensing": "No safe external candidate — clawhub:emotion-state flagged Suspicious (data exfiltration risk). Local implementation path: pure prompt-layer inference, no external API, no data transmission. Target: layers/faculties/sense/emotion-sensing/."
+            "emotionSensing": "Implemented in layers/faculties/emotion-sensing/ — pure prompt-layer inference, no external API, no data transmission. Must be explicitly declared in persona.json (opt-in, not auto-injected)."
           }
         }
       }

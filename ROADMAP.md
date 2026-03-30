@@ -66,6 +66,8 @@ Remaining open items in the runtime coherence phase:
 | P24 Skill Pack Refinement | **人格体技能包改良闭环**：`openpersona refine <slug>` CLI；9 维精炼面（4 层 + 5 个系统概念）；P24 范围：Soul 优先（`soul/behavior-guide.md` 冷启动 bootstrap + constitution 关键词扫描合规门）+ Skill（`evolution.skill` 门控审计 + 安装提示）+ Social（`agent-card.json` 随 generator 重跑自动同步）。两条执行路径：Signal Protocol 异步两步（`--emit` → host LLM → `--apply`）和 AutoSkill 同步直连。新增 `lib/lifecycle/refine.js`；更新 `lib/lifecycle/forker.js`、`bin/cli.js`、`lib/utils.js`。Tests: 415→434 (+19). |
 | P1 Memory as Soul Infrastructure | **记忆升级为灵魂基础设施**：(1) **Memory supersession**（`memory.js update`）：`update <id>` 命令创建新记忆条目并将原条目标记 `supersededBy`，`retrieve`/`search`/`stats` 自动排除被取代条目，解决人格体自相矛盾问题。(2) **Soul-Memory Bridge**（`promoteToInstinct`）：扫描 `eventLog` 重复模式（`interest_discovery`/`trait_emergence`/`mood_shift`），达到阈值（`persona.memory.promotionThreshold`，默认 3）时自动升华为 `evolvedTraits`；`immutableTraits` 门控、幂等去重；通过 `openpersona state promote <slug>`（支持 `--dry-run`）触发。(3) **Fork memory inheritance**：`persona.json` 新增顶层 `memory` 字段（`inheritance: "none"|"copy"`, `promotionThreshold`）；`fork` 时若策略为 `"copy"`，父人格体 `memories.jsonl` 自动复制到子人格体内存目录；`memoryDir()` 修复：统一从 `OPENCLAW_HOME` 派生，修复多 slug 路径语义错误。Tests: 434→451 (+17). |
 || P4-A Skill Signature Verification | **技能安装信任门**：`trust` 字段加入 `persona.json skills[]` 条目（`verified`/`community`/`unverified`）；`evolution.skill.minTrustLevel` 枚举字段声明最低信任门槛；`validateEvolutionSkill()` 校验枚举值；Runtime Gate 第三层约束 — `state-sync.js writeState` 过滤信任不足的 `capability_unlock` pendingCommands，阻断时写入 `capability_gap` 信号（`trust_below_threshold`），全部阻断时保留现有队列不覆盖（镜像 P17 wipe-prevention）；`soul-awareness-body.partial.md` 注入 `{{#hasSkillTrustPolicy}}` 感知块（Body 层，始终渲染）；`AGENTS.md` Runtime Gate 更新为三层约束。Tests: 451→471 (+20). |
+| Sense Dimension Faculties | **`vision` + `emotion-sensing` faculty** — `sense` dimension fully implemented: `vision` (visual perception, graceful degradation, privacy-by-default, OCR/diagram/multi-image patterns; auto-injected when `body.runtime.modalities` declares `vision`); `emotion-sensing` (affective perception from text/voice/expression layers, calibration table, clinical prohibition, Evolution integration; explicit opt-in declaration). `faculty-declaration.spec.md` updated (sense dimension examples + Built-in Faculties table). `baseline.json` sense section updated (optional: vision + emotion-sensing; _gaps resolved). `ai-girlfriend` preset cleaned (stale `install: clawhub:vision-faculty` removed). Tests: 599→607 (+8). |
+| Body Runtime Modalities | **`body.runtime.modalities`** — digital I/O capability declarations in `body.runtime`; open string `type` (extensible beyond fixed enum); modality-driven `voice` faculty auto-injection when `voice` modality declared and not already present; 8 known types: `voice`, `vision`, `document`, `location`, `emotion`, `sensor` + custom extensions; derived modality awareness injected into `soul/injection.md` (provider strings, per-modality self-awareness blocks); `samantha` + `ai-girlfriend` presets updated with modality declarations. Tests: 561→599 (+38). |
 | P11-Prep Universal Materials Baseline | **4+5 baseline 冻结**：`schemas/baseline.json` 声明跨预设必需/可选/休眠能力矩阵（Soul/Body/Faculty/Skill/Evolution/Economy/Vitality/Social/Rhythm）。实现层：`applyBaselineDefaults()` 自动注入 `memory` faculty（不在 faculties 中时前置注入，附 stderr 通知）；`warnBaselineCompliance()` 在 evolution 启用但缺少 `instance.boundaries` 时发出警告；`normalizeEvolutionInput()` 补充短路防护（`evo.instance` 有内容但 `enabled` 未设置时警告）。所有 6 个 preset 从旧平铺 evolution 格式迁移至 `evolution.instance.enabled: true` 规范格式（修复 evolution 从未启用的隐性 bug）。CLI wizard 移除硬编码 memory 注入，与自动注入逻辑统一。文档层：README 新增 Minimum Viable Persona 指南；`persona.input.spec.md` 新增 Building Professional Personas 章节（`constitutionAddendum` 工作流）；`SKILL.md` 新增 Agent Playbook（5 步创建流程）并重构为 agent 优先阅读顺序。Tests: 471→561 (+90 across multiple audits). Version bump 0.19.0→0.20.0→0.20.1. |
 
 ---
@@ -922,6 +924,94 @@ This enables a child fork to know which refinement cycle it was created from, an
 
 ---
 
+### P26-Models — Body Runtime Model Fabric (Deferred)
+
+**Problem:**
+`body.runtime.models` exists in the schema as a primitive string array (`["claude", "gpt-4"]`). It has no role classification, no provider structure, no routing hints, and no self-awareness injection. `evolution.body.allowModelSwap` gates model changes but has nothing structured to swap.
+
+**Design (recorded for future implementation):**
+
+```json
+"body": {
+  "runtime": {
+    "models": [
+      { "role": "language", "provider": "anthropic", "name": "claude-opus-4", "primary": true },
+      { "role": "fast", "provider": "anthropic", "name": "claude-haiku-4" },
+      { "role": "embedding", "provider": "openai", "name": "text-embedding-3-large" },
+      { "role": "custom", "name": "persona-finetuned-v1",
+        "endpoint": "https://my-endpoint.example.com/v1", "auth": "CUSTOM_MODEL_API_KEY" }
+    ],
+    "routing": {
+      "policy": "quality-first",
+      "hints": [{ "when": "task == 'quick'", "prefer": "fast" }]
+    }
+  }
+}
+```
+
+**Key design decisions (recorded):**
+- `models` and `modalities` are orthogonal: `modalities` declares I/O channels; `models` declares cognitive engines. Vision provider in `modalities` is the I/O processor; the language model in `models` is the reasoning engine — no overlap.
+- `role` is an open string enum: `language`, `fast`, `reasoning`, `embedding`, `reranker`, `custom`
+- `provider` is an open string: `anthropic`, `openai`, `google`, `mistral`, `ollama`, `custom`
+- `primary: true` marks the default language model (fallback for runners; target of `allowModelSwap`)
+- `custom` role + `endpoint` covers self-hosted and fine-tuned models; `auth` is the env var name (not the credential value)
+- MoE-style routing belongs to the **runner layer**, not `persona.json`. The `routing.hints` block is a declaration of intent/preference — runners are not required to honor it. True runtime routing (cost/latency/load-aware) is runner intelligence.
+- `body.runtime.routing` is a separate optional block (not inside `models`) to keep the model registry and routing policy independently updatable.
+
+**Implementation scope (when triggered):**
+1. Update `body.runtime.models` schema from string array to mixed array (string | object)
+2. Add `body.runtime.routing` optional schema field
+3. Add derived fields: `hasModelFabric`, `primaryLanguageModel`, `modelRoles` for soul/injection.md self-awareness
+4. Inject model-awareness block into `soul-awareness-body.partial.md`
+5. Update `evolution.body.allowModelSwap` enforcement in `state-sync.js` to reference structured model declarations
+6. Add tests: model self-awareness, primary model fallback, custom endpoint, routing hints
+
+**Trigger threshold:** Implement when 2+ presets or a community preset needs multi-model or custom endpoint declaration.
+
+---
+
+### P27-A — Trial Evolution (Deferred)
+
+**Inspiration:** [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — the "modify → fixed-budget run → evaluate → keep/discard" experiment loop applied to persona behavioral evolution.
+
+**Problem:**
+Current Evolution is one-directional — traits drift forward, `promoteToInstinct` promotes patterns, but there is no automatic reversion mechanism. A persona cannot "try" a behavioral change for N conversations and roll it back if it doesn't improve.
+
+**Design (recorded):**
+
+```json
+"evolution": {
+  "instance": {
+    "trial": {
+      "enabled": true,
+      "budget": 5,
+      "metric": "vitality",
+      "revertOnFailure": true
+    }
+  }
+}
+```
+
+- `state.json` new `trialState` field — staging area for experimental `evolvedTraits`
+- After `budget` conversations, compare vitality delta against baseline
+- Auto-decision: delta above threshold → promote to `evolvedTraits`; below → revert `trialState` to baseline
+- Extends `promoteToInstinct` from manual trigger to an autonomous experiment loop
+- Trust Gradient preserved: trial state and canonical state are separate; Runtime Gate enforces `immutableTraits` on both
+
+**Relationship to autoresearch:**
+`program.md` → `soul/behavior-guide.md` (human-editable research org instructions)
+`train.py` → `evolvedTraits` patch (agent-modified behavioral parameters)
+`val_bpb` metric → `vitality score` delta
+Fixed 5-minute budget → fixed N-conversation trial window
+
+**Implementation gate:** Implement after P11 pilot accumulates enough trial data to validate the metric. Requires vitality scoring to be stable across multi-conversation windows.
+
+**Skill vs. Framework:**
+- Trial Evolution loop mechanism = **framework** (Evolution system extension)
+- `research-lab` Skill (autoresearch-style autonomous AI research on single-GPU training) = **Skill** declaration only, not framework-native. Personas that need this capability (e.g. Evaluator in P11-C) declare `{ "name": "research-lab", "install": "github:karpathy/autoresearch" }` — no framework changes needed.
+
+---
+
 ### P26 — Runtime Capability Composition (Deferred)
 
 **Scope reserved (future):**
@@ -1043,8 +1133,10 @@ OpenPersona's four-layer skeleton is solid as of v0.16.1. The framework successf
 | P4 | P11 Professional Preset Matrix | Growth | Ecosystem adaptation pilots first (gstack-led conversion), then expand to domain-track presets using validated baseline materials |
 | P5 | P11-C Meta-Persona Ops | Productivity | Builder/Trainer/Evaluator presets create an internal self-improvement loop while also serving as reusable deliverable presets |
 | P6 | P25 Connector Positioning & Minimal Declaration | Architecture | Keep connector as declaration-layer concern; continue with `skills[].envVars` during P11 pilot; only implement if trigger thresholds are hit |
-| P7 | P26 Runtime Capability Composition | Architecture | Reserved design; deferred until P11 pilot + P25 trigger review |
-| P8 | P27 Meta-Cognition | Evolution | Inward sensing — persona observes and improves own behavior; deferred until P11 pilot accumulates correction data (trigger: 50+ conversations or 15%+ correction rate) |
+| P7 | P26-Models Body Runtime Model Fabric | Architecture | Structured `body.runtime.models` (role/provider/primary/custom endpoint); `body.runtime.routing` hints; model self-awareness injection; MoE routing stays in runner layer. Trigger: 2+ presets need multi-model or custom endpoint. |
+| P8 | P27-A Trial Evolution | Evolution | autoresearch-inspired experiment loop: try behavioral change for N conversations → keep/revert based on vitality delta. Framework-layer only — `research-lab` Skill for AI research workflows is a separate Skill declaration. Trigger: after P11 pilot validates vitality metric stability. |
+| P9 | P26 Runtime Capability Composition | Architecture | Reserved design; deferred until P11 pilot + P25 trigger review |
+| P9 | P27 Meta-Cognition | Evolution | Inward sensing — persona observes and improves own behavior; deferred until P11 pilot accumulates correction data (trigger: 50+ conversations or 15%+ correction rate) |
 | P9 | P18 State Schema Migration | Forward Compat | Reserve migration pattern before first breaking state change |
 | P10 | P20 Transport Abstraction | Architecture | Reserve interface; implement adapters on demand |
 | P11 | P10 Instant Awakening | Architecture | Daemon deferred to runner layer |

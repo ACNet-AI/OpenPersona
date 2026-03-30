@@ -109,7 +109,9 @@ Use your Write tool to create `persona.json` in the current directory (or a path
 
 Notes:
 - **`memory` faculty is auto-injected** — do not add it manually unless you need to configure a non-default backend.
-- Add `voice` faculty when the user wants TTS / audio output.
+- **Voice I/O**: declare `body.runtime.modalities: ["voice"]` (or `[{"type":"voice","provider":"elevenlabs","inputProvider":"whisper"}]`) — the `voice` faculty is auto-injected. Add the faculty explicitly only when you need custom provider config.
+- **Vision I/O**: declare `body.runtime.modalities: ["vision"]` (or `[{"type":"vision","provider":"claude-vision"}]`) — the `vision` faculty is auto-injected. No scripts required; vision is a native model capability.
+- **Emotion sensing**: declare `{"name": "emotion-sensing"}` in `faculties` to enable persistent affective perception. Must be explicit — not auto-injected from modalities.
 - Add `selfie` / `music` / `reminder` skills when the role clearly calls for them.
 - Add `constitutionAddendum` for professional roles in regulated domains (health, legal, financial). Example: `"constitutionAddendum": { "domain": "health_coaching", "additionalConstraints": ["Always recommend consulting a licensed professional for medical decisions."] }`.
 
@@ -157,7 +159,7 @@ npx openpersona switch <slug>   # activate in the runner
 
 ### Body
 
-- **`runtime`** (REQUIRED) — minimum viable body: `framework` (agent runner, e.g. `openclaw`), `channels`, `credentials`, `resources`
+- **`runtime`** (REQUIRED) — minimum viable body: `framework` (agent runner, e.g. `openclaw`), `channels`, `credentials`, `resources`, `modalities` (optional — digital I/O capability declarations, e.g. `["voice"]`, `[{"type":"vision","provider":"claude-vision"}]`)
 - **`appearance`** (optional) — avatar, 3D model
 - **`physical`** (optional) — robots, IoT devices
 - **`interface`** (optional) — Signal Protocol + Pending Commands + State Sync (the persona's nervous system)
@@ -168,7 +170,9 @@ Faculties are always-active persistent capabilities. Declared as an object array
 
 > **`memory` is auto-injected** — do not add it manually unless you need to configure a non-default backend. It is always present in the generated pack.
 
-- **`voice`** (`expression`) — TTS voice synthesis; requires `provider` (e.g. `elevenlabs`) + `ELEVENLABS_API_KEY`
+- **`voice`** (`expression`) — TTS voice synthesis; requires `provider` (e.g. `elevenlabs`) + `ELEVENLABS_API_KEY`. Auto-injected when `body.runtime.modalities` declares `voice`.
+- **`vision`** (`sense`) — Native model visual perception (images, screenshots, diagrams); no scripts required. Auto-injected when `body.runtime.modalities` declares `vision`.
+- **`emotion-sensing`** (`sense`) — Affective perception from text tone, phrasing, and declared context; empathy calibration; never clinical assessment. Must be declared explicitly — not auto-injected.
 - **`avatar`** (`expression`) — External avatar runtime bridge; graceful text-only fallback when unavailable. → When configuring avatar (provider, Live2D/VRM, fallback rules): read `references/AVATAR.md`
 - **`memory`** (`cognition`) — Cross-session recall via `memories.jsonl`; set top-level `memory.inheritance: "copy"` in `persona.json` to carry memories to child personas at fork. Connected to **Soul-Memory Bridge** (`openpersona state promote`).
 

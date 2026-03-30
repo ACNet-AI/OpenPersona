@@ -270,7 +270,7 @@ describe('generator', () => {
       speakingStyle: 'Observant',
       faculties: [
         { name: 'voice' },
-        { name: 'vision', install: 'clawhub:vision-faculty' },
+        { name: 'haptic-feedback', install: 'clawhub:haptic-feedback' },
       ],
       skills: [],
     };
@@ -282,14 +282,14 @@ describe('generator', () => {
     // Soul-injection: Self-Awareness with dormant faculty
     assert.ok(soulMd.includes('### Self-Awareness'), 'Soul injection must have Self-Awareness');
     assert.ok(soulMd.includes('Dormant Faculties'), 'Must mention dormant faculties');
-    assert.ok(soulMd.includes('vision'), 'Must list vision faculty');
+    assert.ok(soulMd.includes('haptic-feedback'), 'Must list haptic-feedback faculty');
     assert.ok(!soulMd.includes('Dormant Skills'), 'No dormant skills when none are soft-ref');
 
     // SKILL.md: Expected Capabilities with faculty table
     assert.ok(skillMd.includes('Expected Capabilities'), 'SKILL.md must have Expected Capabilities');
     assert.ok(skillMd.includes('### Faculties'), 'Must have Faculties subsection');
-    assert.ok(skillMd.includes('**vision**'), 'Must list vision faculty');
-    assert.ok(skillMd.includes('`clawhub:vision-faculty`'), 'Must show install source');
+    assert.ok(skillMd.includes('**haptic-feedback**'), 'Must list haptic-feedback faculty');
+    assert.ok(skillMd.includes('`clawhub:haptic-feedback`'), 'Must show install source');
 
     await fs.remove(TMP);
   });
@@ -353,7 +353,7 @@ describe('generator', () => {
       speakingStyle: 'Reflective',
       faculties: [
         { name: 'voice' },
-        { name: 'vision', install: 'clawhub:vision-faculty' },
+        { name: 'haptic-feedback', install: 'clawhub:haptic-feedback' },
       ],
       skills: [
         { name: 'weather', description: 'Weather data' },
@@ -462,7 +462,7 @@ describe('generator', () => {
       speakingStyle: 'Neat',
       faculties: [
         { name: 'voice' },
-        { name: 'vision', install: 'clawhub:vision-faculty' },
+        { name: 'haptic-feedback', install: 'clawhub:haptic-feedback' },
       ],
       skills: [
         { name: 'deep-research', description: 'Research', install: 'clawhub:deep-research' },
@@ -530,11 +530,11 @@ describe('generator', () => {
       speakingStyle: 'Flexible',
       faculties: [
         { name: 'voice' },
-        { name: 'vision', install: 'clawhub:vision-faculty' },
+        { name: 'haptic-feedback', install: 'clawhub:haptic-feedback' },
       ],
     };
     await fs.ensureDir(TMP);
-    // Should NOT throw even though "vision" doesn't exist in layers/faculties/
+    // Should NOT throw even though "haptic-feedback" has no local definition in layers/faculties/
     const { skillDir } = await generate(persona, TMP);
     assert.ok(fs.existsSync(path.join(skillDir, 'SKILL.md')), 'SKILL.md must be generated');
 
@@ -547,9 +547,9 @@ describe('generator', () => {
 
     // External faculty install field must be preserved in persona.json
     const output = JSON.parse(fs.readFileSync(path.join(skillDir, 'persona.json'), 'utf-8'));
-    const visionFaculty = output.faculties.find((f) => (typeof f === 'object' ? f.name : f) === 'vision');
-    assert.ok(visionFaculty, 'vision faculty must be in persona.json');
-    assert.strictEqual(visionFaculty.install, 'clawhub:vision-faculty', 'install field must be preserved in persona.json');
+    const extFaculty = output.faculties.find((f) => (typeof f === 'object' ? f.name : f) === 'haptic-feedback');
+    assert.ok(extFaculty, 'haptic-feedback faculty must be in persona.json');
+    assert.strictEqual(extFaculty.install, 'clawhub:haptic-feedback', 'install field must be preserved in persona.json');
 
     await fs.remove(TMP);
   });
