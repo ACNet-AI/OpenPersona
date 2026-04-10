@@ -437,7 +437,7 @@ program
 program
   .command('curate <owner/repo>')
   .description('Curator-only: actively collect a popular persona pack from the market into the OpenPersona directory (requires OPENPERSONA_CURATOR_TOKEN)')
-  .option('--type <type>', 'Pack type: single (default) or multi', 'single')
+  .option('--type <type>', 'Pack type: single (default), multi, or tool', 'single')
   .option('--token <token>', 'Curator authentication token (falls back to OPENPERSONA_CURATOR_TOKEN env)')
   .option('--tags <tags>', 'Comma-separated tag list for discovery (e.g. "companion,wellness"). See CURATION-STANDARDS.md for the full tag taxonomy.')
   .option('--min-stars <n>', 'Minimum GitHub star count (default: 500). Override for exceptional cases.', '500')
