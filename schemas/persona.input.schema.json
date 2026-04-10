@@ -638,7 +638,7 @@
       "type": "string",
       "enum": ["single", "multi", "tool"],
       "default": "single",
-      "description": "Pack type classification. 'single' (default): a single-persona skill pack with one persona.json at root. 'multi': a multi-persona bundle (P11-B) containing multiple coordinated personas; the root manifest is bundle.json. 'tool': a persona-adjacent utility skill — generates, transforms, or augments personas but is not itself a persona (e.g. colleague-skill, persona generators). Multi-persona bundle installation is not yet supported — multi packs can be browsed and curated in the OpenPersona directory but cannot be installed via the CLI."
+      "description": "Pack type classification. 'single' (default): a skill pack containing a single persona. 'multi': a skill pack containing multiple personas or role-based characters (e.g. a team of agents, a collection of role modes); bundle.json is the OpenPersona-native format for multi packs but any multi-persona skill pack qualifies regardless of format. 'tool': a persona-adjacent utility skill that generates, transforms, or augments personas but is not itself a persona (e.g. colleague-skill, persona generators). Multi-persona bundle installation via the CLI is not yet fully supported — multi packs can be browsed and curated in the OpenPersona directory."
     }
   }
 }

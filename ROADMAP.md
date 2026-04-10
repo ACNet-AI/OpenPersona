@@ -457,6 +457,23 @@ Living Canvas      →  how humans discover and interact with this persona
 
 **Phase 1 — ✅ Implemented:** `openpersona canvas <slug> [--output <file>] [--open]` generates a self-contained HTML profile page from persona data. Delivered: `lib/report/canvas.js`, `templates/canvas.template.html`, CLI command in `bin/cli.js`, 28 unit tests in `tests/canvas-generator.test.js`.
 
+**Known gap — Phase 1 avatar rendering:**
+The current Phase 1 output is fully static. When a persona declares `avatar` faculty and `body.appearance` assets, the canvas shows only a static image (or initials placeholder). The `demo/living-canvas.html` demo embeds `avatar-runtime`'s `avatar-widget.js` and renders a live animated avatar — but this demo is hand-crafted and is not produced by `openpersona canvas`. The two are unconnected.
+
+**Phase 1.5 — Avatar Widget Integration (Near-term, framework scope):**
+When a persona has `avatar` faculty declared, `openpersona canvas` should embed `avatar-widget.js` from `@acnlabs/avatar-runtime` and pass `body.appearance` asset paths so the avatar renders live (animated 2D/3D) in the output HTML — no server required for static model rendering (VRM/Live2D assets served from local paths). This closes the gap between the demo and the actual CLI output. Scope: `lib/report/canvas.js` + `templates/reports/canvas.template.html` update only; no new CLI commands.
+
+**Phase 2 / Independent Product Direction (Long-term, out of framework scope):**
+Full interactive Living Canvas (chat input → LLM → TTS → avatar lip-sync) requires a live backend (LLM endpoint, session management, auth). This is a **separate product** — "OpenPersona Web" — that consumes `avatar-runtime` as its rendering engine and `openpersona state` CLI as its persona state manager. It is the web-layer equivalent of OpenClaw. OpenPersona framework ships Phase 1 / Phase 1.5 only; the interactive product lives in its own repo.
+
+**Current positioning summary:**
+
+| Tier | Description | Status |
+|---|---|---|
+| T1 Static | `openpersona canvas` → HTML profile page (text, badges, state) | ✅ Phase 1 done |
+| T2 Dynamic | T1 + animated avatar widget when avatar faculty exists | ❌ Phase 1.5 gap |
+| T3 Interactive | T2 + chat input + TTS + lip-sync (full web persona experience) | 🔮 Separate product |
+
 ---
 
 ### P15 — Generator Pipeline Modularization ✅ COMPLETED
@@ -967,6 +984,34 @@ This enables a child fork to know which refinement cycle it was created from, an
 6. Add tests: model self-awareness, primary model fallback, custom endpoint, routing hints
 
 **Trigger threshold:** Implement when 2+ presets or a community preset needs multi-model or custom endpoint declaration.
+
+---
+
+### P26-Voice×Avatar — Voice × Avatar Lip-Sync Bridge (Deferred, Architecture Gap)
+
+**Problem:**
+The `voice` faculty and `avatar` faculty operate independently with no wiring between them. When both are declared, their voice channels overlap ambiguously. Three distinct configuration scenarios exist but are not documented or enforced at any gate.
+
+**Three scenarios (recorded for clarity):**
+
+| Scenario | voice faculty | avatar provider | Behavior | Status |
+|---|---|---|---|---|
+| **A — voice only** | declared | none | Standalone TTS audio output; no visual | ✅ Works today |
+| **B — avatar with built-in TTS** | not needed | HeyGen / cloud | Provider speaks natively; `sensoryStatus.voice: true`; voice faculty is redundant | ✅ Works today |
+| **C — avatar + external TTS** | declared | VRM / Live2D | voice faculty generates `audioUrl` → `scripts/avatar-runtime.js sendAudio` → avatar lip-syncs | ❌ Bridge not implemented |
+
+**Scenario C gap:** No bridge script connects voice faculty TTS output to avatar-runtime's `/v1/input/audio` endpoint. The agent would need to manually chain the two calls. There is also no generator-level warning when both are declared with a non-TTS provider (Scenario C setup).
+
+**Design (recorded for future implementation):**
+- Add `scripts/voice-avatar-bridge.js` to generated persona packs when both `voice` faculty and `avatar` faculty are declared with a non-TTS provider (VRM/Live2D)
+- Bridge: call `speak.js` → capture `audioUrl` → call `avatar-runtime.js sendAudio <session> <audioUrl>`
+- Inject Scenario A/B/C awareness into `soul-awareness-body.partial.md` when both faculties are active
+- Add Generate Gate warning: "voice faculty + HeyGen provider = built-in TTS takes precedence; voice faculty will be dormant"
+
+**Key boundary (non-negotiable):**
+`sensoryStatus.voice` from avatar-runtime means "this avatar renderer supports lip-sync output." It is **never** equivalent to OpenPersona's `voice` faculty. These are different layers: avatar-runtime's voice is a rendering capability; the voice faculty is a persona behavioral capability. Documents and code must not conflate the two.
+
+**Trigger threshold:** Implement when a preset needs VRM/Live2D avatar + ElevenLabs voice simultaneously (Scenario C).
 
 ---
 
