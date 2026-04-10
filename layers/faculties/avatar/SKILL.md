@@ -78,6 +78,7 @@ node scripts/avatar-runtime.js sync-state "<slug>" "<session-id>"
 
 - `runtimeStatus` — raw runtime response
 - `sensoryStatus` — icon-ready booleans (`image`, `model3d`, `motion`, `voice`, `hearing`, `worldSense`)
+  - **`voice: true`** means the avatar provider supports lip-sync / speech output as part of visual rendering (e.g. HeyGen streaming TTS). This is **not** the same as the persona's `voice` faculty — the voice faculty generates standalone audio output (ElevenLabs/OpenAI TTS); `sensoryStatus.voice` indicates only that the avatar's mouth can move in sync with speech.
 - `statePatch` — patch payload you can persist into `appearanceState`
 
 ### If avatar skill is not installed
@@ -86,8 +87,21 @@ node scripts/avatar-runtime.js sync-state "<slug>" "<session-id>"
 - Clearly state that visual avatar mode is currently unavailable.
 - Offer installation guidance using the install source.
 
+## Voice × Avatar Configuration Scenarios
+
+How voice and avatar work together depends on the provider:
+
+| Scenario | voice faculty | avatar provider | Result |
+|---|---|---|---|
+| **A — voice only** | declared | none | Standalone TTS audio output; no visual |
+| **B — avatar with built-in TTS** | not needed | HeyGen / cloud | Provider speaks natively; `sensoryStatus.voice: true`; voice faculty redundant |
+| **C — avatar + external TTS** | declared | VRM / Live2D | voice faculty generates `audioUrl` → `scripts/avatar-runtime.js sendAudio <session> <audioUrl>` → avatar lip-syncs |
+
+> **Scenario C bridge** (`voice faculty audio → avatar lip-sync`) is not auto-wired. The agent must explicitly call `sendAudio` after TTS generation. See ROADMAP for the planned lip-sync bridge integration.
+
 ## Conversation Policy
 
 - Do not pretend visual/voice rendering succeeded when runtime is unavailable.
 - Confirm capability state before promising actions like "switch to 3D" or "start lip-sync".
+- When `sensoryStatus.voice: true`, the avatar can speak via the provider's built-in channel — do not activate the voice faculty in parallel unless intentionally bridging (Scenario C).
 - Keep user-facing language concise and actionable.

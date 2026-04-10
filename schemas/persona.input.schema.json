@@ -632,6 +632,13 @@
     "author": {
       "type": "string",
       "description": "Persona pack author. Defaults to 'openpersona' if omitted."
+    },
+
+    "packType": {
+      "type": "string",
+      "enum": ["single", "multi"],
+      "default": "single",
+      "description": "Pack type classification. 'single' (default): a single-persona skill pack with one persona.json at root. 'multi': a multi-persona bundle (P11-B) containing multiple coordinated personas; the root manifest is bundle.json. Multi-persona bundle installation is not yet supported — multi packs can be browsed and curated in the OpenPersona directory but cannot be installed via the CLI."
     }
   }
 }

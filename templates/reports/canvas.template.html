@@ -99,9 +99,30 @@
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.02em;
+      position: relative;
     }
     .hero-avatar img {
       width: 100%; height: 100%; object-fit: cover;
+    }
+    #opAvatarMount {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .avatar-live-badge {
+      position: absolute;
+      bottom: -2px; right: -2px;
+      background: #6366F1;
+      color: #fff;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 2px 5px;
+      border-radius: 6px;
+      border: 1.5px solid #fff;
+      text-transform: uppercase;
+      line-height: 1.2;
+      pointer-events: none;
     }
     .hero-body { flex: 1; min-width: 0; }
     .hero-name {
@@ -359,6 +380,12 @@
     <!-- ── Hero card ──────────────────────────────────────────────────────── -->
     <div class="card hero-card">
       <div class="hero-avatar">
+        {{#hasAvatarModel3d}}
+          {{! Live2D / VRM animated avatar — widget script inlined at bottom of body }}
+          <div id="opAvatarMount"></div>
+          <span class="avatar-live-badge">Live</span>
+        {{/hasAvatarModel3d}}
+        {{^hasAvatarModel3d}}
         {{#hasReferenceImage}}
           <img src="{{referenceImage}}" alt="{{personaName}}" />
         {{/hasReferenceImage}}
@@ -371,6 +398,7 @@
             <circle fill="#292F33" cx="21.5" cy="9.5" r="1.5"/>
           </svg>
         {{/hasReferenceImage}}
+        {{/hasAvatarModel3d}}
       </div>
       <div class="hero-body">
         <div class="hero-name">{{personaName}}</div>
@@ -545,6 +573,30 @@
     </div>
 
   </div><!-- /content -->
+
+  {{#avatarWidgetInlineScript}}
+  {{! P14 Phase 1.5 — animated avatar widget: inlined from packages/avatar-runtime/web/avatar-widget.js }}
+  <script>{{{avatarWidgetInlineScript}}}</script>
+  <script>
+    (function () {
+      var mount = document.getElementById('opAvatarMount');
+      if (!mount || typeof window.AvatarWidget !== 'function') return;
+      try {
+        var widget = new window.AvatarWidget(mount, {
+          modelUrl:   '{{{avatarModel3Url}}}',
+          width:      80,
+          height:     80,
+          widgetBase: '/packages/avatar-runtime/web/'
+        });
+        widget.ready().catch(function (e) {
+          console.warn('[Living Canvas] avatar widget failed to mount:', e.message);
+        });
+      } catch (e) {
+        console.warn('[Living Canvas] avatar widget init error:', e.message);
+      }
+    })();
+  </script>
+  {{/avatarWidgetInlineScript}}
 
 </body>
 </html>

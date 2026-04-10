@@ -4,7 +4,7 @@
   "avatar": "../UI/images/samantha-avatar.png",
   "avatarVideo": "",
   "avatarViewer": "",
-  "avatarModel3Url": "/packages/avatar-runtime/assets/live2d/slot/default.model.json",
+  "avatarModel3Url": "/packages/avatar-runtime/assets/live2d/slot/chitose/chitose.model.json",
   "render": {
     "rendererMode": "pixi"
   },

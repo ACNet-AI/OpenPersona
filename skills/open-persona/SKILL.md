@@ -326,9 +326,28 @@ No additional config needed — A2A discoverability is a baseline capability of 
 
 When multiple personas are installed, only one is **active** at a time. All install/uninstall/switch operations maintain a local registry at `~/.openpersona/persona-registry.json`; on OpenClaw, switching replaces the soul injection block in SOUL.md / IDENTITY.md (preserving user-written content outside the markers). **Context Handoff:** On switch, a `handoff.json` is generated with the outgoing persona's relationship stage, mood snapshot, and shared interests — the incoming persona reads it to continue seamlessly. The `export` and `import` commands enable cross-device persona transfer.
 
+## Pack Types
+
+OpenPersona supports two pack type classifications via the `packType` field in `persona.json`:
+
+| `packType` | Description | Root manifest | Install support |
+|---|---|---|---|
+| `single` (default) | A single-persona skill pack — one identity, one `persona.json` | `persona.json` | ✅ Full support |
+| `multi` | A multi-persona bundle (P11-B) — coordinated team of personas | `bundle.json` | 🔜 Planned (P11-B) |
+
+Single packs do not need to declare `packType` — the default is `"single"`. Declare explicitly only when building a multi-pack:
+
+```json
+{ "packType": "multi" }
+```
+
+Multi-persona bundles are indexed in the OpenPersona directory for discovery but cannot be installed via the CLI yet. See `schemas/bundle/bundle.spec.md` for the `bundle.json` format.
+
 ## Publishing Personas
 
-**Primary target: [OpenPersona](https://openpersona-frontend.vercel.app/)** — the vertical persona skills directory. Guide the user through:
+**Primary target: [OpenPersona](https://openpersona-frontend.vercel.app/)** — the vertical persona skills directory.
+
+### Self-publish (author flow)
 
 1. Create the persona: `npx openpersona create --config ./persona.json --output ./my-persona`
 2. Push the persona pack to a public GitHub repo (e.g. `alice/my-persona`)
@@ -337,6 +356,45 @@ When multiple personas are installed, only one is **active** at a time. All inst
 The persona will appear in the OpenPersona leaderboard and be installable via `npx openpersona install <slug>` by anyone.
 
 Persona packs can also be listed on general skill platforms (ClawHub, skills.sh) as supplementary distribution, but OpenPersona is the canonical home for persona-type skill packs.
+
+### Curator workflow (ACNLabs maintainers only)
+
+ACNLabs maintainers actively collect popular persona packs from the market and index them in the OpenPersona directory. This is a **privileged action** — it requires `OPENPERSONA_CURATOR_TOKEN`.
+
+```bash
+# Collect a popular single-persona pack
+OPENPERSONA_CURATOR_TOKEN=<token> npx openpersona curate owner/repo
+
+# Collect a multi-persona bundle
+OPENPERSONA_CURATOR_TOKEN=<token> npx openpersona curate owner/bundle-repo --type multi
+
+# Pass token inline instead of env var
+npx openpersona curate owner/repo --type single --token <token>
+```
+
+**Curator vs. author publish:**
+- `publish` — self-service; the pack author runs it for their own repo; no auth required
+- `curate` — maintainer action; collects third-party repos not self-published; requires curator token
+
+**What curation does:**
+1. Validates the GitHub repo contains a valid pack (`persona.json` for single, `bundle.json` for multi)
+2. Submits to the OpenPersona directory with `isCurated: true` and the specified `packType`
+3. The pack appears in search results with `[curated]` and (for multi-packs) `[multi]` markers
+
+**Multi-pack curation note:** Multi-persona bundles (`--type multi`) are indexed for discovery only — they will appear in `openpersona search --type multi` but `openpersona install` is not yet supported for them (shows a friendly notice).
+
+### Searching by pack type
+
+```bash
+# Search all packs
+npx openpersona search companion
+
+# Search only single-persona packs
+npx openpersona search "" --type single
+
+# Browse all multi-persona bundles in the directory
+npx openpersona search "" --type multi
+```
 
 ## Runner Integration Protocol
 

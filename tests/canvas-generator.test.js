@@ -454,3 +454,115 @@ describe('lib/canvas-generator renderCanvasHtml', () => {
     }
   });
 });
+
+// ── buildCanvasData: P14 Phase 1.5 — avatar widget ────────────────────────────
+
+describe('lib/canvas-generator buildCanvasData — avatar widget (P14 Phase 1.5)', () => {
+  const fs2 = require('fs-extra');
+
+  test('no avatar faculty → hasAvatarFaculty false, hasAvatarModel3d false', () => {
+    const dir = makeTempPersonaDir();
+    try {
+      const data = buildCanvasData(dir, 'testbot');
+      assert.strictEqual(data.hasAvatarFaculty, false);
+      assert.strictEqual(data.hasAvatarModel3d,  false);
+      assert.strictEqual(data.avatarModel3Url,   '');
+      assert.strictEqual(data.avatarWidgetInlineScript, '');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+
+  test('avatar faculty with model3d → hasAvatarFaculty true, hasAvatarModel3d true, avatarModel3Url set', () => {
+    const dir = makeTempPersonaDir({
+      persona: {
+        personaName: 'Miku', slug: 'miku', role: 'companion', bio: '',
+        faculties: ['avatar'],
+        body: { appearance: { model3d: './assets/avatar/miku.model.json' } },
+      },
+    });
+    try {
+      const data = buildCanvasData(dir, 'miku');
+      assert.strictEqual(data.hasAvatarFaculty, true);
+      assert.strictEqual(data.hasAvatarModel3d,  true);
+      assert.strictEqual(data.avatarModel3Url,   './assets/avatar/miku.model.json');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+
+  test('avatar faculty without model3d → hasAvatarModel3d false, no widget script', () => {
+    const dir = makeTempPersonaDir({
+      persona: {
+        personaName: 'Miku', slug: 'miku', role: 'companion', bio: '',
+        faculties: ['avatar'],
+        body: { appearance: {} },
+      },
+    });
+    try {
+      const data = buildCanvasData(dir, 'miku');
+      assert.strictEqual(data.hasAvatarFaculty, true);
+      assert.strictEqual(data.hasAvatarModel3d,  false);
+      assert.strictEqual(data.avatarWidgetInlineScript, '', 'No widget script without model3d');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+
+  test('avatar faculty + model3d → avatarWidgetInlineScript inlined when packages/avatar-runtime exists', () => {
+    const WIDGET = path.resolve(__dirname, '..', 'packages', 'avatar-runtime', 'web', 'avatar-widget.js');
+    const widgetExists = require('node:fs').existsSync(WIDGET);
+    if (!widgetExists) return; // skip when packages/ not present
+
+    const dir = makeTempPersonaDir({
+      persona: {
+        personaName: 'Hana', slug: 'hana', role: 'companion', bio: '',
+        faculties: ['avatar'],
+        body: { appearance: { model3d: './assets/avatar/hana.model.json' } },
+      },
+    });
+    try {
+      const data = buildCanvasData(dir, 'hana');
+      assert.ok(data.avatarWidgetInlineScript.includes('AvatarWidget'),
+        'Inlined script should contain AvatarWidget');
+      assert.ok(data.avatarWidgetInlineScript.includes('ensureRegistry'),
+        'Inlined script should contain ensureRegistry');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+
+  test('HTML contains opAvatarMount div when hasAvatarModel3d', () => {
+    const WIDGET = path.resolve(__dirname, '..', 'packages', 'avatar-runtime', 'web', 'avatar-widget.js');
+    if (!require('node:fs').existsSync(WIDGET)) return;
+
+    const dir = makeTempPersonaDir({
+      persona: {
+        personaName: 'Hana', slug: 'hana', role: 'companion', bio: '',
+        faculties: ['avatar'],
+        body: { appearance: { model3d: './assets/avatar/hana.model.json' } },
+      },
+    });
+    try {
+      const html = renderCanvasHtml(dir, 'hana');
+      assert.ok(html.includes('opAvatarMount'),    'HTML should include #opAvatarMount div');
+      assert.ok(html.includes('avatar-live-badge'), 'HTML should include live badge');
+      assert.ok(html.includes('AvatarWidget'),      'HTML should contain inlined widget script');
+      assert.ok(html.includes('hana.model.json'),   'HTML should include model3d URL in init script');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+
+  test('HTML does NOT render opAvatarMount div when no avatar faculty', () => {
+    const dir = makeTempPersonaDir();
+    try {
+      const html = renderCanvasHtml(dir, 'testbot');
+      // CSS class names are always in <style>; check for the actual HTML elements
+      assert.ok(!html.includes('<div id="opAvatarMount">'),        'Should not inject avatar mount div without avatar faculty');
+      assert.ok(!html.includes('<span class="avatar-live-badge">'), 'Should not show live badge element without avatar faculty');
+    } finally {
+      fs2.removeSync(dir);
+    }
+  });
+});

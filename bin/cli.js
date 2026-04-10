@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | reset | evolve-report | contribute | export | import | acn-register | state
+ * Commands: create | install | search | uninstall | update | list | switch | publish | curate | reset | evolve-report | contribute | export | import | acn-register | state
  */
 const path = require('path');
 const os   = require('os');
@@ -15,6 +15,7 @@ const { download } = require('../lib/remote/downloader');
 const { search } = require('../lib/remote/searcher');
 const { uninstall } = require('../lib/lifecycle/uninstaller');
 const publishAdapter = require('../lib/publisher');
+const { curate } = require('../lib/remote/curator');
 const { contribute } = require('../lib/lifecycle/contributor');
 const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
 const { registerWithAcn } = require('../lib/remote/registrar');
@@ -297,9 +298,10 @@ program
 program
   .command('search <query>')
   .description('Search personas in the OpenPersona directory')
-  .action(async (query) => {
+  .option('--type <type>', 'Filter by pack type: single or multi')
+  .action(async (query, options) => {
     try {
-      await search(query);
+      await search(query, { type: options.type });
     } catch (e) {
       printError(e.message);
       process.exit(1);
@@ -403,7 +405,8 @@ program
     for (const p of personas) {
       const marker = p.active ? chalk.green(' ← active') : '';
       const status = p.enabled ? '' : chalk.dim(' (disabled)');
-      console.log(`  ${p.personaName} (persona-${p.slug})${marker}${status}`);
+      const typeTag = p.packType && p.packType !== 'single' ? chalk.cyan(` [${p.packType}]`) : '';
+      console.log(`  ${p.personaName} (persona-${p.slug})${typeTag}${marker}${status}`);
     }
   });
 
@@ -425,6 +428,22 @@ program
   .action(async (ownerRepo) => {
     try {
       await publishAdapter.publish(ownerRepo);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('curate <owner/repo>')
+  .description('Curator-only: actively collect a popular persona pack from the market into the OpenPersona directory (requires OPENPERSONA_CURATOR_TOKEN)')
+  .option('--type <type>', 'Pack type: single (default) or multi', 'single')
+  .option('--token <token>', 'Curator authentication token (falls back to OPENPERSONA_CURATOR_TOKEN env)')
+  .option('--tags <tags>', 'Comma-separated tag list for discovery (e.g. "companion,wellness"). See CURATION-STANDARDS.md for the full tag taxonomy.')
+  .option('--min-stars <n>', 'Minimum GitHub star count (default: 500). Override for exceptional cases.', '500')
+  .action(async (ownerRepo, options) => {
+    try {
+      await curate(ownerRepo, { packType: options.type, token: options.token, tags: options.tags, minStars: parseInt(options.minStars, 10) });
     } catch (e) {
       printError(e.message);
       process.exit(1);
