@@ -1,0 +1,15 @@
+# Generated model artifacts (large, user-specific — never commit)
+models/
+training/conversations.jsonl
+training/prepared/
+training/profile.md
+training/metadata.json
+
+# Python
+__pycache__/
+*.pyc
+.venv-trainer/
+*.egg-info/
+
+# macOS
+.DS_Store

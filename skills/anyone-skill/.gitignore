@@ -1,0 +1,13 @@
+# Generated persona packs (local only)
+.claude/skills/*/materials/
+.claude/skills/*/.versions/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
