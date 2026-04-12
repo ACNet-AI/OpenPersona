@@ -6,7 +6,7 @@ Scores how well the model's outputs match the distilled persona profile.
 Usage:
   python scripts/voice_test.py \
     --model models/{slug}/adapter_weights/ \
-    --base-model google/gemma-4-4b-it \
+    --base-model google/gemma-4-E4B-it \
     --profile training/profile.md \
     --questions 10
 """
