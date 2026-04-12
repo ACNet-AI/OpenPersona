@@ -22,7 +22,7 @@ The `prepare_data.py` script scans for obvious PII patterns (SSN, credit cards, 
 - Health information discussed informally
 - Financial details in casual language
 
-**Recommendation**: manually review `training/conversations.jsonl` before training, especially if it contains sensitive conversations.
+**Recommendation**: manually review both `training/raw/` files and `training/conversations.jsonl` before training, especially if they contain sensitive conversations.
 
 ## Who Can Access the Model
 
@@ -44,8 +44,8 @@ If you are training a model of someone else (with their data):
 ## Recommended Practice
 
 1. Run `prepare_data.py` — check the PII flags in `stats.json`
-2. Open `training/conversations.jsonl` in a text editor and skim for sensitive content
-3. Delete or redact lines with sensitive information (it's plain JSONL, one line = one turn)
+2. Review `training/raw/` files and `training/conversations.jsonl` for sensitive content
+3. Delete or redact sensitive information (JSONL: one line = one turn; TXT: remove paragraphs)
 4. Re-run `prepare_data.py` after cleanup
 5. Keep trained model weights in a private directory, not a public repo
 

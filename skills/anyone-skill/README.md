@@ -69,13 +69,15 @@ Phase 7  Evolve (add data · correct · rollback)
 
 | Source | How |
 |--------|-----|
-| iMessage, WhatsApp, Telegram, Signal | Export + `scripts/preprocess.py` |
-| Slack, Discord | Export + `scripts/preprocess.py` |
-| Email (.eml / .mbox) | `scripts/preprocess.py` |
-| Twitter/X, Instagram archives | `scripts/preprocess.py` |
-| WeChat, Feishu, DingTalk | Export + `scripts/preprocess.py` |
+| iMessage (.db) / WeChat (.db) | `scripts/preprocess.py` (SQLite extraction) |
+| WhatsApp, Telegram, Signal exports | `Read` tool directly (text/JSON) |
+| Slack, Discord exports | `Read` tool directly (JSON) |
+| Email (.eml / .mbox) | `Read` tool directly |
+| Twitter/X, Instagram archives | `Read` tool directly (JSON) |
+| Feishu, DingTalk exports | `Read` tool directly |
+| Any file > 5000 messages | `scripts/preprocess.py --max 3000` (sampling) |
 | Public figures / historical figures | WebSearch (automatic) |
-| PDF, images, documents | Claude Code `Read` tool (native) |
+| PDF, images, documents | `Read` tool (native) |
 
 ## Output
 
