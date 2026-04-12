@@ -47,6 +47,7 @@ _Agent workflows, runner protocol, and full 4+5+3 operational detail: [`skills/o
 | [`open-persona`](skills/open-persona/) | `npx skills add acnlabs/OpenPersona` | Framework meta-skill — create, install, and manage personas |
 | [`anyone-skill`](skills/anyone-skill/) | `npx skills add acnlabs/anyone-skill` | Distill any person or character into a persona skill pack |
 | [`persona-model-trainer`](skills/persona-model-trainer/) | `npx skills add acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops |
+| [`persona-dataset`](skills/persona-dataset/) | `npx skills add acnlabs/persona-dataset` | Persistent, searchable persona knowledge base — MemPalace + Knowledge Graph + Karpathy Wiki |
 
 ## Quick Start
 
@@ -639,6 +640,7 @@ npx openpersona create --preset ai-girlfriend --output ./my-personas
 skills/open-persona/    # Framework meta-skill (AI entry point)
 skills/anyone-skill/          # Universal persona distillation — any person or character → skill pack
 skills/persona-model-trainer/ # Fine-tune Gemma-4 locally on distilled data (Ollama/llama.cpp/mobile)
+skills/persona-dataset/      # Persistent persona knowledge base (MemPalace + KG + Karpathy Wiki)
 presets/                # Assembled products — complete persona bundles
   samantha/             #   Samantha (movie "Her") — voice + music skill + evolution
   ai-girlfriend/        #   Luna — selfie + music skills + voice + evolution

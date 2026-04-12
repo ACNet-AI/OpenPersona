@@ -18,6 +18,15 @@ anyone-skill is a **distillation front-end** for OpenPersona. It handles data co
 
 **Dependency chain**: `anyone-skill` → `skills/open-persona` → `openpersona create`
 
+**Optional integration**: When `persona-dataset` is installed (`skills/persona-dataset/`), anyone-skill uses it for persistent storage, semantic search, and Knowledge Graph instead of writing directly to `training/raw/`. Detection:
+
+```bash
+# Check at start of Phase 3 — if this directory exists, use persona-dataset integration
+ls skills/persona-dataset/SKILL.md 2>/dev/null && echo "persona-dataset detected"
+```
+
+When detected, data flow becomes: `source → persona-dataset ingest → MemPalace + KG + wiki → persona-dataset export → training/`
+
 ## Trigger phrases
 
 - `/create-anyone`
@@ -144,6 +153,22 @@ For each file provided:
 - **SQLite `.db` files** (iMessage `chat.db`, WeChat PyWxDump) → run `preprocess.py --input <file.db>`
 - **Very large files** (>5 MB or clearly >5000 messages) → run `preprocess.py --input <file> --max 3000`
 
+#### Path A: persona-dataset detected
+
+If `persona-dataset` is installed, ingest each source via its pipeline:
+
+```bash
+python skills/persona-dataset/scripts/ingest.py \
+  --slug {slug} --source <path> --persona-name "{Name}"
+```
+
+This automatically handles PII scanning, deduplication, MemPalace storage, KG extraction, and `sources/` backup. No manual `training/raw/` writing needed.
+
+Report after each source:
+`✅ [N] messages from [source] → persona-dataset/{slug}`
+
+#### Path B: no persona-dataset (default)
+
 **After processing each source, immediately save a copy to `training/raw/`** (do not wait for Step 6-D):
 
 ```
@@ -204,7 +229,26 @@ Skip data collection. Proceed directly to Phase 4 based on Phase 2 impressions.
 
 ## Phase 4: 4-Dimension Extraction
 
-After all source material is processed, extract along 4 dimensions:
+After all source material is processed, extract along 4 dimensions.
+
+#### persona-dataset integration (when detected)
+
+Before extraction, query MemPalace for an overview and use the wiki as a starting point:
+
+```bash
+# Get a ~170-token overview of what's been ingested
+mempalace wake-up --wing {slug}
+
+# Read existing wiki pages for structured knowledge
+cat ~/.openpersona/datasets/{slug}/wiki/identity.md
+cat ~/.openpersona/datasets/{slug}/wiki/voice.md
+cat ~/.openpersona/datasets/{slug}/wiki/values.md
+cat ~/.openpersona/datasets/{slug}/wiki/thinking.md
+```
+
+Use the wiki content as evidence-grounded starting points for each dimension. Fill gaps with semantic search: `mempalace search "decision making style" --wing {slug}`
+
+After extraction, update the wiki pages with new insights (following Phase 3 of persona-dataset's SKILL.md).
 
 ### Dimension 1: Procedure — *How do they think?*
 
@@ -339,7 +383,19 @@ npx openpersona switch {slug}
 
 ### Step 6-D: Export Training Data (for persona-model-trainer)
 
-Export a `training/` directory alongside the skill pack. This feeds `persona-model-trainer` with **both layers** of data:
+Export a `training/` directory alongside the skill pack. This feeds `persona-model-trainer` with **both layers** of data.
+
+#### Path A: persona-dataset detected
+
+Run the export script — it generates the entire `training/` directory from the dataset:
+
+```bash
+python skills/persona-dataset/scripts/export_training.py --slug {slug} --output training/
+```
+
+This copies `sources/` → `training/raw/`, generates `conversations.jsonl` from wiki, and creates `profile.md` + `metadata.json`. Skip to the "After export" report below.
+
+#### Path B: no persona-dataset (default)
 
 ```
 training/
@@ -358,14 +414,14 @@ training/
 
 > `training/raw/` is already populated progressively during Phase 3 as each source is processed. Do not re-write it here.
 
-**`training/conversations.jsonl`** — write distilled turns from Phase 4 extraction:
+`**training/conversations.jsonl`** — write distilled turns from Phase 4 extraction:
 
 Each line is one turn: `{"role": "user"|"assistant", "content": "..."}`.  
 Represent the persona's voice as `assistant` turns. Synthesize realistic user prompts for `user` turns.
 
 Minimum 50 turns; aim for 200–500 if source material allows.
 
-**`training/profile.md`** — write a concise 300–500 word character sheet:
+`**training/profile.md`** — write a concise 300–500 word character sheet:
 
 ```markdown
 # {Name} — Character Profile
@@ -386,7 +442,7 @@ Minimum 50 turns; aim for 200–500 if source material allows.
 [Layer 0 prohibitions: what they would never say or do]
 ```
 
-**`training/metadata.json`**:
+`**training/metadata.json**`:
 
 ```json
 {

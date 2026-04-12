@@ -1,4 +1,6 @@
 node_modules/
+__pycache__/
+*.pyc
 .tmp-hook-hist-*/
 packages/
 frontend/

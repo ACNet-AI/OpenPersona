@@ -505,6 +505,7 @@ For detailed reference material, see the `references/` directory:
 | --------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `[anyone-skill](https://github.com/acnlabs/anyone-skill)`       | `npx skills add acnlabs/anyone-skill`    | Distill any person or character (self, personal, public, historical, fictional, archetype) into a persona skill pack     |
 | `[persona-model-trainer](https://github.com/acnlabs/persona-model-trainer)` | `npx skills add acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops via Ollama/llama.cpp |
+| `[persona-dataset](https://github.com/acnlabs/persona-dataset)` | `npx skills add acnlabs/persona-dataset` | Persistent, searchable persona knowledge base — MemPalace storage + Knowledge Graph + Karpathy LLM Wiki + training/ export |
 
 
 ---
