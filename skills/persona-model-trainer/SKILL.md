@@ -1,6 +1,6 @@
 ---
 name: persona-model-trainer
-description: Fine-tune a small local model (Gemma-4 E2B/E4B) on distilled persona data from anyone-skill. Produces a self-contained, locally runnable persona model that works on phones and personal computers — no cloud API required.
+description: Fine-tune a small local model (Gemma-4 E2B/E4B/26B-A4B) on persona data (raw + distilled) from anyone-skill. Produces a self-contained, locally runnable persona model that works on phones and personal computers — no cloud API required.
 version: 0.1.0
 license: MIT
 author: acnlabs
@@ -617,6 +617,15 @@ Open LM Studio → Load Model → select {slug}.gguf
 
 ## llama.cpp (advanced)
 ./llama-cli -m model/gguf/{slug}.gguf --interactive --ctx-size 4096
+
+## vLLM — OpenAI-compatible API server (NVIDIA GPU)
+pip install vllm
+bash model/vllm/launch.sh
+# → http://localhost:8000/v1/chat/completions
+
+## ONNX — Edge / mobile / browser
+# Android / iOS: bundle model/onnx/ into your app with ONNX Runtime Mobile
+# Browser: use onnxruntime-web
 
 ## OpenClaw integration
 # persona.json already declares the local model — OpenClaw picks it up automatically

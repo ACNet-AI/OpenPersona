@@ -3,7 +3,6 @@
 
 import sys
 import platform
-import subprocess
 import importlib.util
 
 def check(name, fn):
@@ -38,8 +37,12 @@ def detect_accelerator():
 def recommend_model():
     try:
         import torch
-        import psutil
-        ram_gb = psutil.virtual_memory().total // (1024**3)
+        try:
+            import psutil
+            ram_gb = psutil.virtual_memory().total // (1024**3)
+        except ImportError:
+            import os
+            ram_gb = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') // (1024**3)
 
         if torch.cuda.is_available():
             vram = torch.cuda.get_device_properties(0).total_memory // (1024**3)
