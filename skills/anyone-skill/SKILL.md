@@ -145,8 +145,22 @@ For each file provided:
 - **SQLite `.db` files** (iMessage `chat.db`, WeChat PyWxDump) → run `preprocess.py --input <file.db>`
 - **Very large files** (>5 MB or clearly >5000 messages) → run `preprocess.py --input <file> --max 3000`
 
+**After processing each source, immediately save a copy to `training/raw/`** (do not wait for Step 6-D):
+
+```
+Source type           → save as training/raw/…
+─────────────────────────────────────────────────────────────
+Chat export (any)     → whatsapp.jsonl / imessage.jsonl / …  [{role, content}, …]
+Essay / diary / notes → essays.txt                           plain text paragraphs
+Interview / Q&A       → interviews.jsonl                     [{role:"user"|"assistant", content}]
+Social posts          → social.jsonl                         [{role:"assistant", content}]
+```
+
+- Keep original wording — do NOT paraphrase in raw/
+- Redact obvious PII before saving (phone numbers, SSNs, addresses)
+
 Report after processing each source:  
-`✅ [N] messages from [source] ([date range if known])`
+`✅ [N] messages from [source] ([date range if known]) → saved to training/raw/[filename]`
 
 ### Public figure / Historical figure
 
@@ -164,6 +178,8 @@ Report: [N] sources indexed, ~[M] words of coverage
 
 User may also provide: book PDFs / video transcripts / interview screenshots.
 
+Save all collected text to `training/raw/` as plain `.txt` or structured `.jsonl` (interviews as `{role:"user"|"assistant", content}`).
+
 ### Fictional character
 
 ```
@@ -178,6 +194,8 @@ Activate **copyright guard**: ask *"Will this skill be shared with others?"*
 
 - Yes → Inspired-by mode  
 - No → direct roleplay mode
+
+Save all collected text to `training/raw/` (scripts → `script.jsonl`, lore/wiki → `lore.txt`).
 
 ### Archetype
 

@@ -18,14 +18,13 @@ metadata:
     - uv (pip install uv)
     - 4 GB+ RAM for E2B model, 8 GB+ for E4B model
   optional:
-    - CUDA GPU (10–30× speedup over CPU)
-    - Metal GPU (Apple Silicon — supported via PyTorch MPS)
-
-- autoresearch skill (for Phase 6.5 hyperparameter refinement loop)
+    - CUDA GPU + Unsloth (2–5× faster QLoRA)
+    - Apple Silicon + MLX (Apple-native, faster than PyTorch MPS)
+    - autoresearch skill (Phase 6.5 hyperparameter refinement loop)
 
 ---
 
-# persona-trainer
+# persona-model-trainer
 
 Fine-tune a small local model on distilled persona data. Turn anyone-skill's output into a self-contained model that **is** the person — no prompting, no cloud, no latency.
 
@@ -48,38 +47,55 @@ Trigger phrases:
 
 **Not suitable when:**
 
-- `training/metadata.json` shows `"trainable": false` (< 200 assistant turns)
-- Subject is a fictional character or historical figure (insufficient authentic dialogue data)
+- Effective assistant-role turns (raw/ + conversations.jsonl combined) < 200
 - User only wants a quick prompt-based persona (use anyone-skill alone)
+
+> Fictional characters and historical figures can be trained if `training/raw/` contains scripts, lore, speeches, or biographies — check actual turn count, not subject type.
 
 ---
 
 ## Phase 1: Pre-flight Check
 
-Read `training/metadata.json`:
+Read `training/metadata.json` (written by anyone-skill Step 6-D):
 
 ```json
 {
   "slug": "...",
-  "subject_type": "self | personal | public | ...",
-  "message_count": 1240,
-  "trainable": true,
-  "date_range": "2021-03 to 2024-11",
-  "sources": ["iMessage", "WhatsApp"]
+  "name": "...",
+  "subject_type": "personal | public | fictional | historical | archetype",
+  "source_count": 3,
+  "total_words": 48000,
+  "distilled_turns": 320,
+  "raw_files": ["whatsapp.jsonl", "essays.txt"],
+  "created_at": "2026-04-11T10:00:00Z"
 }
 ```
 
-**Gate**: if `trainable: false` → stop and explain: *"Not enough authentic dialogue (< 200 turns). Fine-tuning would overfit noise. Use the prompt-based persona instead."*
+**Gate — compute effective assistant turns before proceeding:**
 
-**Minimum quality bar before proceeding:**
+```bash
+python scripts/prepare_data.py \
+  --input training/conversations.jsonl \
+  --raw-dir training/raw/ \
+  --profile training/profile.md \
+  --output training/prepared/ \
+  --model-size e4b
+```
 
-- ≥ 200 `assistant`-role turns
-- ≥ 3 distinct date ranges (not a single conversation burst)
-- No PII red flags (scan for patterns: SSN, credit card, passwords)
+Read the printed composition line. If total assistant-role turns < 200 → stop:
+*"Not enough authentic voice data (< 200 turns). Fine-tuning would overfit noise. Use the prompt-based persona instead, or collect more source material."*
 
-Read `slug` from `metadata.json["slug"]` — this value is used as `{slug}` in all subsequent commands (Phase 5 `--output`, Phase 6 `--model`, Phase 7 `--slug`, etc.). Confirm once:
+**Minimum quality bar:**
 
-*"Found [N] training turns spanning [date range] for slug `{slug}`. Estimated training time: [~X hours] on [detected hardware]. Proceed?"*
+- ≥ 200 `assistant`-role turns (combined from raw/ + conversations.jsonl)
+- Source material spans ≥ 3 distinct topics or time periods
+- No PII red flags from PII scan output
+
+> **Note**: Fictional and historical subjects can meet this bar via `training/raw/` (scripts, lore books, speeches, biographies). Check the actual turn count — don't reject based on subject type alone.
+
+Read `slug` from `metadata.json["slug"]` — used as `{slug}` in all subsequent commands. Confirm once:
+
+*"Found [N] assistant-role turns from [source_count] sources for slug `{slug}`. Estimated training time: [~X hours] on [detected hardware]. Proceed?"*
 
 ---
 
@@ -95,8 +111,8 @@ Ask once (hardware will be verified in Phase 3 after environment setup):
 
 Default recommendation:
 
-- Apple Silicon (M1/M2/M3/M4) → **E4B** via MPS (full LoRA, not QLoRA — see Phase 5)
-- NVIDIA GPU ≥ 8 GB VRAM → **E4B** via QLoRA
+- Apple Silicon (M1/M2/M3/M4) → **E4B** via MLX (Apple-native; fallback: PyTorch MPS LoRA)
+- NVIDIA GPU ≥ 8 GB VRAM → **E4B** via Unsloth QLoRA (fallback: vanilla QLoRA)
 - CPU only → **E2B** (warn: very slow, ~20h+)
 
 ---
@@ -402,7 +418,8 @@ if train_file.exists():
     sys.exit(0)
 else:
     print("❌ training/prepared/train.jsonl not found.")
-    print("   Run Phase 4 first: python scripts/prepare_data.py --input training/conversations.jsonl ...")
+    print("   Run Phase 4 first:")
+    print("   python scripts/prepare_data.py --input training/conversations.jsonl --raw-dir training/raw/ --profile training/profile.md --output training/prepared/ --model-size e4b")
     sys.exit(1)
 EOF
 ```
@@ -542,7 +559,7 @@ Bundle the model into the persona skill pack:
     adapter_weights/        ← LoRA weights (versioned)
     gguf/{slug}.gguf        ← quantized model
     ollama/Modelfile
-    training_summary.md     ← fidelity scores, data stats
+    training_summary.json   ← fidelity scores, data stats, base model
     voice_test_results.json
 ```
 
@@ -609,13 +626,13 @@ openpersona switch {slug}
 ## Scripts
 
 
-| Script                    | Purpose                                                           |
-| ------------------------- | ----------------------------------------------------------------- |
-| `scripts/check_env.py`    | Verify Python, PyTorch, GPU/MPS availability                      |
-| `scripts/prepare_data.py` | Format JSONL → instruction-tuning dataset                         |
-| `scripts/train.py`        | QLoRA fine-tuning loop (eval-per-epoch, best checkpoint retained) |
-| `scripts/voice_test.py`   | Automated voice fidelity scoring                                  |
-| `scripts/export.py`       | Export to GGUF + Ollama Modelfile                                 |
+| Script                    | Purpose                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `scripts/check_env.py`    | Detect hardware, recommend model size and training backend                      |
+| `scripts/prepare_data.py` | Merge raw/ + conversations.jsonl → instruction-tuning dataset (dual-layer)      |
+| `scripts/train.py`        | Fine-tuning: Unsloth / vanilla QLoRA / MLX / PyTorch MPS LoRA (auto-routed)    |
+| `scripts/voice_test.py`   | Automated voice fidelity scoring against profile.md (1–5 scale)                 |
+| `scripts/export.py`       | Export to GGUF / Ollama / vLLM launch script / ONNX (pick one or all)          |
 
 
 ---

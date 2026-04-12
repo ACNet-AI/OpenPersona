@@ -17,13 +17,15 @@ The model **is** the persona — not a base model being prompted to act like one
 
 ## Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| Python | 3.11+ | 3.12 |
-| RAM | 4 GB | 16 GB |
-| Disk | 10 GB | 30 GB |
-| GPU/NPU | Not required | Apple Silicon M2+ or NVIDIA RTX 3080+ |
-| Training data | 200 assistant turns | 1000+ turns |
+
+| Resource      | Minimum             | Recommended                           |
+| ------------- | ------------------- | ------------------------------------- |
+| Python        | 3.11+               | 3.12                                  |
+| RAM           | 4 GB                | 16 GB                                 |
+| Disk          | 10 GB               | 30 GB                                 |
+| GPU/NPU       | Not required        | Apple Silicon M2+ or NVIDIA RTX 3080+ |
+| Training data | 200 assistant turns | 1000+ turns                           |
+
 
 ## Quick Start
 
@@ -65,17 +67,19 @@ ollama run {slug}
 
 ## Pipeline Phases
 
-| Phase | Script | Purpose |
-|-------|--------|---------|
-| 1. Pre-flight | `check_env.py` | Verify hardware, packages, data quality |
-| 2. Model selection | (interactive) | Choose 1B / 4B / 12B |
-| 3. Environment | `uv pip install` | Install training stack |
-| 4. Data prep | `prepare_data.py` | Format JSONL → instruction-tuning dataset |
-| 5. Fine-tuning | `train.py` | QLoRA training loop with early stopping |
-| 6. Voice validation | `voice_test.py` | Automated fidelity scoring (1–5 scale) |
+
+| Phase               | Script                 | Purpose                                                                    |
+| ------------------- | ---------------------- | -------------------------------------------------------------------------- |
+| 1. Pre-flight       | `check_env.py`         | Verify hardware, packages, data quality                                    |
+| 2. Model selection  | (interactive)          | Choose 1B / 4B / 12B                                                       |
+| 3. Environment      | `uv pip install`       | Install training stack                                                     |
+| 4. Data prep        | `prepare_data.py`      | Format JSONL → instruction-tuning dataset                                  |
+| 5. Fine-tuning      | `train.py`             | QLoRA training loop with early stopping                                    |
+| 6. Voice validation | `voice_test.py`        | Automated fidelity scoring (1–5 scale)                                     |
 | **6.5. Refinement** | **autoresearch skill** | **Optional: hyperparameter search when score < 3.0 and data ≥ 1000 turns** |
-| 7. Export | `export.py` | GGUF + Ollama Modelfile |
-| 8. Pack integration | (manual) | Bundle model into persona skill pack |
+| 7. Export           | `export.py`            | GGUF + Ollama Modelfile                                                    |
+| 8. Pack integration | (manual)               | Bundle model into persona skill pack                                       |
+
 
 ## Dependency Chain
 
