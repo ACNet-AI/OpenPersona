@@ -1,5 +1,4 @@
 ---
-
 name: persona-model-trainer
 description: Fine-tune a small local model (Gemma-4 E2B/E4B) on distilled persona data from anyone-skill. Produces a self-contained, locally runnable persona model that works on phones and personal computers — no cloud API required.
 version: 0.1.0
@@ -26,12 +25,12 @@ metadata:
 
 # persona-model-trainer
 
-Fine-tune a small local model on distilled persona data. Turn anyone-skill's output into a self-contained model that **is** the person — no prompting, no cloud, no latency.
+Fine-tune a small local model on persona data (raw + distilled). Turn anyone-skill's output into a self-contained model that **is** the person — no prompting, no cloud, no latency.
 
 **Dependency chain**: `anyone-skill` → `persona-model-trainer` → runnable Gemma-4 persona model
 
 **Input**: `training/` folder produced by `anyone-skill` Step 6-D (raw/ populated in Phase 3)  
-**Output**: LoRA/QLoRA adapter weights (method depends on hardware) + GGUF export for Ollama/llama.cpp + updated skill pack
+**Output**: LoRA/QLoRA adapter weights + GGUF / Ollama / vLLM / ONNX exports
 
 ---
 
@@ -76,15 +75,21 @@ Read `training/metadata.json` (written by anyone-skill Step 6-D):
 ```bash
 # Quick count without running the full pipeline
 python3 -c "
-import json, pathlib
-raw = sum(
+import json, pathlib, re
+raw_dir = pathlib.Path('training/raw')
+raw_jsonl = sum(
     sum(1 for l in open(f) if json.loads(l).get('role')=='assistant')
-    for f in pathlib.Path('training/raw').glob('*.jsonl') if f.exists()
-) if pathlib.Path('training/raw').exists() else 0
+    for f in raw_dir.glob('*.jsonl')
+) if raw_dir.exists() else 0
+raw_txt = sum(
+    len([p for p in re.split(r'\n{2,}', f.read_text()) if len(p.strip()) >= 20])
+    for f in raw_dir.glob('*.txt')
+) if raw_dir.exists() else 0
 dist = sum(1 for l in open('training/conversations.jsonl')
            if json.loads(l).get('role')=='assistant') \
        if pathlib.Path('training/conversations.jsonl').exists() else 0
-print(f'assistant turns — raw: {raw}  distilled: {dist}  total: {raw+dist}')
+total = raw_jsonl + raw_txt + dist
+print(f'assistant turns — raw jsonl: {raw_jsonl}  raw txt: {raw_txt}  distilled: {dist}  total: {total}')
 "
 ```
 
@@ -254,14 +259,11 @@ python scripts/train.py \
   --epochs 3 --batch-size 2 --learning-rate 2e-4
 ```
 
-**Training loop** (eval-per-epoch with best-checkpoint retention):
+**Training loop** (behavior varies by method):
 
-1. Run one epoch
-2. Evaluate on held-out set — metric: `eval_loss` (lower is better)
-3. If eval_loss improved → checkpoint kept; if degraded → revert to best checkpoint
-4. Repeat for remaining epochs
-
-**Early stopping**: if eval_loss doesn't improve for 2 consecutive epochs, stop.
+- **qlora / lora** (HF Trainer): eval-per-epoch + best-checkpoint retention. If eval_loss doesn't improve for 2 consecutive epochs → early stop.
+- **unsloth**: uses HF Trainer under the hood — same eval/checkpoint behavior, but 2–5× faster per step.
+- **mlx**: iteration-based (no built-in eval split). Saves adapter every N steps. Check training loss convergence manually.
 
 **Live monitoring** — method-dependent:
 

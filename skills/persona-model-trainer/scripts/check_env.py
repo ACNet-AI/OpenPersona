@@ -62,7 +62,7 @@ def _has_pkg(name):
     return importlib.util.find_spec(name) is not None
 
 print(f"\n{'='*50}")
-print("persona-trainer environment check")
+print("persona-model-trainer environment check")
 print(f"{'='*50}\n")
 
 print("System:")
