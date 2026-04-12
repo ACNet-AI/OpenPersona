@@ -30,7 +30,7 @@ Fine-tune a small local model on distilled persona data. Turn anyone-skill's out
 
 **Dependency chain**: `anyone-skill` → `persona-model-trainer` → runnable Gemma-4 persona model
 
-**Input**: `training/` folder produced by `anyone-skill` Phase 3 export  
+**Input**: `training/` folder produced by `anyone-skill` Step 6-D (raw/ populated in Phase 3)  
 **Output**: LoRA/QLoRA adapter weights (method depends on hardware) + GGUF export for Ollama/llama.cpp + updated skill pack
 
 ---
@@ -71,18 +71,24 @@ Read `training/metadata.json` (written by anyone-skill Step 6-D):
 }
 ```
 
-**Gate — compute effective assistant turns before proceeding:**
+**Gate — estimate effective assistant turns before proceeding:**
 
 ```bash
-python scripts/prepare_data.py \
-  --input training/conversations.jsonl \
-  --raw-dir training/raw/ \
-  --profile training/profile.md \
-  --output training/prepared/ \
-  --model-size e4b
+# Quick count without running the full pipeline
+python3 -c "
+import json, pathlib
+raw = sum(
+    sum(1 for l in open(f) if json.loads(l).get('role')=='assistant')
+    for f in pathlib.Path('training/raw').glob('*.jsonl') if f.exists()
+) if pathlib.Path('training/raw').exists() else 0
+dist = sum(1 for l in open('training/conversations.jsonl')
+           if json.loads(l).get('role')=='assistant') \
+       if pathlib.Path('training/conversations.jsonl').exists() else 0
+print(f'assistant turns — raw: {raw}  distilled: {dist}  total: {raw+dist}')
+"
 ```
 
-Read the printed composition line. If total assistant-role turns < 200 → stop:
+If total < 200 → stop:  
 *"Not enough authentic voice data (< 200 turns). Fine-tuning would overfit noise. Use the prompt-based persona instead, or collect more source material."*
 
 **Minimum quality bar:**
@@ -257,11 +263,11 @@ python scripts/train.py \
 
 **Early stopping**: if eval_loss doesn't improve for 2 consecutive epochs, stop.
 
-**Live monitoring** — HuggingFace Trainer prints loss to stdout. If backgrounded, poll `trainer_state.json` (it's a static file overwritten each step, not a stream):
+**Live monitoring** — method-dependent:
 
 ```bash
-# macOS / Linux: refresh every 15s
-watch -n 15 "python -c \"
+# HF Trainer (qlora / lora methods) — poll trainer_state.json every 15s
+watch -n 15 "python3 -c \"
 import json, pathlib
 p = pathlib.Path('models/{slug}/checkpoints/trainer_state.json')
 if p.exists():
@@ -269,6 +275,12 @@ if p.exists():
     log = s.get('log_history', [])
     if log: print(log[-1])
 \""
+
+# MLX — progress prints directly to stdout; no polling needed
+# Run in foreground or capture with: python scripts/train.py ... 2>&1 | tee train.log
+
+# Unsloth — uses tqdm + loss printed to stdout each step
+# Run in foreground or: python scripts/train.py ... 2>&1 | tee train.log
 ```
 
 ---
@@ -282,6 +294,7 @@ python scripts/voice_test.py \
   --model models/{slug}/adapter_weights/ \
   --base-model google/gemma-4-E4B-it \
   --profile training/profile.md \
+  --output models/{slug}/voice_test_results.json \
   --questions 10
 ```
 
@@ -315,7 +328,7 @@ If overall score < 3.0 → check conditions below before proceeding to Phase 6.5
 2. Training data has ≥ 1000 assistant-role turns
 3. User agrees to spend additional training time
 
-If conditions not met → skip to Phase 7 and note the shortfall in `training_summary.md`.
+If conditions not met → skip to Phase 7 and note the shortfall in `training_summary.json`.
 
 ---
 
@@ -452,7 +465,7 @@ The autoresearch skill will:
 
 Once autoresearch completes (score ≥ 3.5 or iterations exhausted):
 
-- Record best configuration in `training_summary.md`
+- Record best configuration in `training_summary.json`
 - Proceed to Phase 7 with the best checkpoint
 
 ---

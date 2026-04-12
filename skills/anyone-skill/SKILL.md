@@ -1,7 +1,5 @@
 ---
-
-## name: create-anyone
-
+name: create-anyone
 description: "Distill anyone into a runnable OpenPersona skill pack — real or fictional, personal or public, living or historical. Collects chat logs, documents, and public content, extracts a 4-dimension persona, and generates a portable OpenPersona pack via skills/open-persona. Use when asked to distill, clone, or create a persona for any person or character."
 license: MIT
 compatibility: Designed for Claude Code. Requires Python 3. Uses WebSearch for public figures and fictional characters.
@@ -9,6 +7,7 @@ allowed-tools: Read Write Edit Bash WebSearch
 metadata:
   version: "1.0.0"
   author: acnlabs
+---
 
 # anyone.skill — Distill Anyone
 
@@ -357,22 +356,7 @@ training/
 
 **How to build each file:**
 
-**`training/raw/`** — copy or convert each source as-is into the closest JSONL or text form:
-
-```
-Source type           → raw/ format
-─────────────────────────────────────────────────────────────────
-Chat export (any)     → chat_logs.jsonl   [{role, content}, ...]
-Monologue / essay /   → persona_voice.txt  plain text paragraphs
-  book / speech
-Q&A interview         → interviews.jsonl  [{role:"user"|"assistant", content}]
-Social posts / tweets → social.jsonl      [{role:"assistant", content}]
-Wiki / lore (fiction) → lore.txt          plain text
-```
-
-- Keep original wording — do NOT paraphrase or summarize in raw/
-- One file per source; name by source type (e.g. `whatsapp.jsonl`, `essays.txt`)
-- Redact obvious PII before saving (phone numbers, SSNs, addresses)
+> `training/raw/` is already populated progressively during Phase 3 as each source is processed. Do not re-write it here.
 
 **`training/conversations.jsonl`** — write distilled turns from Phase 4 extraction:
 
@@ -438,9 +422,9 @@ Alongside `persona.json`, maintain a `persona.md` with the full 4-dimension extr
 Enter evolution mode when the user says — don't restart from scratch:
 
 - **Add material**: "I found more chat logs" / "here's another source"  
-→ Preprocess → merge into `persona.md` → conflict check → update `persona.json` → re-run Phase 6 → bump version
+→ Preprocess new source → save to `training/raw/` → merge into `persona.md` → conflict check → update `persona.json` → re-run Step 6-D (update `conversations.jsonl` + `metadata.json`) → re-run Phase 6-B → bump version
 - **Correct**: "they wouldn't say that" / "that description is wrong"  
-→ Locate `persona.md` section → revise → adjust evidence level → sync `persona.json` → bump version
+→ Locate `persona.md` section → revise → adjust evidence level → sync `persona.json` → update affected turns in `training/conversations.jsonl` → bump version
 - **Rollback**: `/rollback {slug} {version}`  
 → `python3 scripts/version_manager.py --action rollback --slug {slug} --version {version}`
 
