@@ -433,40 +433,88 @@ Once autoresearch completes (score ≥ 3.5 or iterations exhausted):
 
 ## Phase 7: Export
 
-Export the fine-tuned model in usable formats:
+Choose formats based on your deployment target:
+
+| Format | Use case | Command flag |
+|--------|----------|-------------|
+| `gguf` | Offline / laptop / mobile (llama.cpp, LM Studio) | `--formats gguf` |
+| `ollama` | Local CLI chat via Ollama | `--formats gguf,ollama` |
+| `vllm` | Production OpenAI-compatible API server | `--formats vllm` |
+| `onnx` | Edge / WASM / Android / iOS runtimes | `--formats onnx` |
 
 ```bash
+# Local use (default) — GGUF + Ollama
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
   --base-model google/gemma-4-E4B-it \
   --slug {slug} \
   --formats gguf,ollama
+
+# API server — vLLM (OpenAI-compatible, NVIDIA GPU)
+python scripts/export.py \
+  --model models/{slug}/adapter_weights/ \
+  --base-model google/gemma-4-E4B-it \
+  --slug {slug} \
+  --formats vllm
+
+# Edge / mobile — ONNX (requires: uv pip install optimum[exporters])
+python scripts/export.py \
+  --model models/{slug}/adapter_weights/ \
+  --base-model google/gemma-4-E4B-it \
+  --slug {slug} \
+  --formats onnx
+
+# All formats at once
+python scripts/export.py \
+  --model models/{slug}/adapter_weights/ \
+  --base-model google/gemma-4-E4B-it \
+  --slug {slug} \
+  --formats gguf,ollama,vllm,onnx
 ```
 
-**Outputs:**
+**Output tree:**
 
 ```
 models/{slug}/
   adapter_weights/          ← LoRA adapter (small, ~50–200 MB)
+  merged/                   ← Full merged HF model (shared by all formats)
   gguf/
-    {slug}-{size}.gguf      ← for llama.cpp / LM Studio / Open WebUI
+    {slug}.gguf             ← for llama.cpp / LM Studio / Open WebUI
   ollama/
-    Modelfile               ← for Ollama
+    Modelfile               ← ollama create {slug} -f Modelfile
+  vllm/
+    launch.sh               ← bash launch.sh → OpenAI-compatible API on :8000
+    system_prompt.txt
+    README.md
+  onnx/
+    model.onnx              ← onnxruntime / onnxruntime-web / mobile
   voice_test_results.json
-  training_summary.md
+  training_summary.json
 ```
 
-**Register with Ollama** (if installed):
-
+**Run locally with Ollama:**
 ```bash
 ollama create {slug} -f models/{slug}/ollama/Modelfile
 ollama run {slug}
 ```
 
-**Run with llama.cpp** (mobile-friendly):
-
+**Serve as API with vLLM** (OpenAI-compatible, NVIDIA GPU):
 ```bash
-./llama-cli -m models/{slug}/gguf/{slug}-{size}.gguf --interactive
+pip install vllm
+bash models/{slug}/vllm/launch.sh
+# → listening on http://localhost:8000/v1/chat/completions
+```
+
+**Run on mobile / Edge with ONNX:**
+```bash
+# Android / iOS: copy onnx/ directory into your app
+# WASM: use onnxruntime-web in browser
+# Desktop CLI: python -c "import onnxruntime as ort; ..."
+```
+
+**Run with llama.cpp directly:**
+```bash
+./llama-cli -m models/{slug}/gguf/{slug}.gguf --interactive
 ```
 
 ---

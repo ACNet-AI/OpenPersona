@@ -49,4 +49,65 @@ ollama run {slug}
 
 ## Context Length
 
-Gemma-4 supports up to 8192 tokens context. For conversation-heavy personas, use `--ctx-size 4096` or higher. Larger context uses more RAM linearly.
+Gemma-4 supports up to 128K tokens context (E2B/E4B). For conversation-heavy personas, use `--ctx-size 4096` or higher. Larger context uses more RAM linearly.
+
+---
+
+## vLLM — Production API Serving
+
+vLLM provides an OpenAI-compatible REST API over the merged HF model. Best for:
+- Teams running the persona as a shared internal service
+- Integrating with existing OpenAI SDK clients
+- NVIDIA GPU servers (A10, A100, H100, RTX 30/40 series)
+
+**Setup:**
+```bash
+pip install vllm
+bash models/{slug}/vllm/launch.sh         # starts on :8000
+```
+
+**Test:**
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"{slug}","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+**When to choose vLLM vs. Ollama:**
+
+| | vLLM | Ollama |
+|--|------|--------|
+| Format | Merged HF (safetensors) | GGUF |
+| API | OpenAI-compatible REST | Ollama REST + CLI |
+| Throughput | Very high (paged KV cache) | Moderate |
+| Best for | Production server / multi-user | Personal laptop |
+| VRAM required | Full precision (8–16 GB) | Quantized (3–8 GB) |
+
+---
+
+## ONNX — Edge and Mobile Deployment
+
+ONNX IR (Open Neural Network Exchange) allows running the model in browser (WASM), Android, iOS, and Raspberry Pi without Python.
+
+**Export:**
+```bash
+uv pip install "optimum[exporters]"
+python scripts/export.py --formats onnx --slug {slug} ...
+```
+
+**Runtimes:**
+
+| Target | Runtime | Notes |
+|--------|---------|-------|
+| Android / iOS | ONNX Runtime Mobile | INT8 quantize for phones |
+| Browser (WASM) | onnxruntime-web | E2B model recommended |
+| Desktop Python | onnxruntime | Fast CPU inference |
+| Raspberry Pi | onnxruntime | ARM-optimized |
+
+**When to use ONNX:**
+- Need to run offline on a phone without a companion app server
+- Browser-based chat interface (WASM)
+- IoT / embedded devices (Raspberry Pi, Jetson Nano — aligns with E2B/E4B spec)
+- CI/CD regression testing without GPU
+
+**Size after ONNX export (E4B, INT8):** ~2–3 GB (comparable to GGUF Q4_K_M)
