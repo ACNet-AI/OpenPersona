@@ -10,13 +10,34 @@
 
 > Note: Gemma-4 is multimodal (text + image + video + audio). For persona fine-tuning, only text capabilities are used.
 
-## Training Method by Platform
+## Training Backend by Platform
 
-| Platform | Method | Why |
-|----------|--------|-----|
-| Apple Silicon (MPS) | **Full LoRA** (fp16/bf16) | bitsandbytes 4-bit quantization requires CUDA — not available on MPS |
-| NVIDIA GPU (CUDA) | **QLoRA** (4-bit) | Reduces VRAM by ~4×; fits E4B in 8 GB VRAM |
-| CPU only | **Full LoRA** (fp32) | No quantization support; very slow |
+| Platform | Recommended | Fallback | Why |
+|----------|------------|---------|-----|
+| NVIDIA GPU (CUDA) | **Unsloth** (`--method unsloth`) | vanilla QLoRA (`--method qlora`) | Unsloth: 2–5× faster, 60% less VRAM via custom CUDA kernels; official Google recommendation |
+| Apple Silicon (M1/M2/M3/M4) | **MLX** (`--method mlx`) | PyTorch MPS LoRA (`--method lora`) | MLX: Apple-native framework, faster than PyTorch MPS backend; bitsandbytes 4-bit requires CUDA |
+| CPU only | vanilla LoRA (`--method lora`) | — | No quantization; very slow |
+
+### Unsloth vs. vanilla HuggingFace (CUDA)
+
+| | Unsloth | Vanilla peft+trl |
+|---|---------|-----------------|
+| Speed | 2–5× faster | baseline |
+| VRAM | ~60% less | baseline |
+| Install | `pip install unsloth` | `pip install peft trl bitsandbytes` |
+| API | `FastLanguageModel` | `AutoModelForCausalLM + get_peft_model` |
+| Gemma-4 support | ✅ (official) | ✅ |
+
+### MLX vs. PyTorch MPS (Apple Silicon)
+
+| | MLX | PyTorch MPS |
+|---|-----|------------|
+| Framework | Apple-native (Metal) | Cross-platform PyTorch |
+| Speed | Faster (unified memory optimized) | Slower |
+| QLoRA 4-bit | ❌ not yet | ❌ (bitsandbytes CUDA-only) |
+| LoRA support | ✅ via `mlx_lm.lora` | ✅ via peft |
+| GGUF export | Via llama.cpp convert | Via llama.cpp convert |
+| Install | `pip install mlx-lm` | `pip install torch peft trl` |
 
 ## Hardware → Model Recommendation
 

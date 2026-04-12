@@ -43,18 +43,23 @@ def recommend_model():
 
         if torch.cuda.is_available():
             vram = torch.cuda.get_device_properties(0).total_memory // (1024**3)
+            method = "Unsloth QLoRA" if _has_pkg("unsloth") else "vanilla QLoRA"
             if vram >= 16:
-                return f"12B (VRAM: {vram} GB)"
+                return f"E4B or 26B-A4B · {method} (VRAM: {vram} GB)"
             if vram >= 8:
-                return f"4B (VRAM: {vram} GB)"
-            return f"1B (VRAM: {vram} GB — limited)"
+                return f"E4B · {method} (VRAM: {vram} GB)"
+            return f"E2B · {method} (VRAM: {vram} GB — limited)"
         if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            method = "MLX" if _has_pkg("mlx_lm") else "PyTorch MPS LoRA"
             if ram_gb >= 16:
-                return f"4B (Apple Silicon, {ram_gb} GB RAM)"
-            return f"1B (Apple Silicon, {ram_gb} GB RAM)"
-        return f"1B CPU-only ({ram_gb} GB RAM — expect 20–30h)"
+                return f"E4B · {method} ({ram_gb} GB RAM)"
+            return f"E2B · {method} ({ram_gb} GB RAM)"
+        return f"E2B CPU-only ({ram_gb} GB RAM — expect 20–30h)"
     except Exception:
         return "unable to determine"
+
+def _has_pkg(name):
+    return importlib.util.find_spec(name) is not None
 
 print(f"\n{'='*50}")
 print("persona-trainer environment check")
@@ -64,9 +69,13 @@ print("System:")
 check("Python", lambda: f"{sys.version.split()[0]} ({'ok' if sys.version_info >= (3, 11) else 'need ≥ 3.11'})")
 check("Platform", lambda: f"{platform.system()} {platform.machine()}")
 
-print("\nPython packages:")
+print("\nPython packages (core):")
 for pkg in ["torch", "transformers", "peft", "datasets", "trl", "bitsandbytes", "accelerate"]:
     check(pkg, lambda p=pkg: pkg_version(p))
+
+print("\nPython packages (optimized backends):")
+check("unsloth", lambda: pkg_version("unsloth"))   # CUDA recommended
+check("mlx_lm",  lambda: pkg_version("mlx_lm"))    # Apple Silicon recommended
 
 print("\nHardware:")
 check("Accelerator", detect_accelerator)

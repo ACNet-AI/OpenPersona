@@ -115,12 +115,20 @@ source .venv-trainer/bin/activate
 **Install training stack — pick by platform:**
 
 ```bash
-# NVIDIA GPU (CUDA) — includes bitsandbytes for QLoRA 4-bit
+# NVIDIA GPU (CUDA) — Unsloth (official recommended QLoRA path, 2–5× faster than vanilla HF)
+uv pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+uv pip install torch torchvision torchaudio \
+  transformers>=4.50 datasets sentencepiece protobuf
+
+# NVIDIA GPU (CUDA) — vanilla HuggingFace fallback (if Unsloth install fails)
 uv pip install torch torchvision torchaudio \
   transformers>=4.50 peft>=0.14 datasets trl>=0.9 \
   bitsandbytes accelerate sentencepiece protobuf
 
-# Apple Silicon (MPS) — standard PyTorch; bitsandbytes NOT needed (MPS doesn't support 4-bit)
+# Apple Silicon (M1/M2/M3/M4) — MLX (Apple-native, faster than PyTorch MPS)
+uv pip install mlx-lm
+
+# Apple Silicon fallback — PyTorch MPS (if MLX doesn't support chosen model yet)
 # MPS backend is built-in to PyTorch ≥ 2.0 — do NOT use --index-url .../cpu
 uv pip install torch torchvision torchaudio \
   transformers>=4.50 peft>=0.14 datasets trl>=0.9 \
@@ -179,7 +187,16 @@ Generate and run the training config:
 **Pick method by hardware:**
 
 ```bash
-# NVIDIA GPU — QLoRA (4-bit quantized, saves VRAM)
+# NVIDIA GPU — Unsloth QLoRA (recommended: 2–5× faster, less VRAM)
+python scripts/train.py \
+  --model google/gemma-4-E4B-it \
+  --data training/prepared/ \
+  --output models/{slug}/ \
+  --method unsloth \
+  --lora-rank 16 --lora-alpha 32 \
+  --epochs 3 --batch-size 4 --learning-rate 2e-4
+
+# NVIDIA GPU — vanilla QLoRA fallback (if Unsloth unavailable)
 python scripts/train.py \
   --model google/gemma-4-E4B-it \
   --data training/prepared/ \
@@ -188,7 +205,15 @@ python scripts/train.py \
   --lora-rank 16 --lora-alpha 32 \
   --epochs 3 --batch-size 4 --learning-rate 2e-4
 
-# Apple Silicon (MPS) — full LoRA (bitsandbytes 4-bit not supported on MPS)
+# Apple Silicon — MLX (recommended: Apple-native, faster than PyTorch MPS)
+python scripts/train.py \
+  --model google/gemma-4-E4B-it \
+  --data training/prepared/ \
+  --output models/{slug}/ \
+  --method mlx \
+  --lora-rank 16 --epochs 3 --learning-rate 2e-4
+
+# Apple Silicon fallback — PyTorch MPS LoRA (if MLX doesn't support model yet)
 python scripts/train.py \
   --model google/gemma-4-E4B-it \
   --data training/prepared/ \
