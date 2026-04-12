@@ -1,6 +1,6 @@
 ---
 
-name: persona-trainer
+name: persona-model-trainer
 description: Fine-tune a small local model (Gemma-4 E2B/E4B) on distilled persona data from anyone-skill. Produces a self-contained, locally runnable persona model that works on phones and personal computers — no cloud API required.
 version: 0.1.0
 license: MIT
@@ -29,7 +29,7 @@ metadata:
 
 Fine-tune a small local model on distilled persona data. Turn anyone-skill's output into a self-contained model that **is** the person — no prompting, no cloud, no latency.
 
-**Dependency chain**: `anyone-skill` → `persona-trainer` → runnable Gemma-4 persona model
+**Dependency chain**: `anyone-skill` → `persona-model-trainer` → runnable Gemma-4 persona model
 
 **Input**: `training/` folder produced by `anyone-skill` Phase 3 export  
 **Output**: LoRA/QLoRA adapter weights (method depends on hardware) + GGUF export for Ollama/llama.cpp + updated skill pack

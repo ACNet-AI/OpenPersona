@@ -1,11 +1,11 @@
-# persona-trainer
+# persona-model-trainer
 
 Fine-tune a small local model (Gemma-4 1B/4B/12B) on distilled persona data. Turn an [anyone-skill](https://github.com/acnlabs/anyone-skill) persona into a **self-contained model** that runs on phones and personal computers — no cloud API, no latency, no subscription.
 
 ## What it does
 
 ```
-anyone-skill output          persona-trainer              Runnable model
+anyone-skill output          persona-model-trainer        Runnable model
 ─────────────────────   →   ──────────────────   →   ──────────────────────
 training/                    QLoRA fine-tune              models/{slug}/
   conversations.jsonl        on Gemma-4 1B/4B/12B          adapter_weights/
@@ -85,7 +85,7 @@ anyone-skill  →  persona.json + training/   →  persona-trainer  →  runnabl
 ```
 
 Use `anyone-skill` alone for a prompt-based persona (instant, no training).  
-Add `persona-trainer` when you want a self-contained model that doesn't need a cloud API.
+Add `persona-model-trainer` when you want a self-contained model that doesn't need a cloud API.
 
 ## Data Requirements
 
