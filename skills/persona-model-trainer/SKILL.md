@@ -150,33 +150,42 @@ python scripts/check_env.py
 
 ## Phase 4: Data Preparation
 
-Run the data preparation script:
+`prepare_data.py` reads from **two layers** and merges them:
+
+| Layer | Path | Content | Role in training |
+|-------|------|---------|-----------------|
+| Raw sources | `training/raw/` | Original files (.jsonl / .json / .txt / .csv) | Authentic voice — teaches real wording |
+| Distilled | `training/conversations.jsonl` | Structured turns from anyone-skill | Coherent Q→A pairs |
 
 ```bash
 python scripts/prepare_data.py \
   --input training/conversations.jsonl \
+  --raw-dir training/raw/ \
   --profile training/profile.md \
   --output training/prepared/ \
   --model-size {e2b|e4b|26b}
 ```
 
-Map to prepare_data.py internal sizes: `e2b` → `1b`, `e4b` → `4b`, `26b` → `12b` (controls max token length per sample).
+Both `--input` and `--raw-dir` are optional — the script works if at least one exists.  
+To use raw data only (skipping anyone-skill distillation): omit `--input`.  
+To use distilled only (original behavior): omit `--raw-dir` or leave `training/raw/` empty.
+
+**Raw format auto-detection:**
+
+| File type | Handling |
+|-----------|---------|
+| `.jsonl` / `.json` | Parsed as `{role, content}` turns directly |
+| `.txt` | Paragraphs → assistant turns, paired with generic user prompts |
+| `.csv` | Auto-detects speaker/content columns; falls back to monologue |
 
 **What this does:**
 
-1. Loads `conversations.jsonl`
-2. Formats turns into instruction-tuning format:
-  ```
-   <start_of_turn>user
-   {user message}
-   <end_of_turn>
-   <start_of_turn>model
-   {persona response}
-   <end_of_turn>
-  ```
-3. Injects persona profile as a system prompt prefix on every sample
-4. Splits into train (90%) / eval (10%) preserving temporal order (no data leakage)
-5. Reports: `[N_train] train / [N_eval] eval samples · max token length: [L]`
+1. Loads raw/ files → converts to `{role, content}` turns (authentic voice layer)
+2. Loads `conversations.jsonl` → appends as structured turns (distilled layer)
+3. Formats all turns into Gemma-4 instruction-tuning format with profile system prompt
+4. Scans for PII patterns (SSN, credit card, email, passwords)
+5. Splits train (90%) / eval (10%) preserving temporal order
+6. Reports composition: `{N}% authentic voice + {N}% distilled`
 
 ---
 
