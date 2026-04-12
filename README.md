@@ -40,6 +40,14 @@ _Open the same HTML files locally from `demo/` if you prefer (no network). See [
 
 _Agent workflows, runner protocol, and full 4+5+3 operational detail: [`skills/open-persona/SKILL.md`](skills/open-persona/SKILL.md)._
 
+### Companion Skills
+
+| Skill | Install | Purpose |
+|-------|---------|---------|
+| [`open-persona`](skills/open-persona/) | `npx skills add acnlabs/OpenPersona` | Framework meta-skill — create, install, and manage personas |
+| [`anyone-skill`](skills/anyone-skill/) | `npx skills add acnlabs/anyone-skill` | Distill any person or character into a persona skill pack |
+| [`persona-trainer`](skills/persona-trainer/) | `npx skills add acnlabs/persona-trainer` | Fine-tune Gemma-4 locally on distilled data — runs on phones and laptops |
+
 ## Quick Start
 
 ```bash
@@ -629,6 +637,8 @@ npx openpersona create --preset ai-girlfriend --output ./my-personas
 
 ```
 skills/open-persona/    # Framework meta-skill (AI entry point)
+skills/anyone-skill/    # Universal persona distillation — any person or character → skill pack
+skills/persona-trainer/ # Fine-tune Gemma-4 locally on distilled data (Ollama/llama.cpp/mobile)
 presets/                # Assembled products — complete persona bundles
   samantha/             #   Samantha (movie "Her") — voice + music skill + evolution
   ai-girlfriend/        #   Luna — selfie + music skills + voice + evolution
