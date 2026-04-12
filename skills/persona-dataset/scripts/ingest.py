@@ -9,8 +9,8 @@ and backs up raw data to sources/.
 Usage:
     python scripts/ingest.py --slug sam --source ~/whatsapp-export.txt --persona-name "Samantha"
     python scripts/ingest.py --slug sam --source ~/twitter-archive/ --persona-name "Sam"
-    python scripts/ingest.py --slug sam --source data.jsonl --adapter jsonl
-    python scripts/ingest.py --slug sam --adapter gbrain --entity "Samantha"
+    python scripts/ingest.py --slug sam --source data.jsonl --adapter universal
+    python scripts/ingest.py --slug sam --source gbrain-export.json --entity "Samantha"
 """
 
 import argparse
@@ -48,10 +48,10 @@ def main():
     parser = argparse.ArgumentParser(description='Ingest data into a persona dataset')
     parser.add_argument('--slug', required=True, help='Persona dataset slug')
     parser.add_argument('--source', help='Path to source file or directory')
-    parser.add_argument('--adapter', help='Force specific adapter (obsidian/chat_export/social/plaintext/jsonl/gbrain)')
+    parser.add_argument('--adapter', help='Force specific adapter (universal/chat_export/social)')
     parser.add_argument('--persona-name', default='', help='Persona display name (for role detection)')
     parser.add_argument('--since', help='Only ingest data after this date (ISO 8601)')
-    parser.add_argument('--entity', help='Entity name for GBrain adapter')
+    parser.add_argument('--entity', help='Entity name for GBrain JSON export')
     parser.add_argument('--dry-run', action='store_true', help='Parse and report without writing')
 
     args = parser.parse_args()
@@ -251,6 +251,9 @@ def _write_sources_backup(dataset_dir: Path, messages: list[dict], adapter_name:
 
 HALL_ROUTING = {
     'obsidian': 'hall_facts',
+    'markdown': 'hall_facts',
+    'gbrain-export': 'hall_facts',
+    'gbrain': 'hall_facts',
     'whatsapp': 'hall_voice',
     'telegram': 'hall_voice',
     'signal': 'hall_voice',
@@ -263,7 +266,6 @@ HALL_ROUTING = {
     'plaintext': 'hall_facts',
     'pdf': 'hall_facts',
     'jsonl': 'hall_voice',
-    'gbrain': 'hall_facts',
 }
 
 
@@ -311,7 +313,7 @@ def _store_in_mempalace(dataset_dir: Path, slug: str, messages: list[dict]) -> i
 
 # Simple entity/relationship patterns for automatic extraction
 _PERSON_PATTERN = re.compile(
-    r'\b(?:my (?:friend|brother|sister|mom|dad|mother|father|wife|husband|partner|boss|colleague|coworker)|'
+    r'\b(?:[Mm]y (?:friend|brother|sister|mom|dad|mother|father|wife|husband|partner|boss|colleague|coworker)|'
     r'(?:with|told|asked|met|called|texted|emailed)\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'
 )
 
@@ -331,6 +333,11 @@ _RELATIONSHIP_KEYWORDS = {
     'coworker': 'colleague_of',
 }
 
+_RELATIONSHIP_PATTERNS = tuple(
+    (re.compile(rf'\b[Mm]y\s+{kw}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'), rel)
+    for kw, rel in _RELATIONSHIP_KEYWORDS.items()
+)
+
 
 def _extract_kg_triples(dataset_dir: Path, messages: list[dict]) -> dict:
     """Extract entities and relationships from message content."""
@@ -344,11 +351,7 @@ def _extract_kg_triples(dataset_dir: Path, messages: list[dict]) -> dict:
 
         content = msg['content']
 
-        # Extract named entities mentioned with relationship keywords
-        for kw, rel_type in _RELATIONSHIP_KEYWORDS.items():
-            pattern = re.compile(
-                rf'\bmy\s+{kw}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'
-            )
+        for pattern, rel_type in _RELATIONSHIP_PATTERNS:
             for match in pattern.finditer(content):
                 name = match.group(1)
                 entities.add(name)
@@ -356,6 +359,7 @@ def _extract_kg_triples(dataset_dir: Path, messages: list[dict]) -> dict:
                     'from': name,
                     'to': slug,
                     'type': rel_type,
+                    'confidence': 'extracted',
                     'timestamp': msg.get('timestamp'),
                     'source': msg.get('source_file'),
                 })
@@ -392,7 +396,11 @@ def _write_kg(palace_dir: Path, entities: set[str], relationships: list[dict]):
                     from_entity=rel['from'],
                     to_entity=rel.get('to', ''),
                     relationship_type=rel['type'],
-                    metadata={'timestamp': rel.get('timestamp'), 'source': rel.get('source')},
+                    metadata={
+                        'timestamp': rel.get('timestamp'),
+                        'source': rel.get('source'),
+                        'confidence': rel.get('confidence', 'extracted'),
+                    },
                 )
             except Exception:
                 pass
@@ -408,9 +416,9 @@ def _write_kg(palace_dir: Path, entities: set[str], relationships: list[dict]):
                 pass
 
         for entity in entities:
-            pending.append({'type': 'entity', 'name': entity, 'entity_type': 'person'})
+            pending.append({'_entry': 'entity', 'name': entity, 'entity_type': 'person'})
         for rel in relationships:
-            pending.append({'type': 'relationship', **rel})
+            pending.append({'_entry': 'relationship', **rel})
 
         kg_file.write_text(json.dumps(pending, indent=2, ensure_ascii=False) + '\n')
 

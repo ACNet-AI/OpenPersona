@@ -269,14 +269,14 @@ python scripts/train.py \
 
 ```bash
 # HF Trainer (qlora / lora methods) — poll trainer_state.json every 15s
-watch -n 15 "python3 -c \"
+watch -n 15 'python3 -c "
 import json, pathlib
-p = pathlib.Path('models/{slug}/checkpoints/trainer_state.json')
+p = pathlib.Path(\"models/{slug}/checkpoints/trainer_state.json\")
 if p.exists():
     s = json.loads(p.read_text())
-    log = s.get('log_history', [])
+    log = s.get(\"log_history\", [])
     if log: print(log[-1])
-\""
+"'
 
 # MLX — progress prints directly to stdout; no polling needed
 # Run in foreground or capture with: python scripts/train.py ... 2>&1 | tee train.log

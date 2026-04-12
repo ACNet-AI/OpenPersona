@@ -8,12 +8,12 @@ Persistent, incremental, searchable persona knowledge base — the **data layer*
 Data sources                  persona-dataset                 Downstream consumers
 ───────────────          →   ──────────────────────      →   ──────────────────────
 Obsidian vault                Storage: MemPalace              anyone-skill
-WhatsApp / Telegram           Graph: Knowledge Graph            (4D extraction)
-X (Twitter) archive           Knowledge: Karpathy Wiki        persona-model-trainer
-Instagram archive             Export: training/                 (fine-tuning)
+GBrain export                 Graph: Knowledge Graph            (4D extraction)
+WhatsApp / Telegram           Knowledge: Karpathy Wiki        persona-model-trainer
+X (Twitter) / Instagram       Export: training/                 (fine-tuning)
 iMessage / Signal
-.txt / .csv / .pdf
-JSONL / GBrain MCP
+.md / .txt / .csv / .pdf
+.jsonl / .json
 ```
 
 ## Architecture
@@ -104,20 +104,30 @@ training/
 python scripts/lint_wiki.py --slug sam
 ```
 
+### 6. Query Knowledge Graph
+
+```bash
+python scripts/query_kg.py --slug sam --entity "Tom"
+python scripts/query_kg.py --slug sam --path "Tom" "Alice"
+python scripts/query_kg.py --slug sam --stats
+```
+
 ## Supported sources
+
+Three adapters cover all formats:
 
 | Source | Adapter | Auto-detected |
 |--------|---------|---------------|
-| Obsidian vault | `obsidian` | `.obsidian/` or `*.md` directory |
+| Obsidian vault | `universal` | `.obsidian/` or `*.md` directory |
+| GBrain export | `universal` | Markdown dir with `.raw/` sidecars |
+| `.md` / `.txt` / `.csv` / `.pdf` | `universal` | File extension |
+| `.jsonl` / `.json` | `universal` | File extension |
 | WhatsApp `.txt` | `chat_export` | Timestamp pattern |
 | Telegram `result.json` | `chat_export` | `chats` JSON key |
 | Signal JSON | `chat_export` | `sender`+`body` format |
 | iMessage `.db` | `chat_export` | SQLite tables |
 | X (Twitter) archive | `social` | `data/tweets.js` |
 | Instagram archive | `social` | `content/posts_1.json` |
-| `.txt` / `.csv` / `.pdf` | `plaintext` | File extension |
-| `.jsonl` / `.json` | `jsonl` | File extension |
-| GBrain MCP | `gbrain` | `--adapter gbrain` |
 
 ## Data storage
 

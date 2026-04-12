@@ -64,11 +64,22 @@ def main():
     # --- 4. Write metadata.json ---
     _write_metadata(dataset_dir, output_dir, slug, name, raw_stats, conv_count)
 
+    # --- 5. Quality report ---
+    quality = _compute_quality_report(output_dir)
+
     print(f'\n✅ Export complete: {output_dir}/')
     print(f'   raw/: {raw_stats["files"]} files')
     print(f'   conversations.jsonl: {conv_count} turns')
     print(f'   profile.md: generated')
     print(f'   metadata.json: generated')
+    print(f'\n📊 Quality report:')
+    print(f'   Role balance: {quality["assistant_turns"]} assistant / {quality["user_turns"]} user'
+          f' (ratio {quality["role_ratio"]:.2f})')
+    print(f'   Avg turn length: {quality["avg_assistant_len"]:.0f} chars (assistant)'
+          f' / {quality["avg_user_len"]:.0f} chars (user)')
+    print(f'   Topics covered: {quality["topic_count"]}')
+    if quality.get('unique_questions', 0) > 0:
+        print(f'   Unique questions: {quality["unique_questions"]}')
 
 
 def _copy_raw_sources(dataset_dir: Path, output_dir: Path) -> dict:
@@ -241,14 +252,45 @@ def _generate_profile(dataset_dir: Path, output_dir: Path, name: str, slug: str)
     print(f'   profile.md: generated')
 
 
+def _count_total_words(dataset_dir: Path) -> int:
+    """Estimate total word count across all source files."""
+    total = 0
+    sources_dir = dataset_dir / 'sources'
+    if not sources_dir.exists():
+        return 0
+    for src_file in sources_dir.iterdir():
+        if src_file.name.startswith('.'):
+            continue
+        if src_file.suffix == '.jsonl':
+            for line in src_file.open(errors='replace'):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    msg = json.loads(line)
+                    total += len(msg.get('content', '').split())
+                except json.JSONDecodeError:
+                    continue
+        elif src_file.suffix in ('.txt', '.md', '.csv'):
+            total += len(src_file.read_text(errors='replace').split())
+    return total
+
+
 def _write_metadata(dataset_dir: Path, output_dir: Path, slug: str, name: str,
                     raw_stats: dict, conv_count: int):
+    total_words = _count_total_words(dataset_dir)
+
     meta = {
         'slug': slug,
         'name': name,
         'exported_at': datetime.now(timezone.utc).isoformat(),
         'source': f'persona-dataset ({dataset_dir})',
-        'raw_files': raw_stats['files'],
+        'source_count': raw_stats['files'],
+        'total_words': total_words,
+        'raw_files': [
+            f.name for f in sorted((dataset_dir / 'sources').iterdir())
+            if not f.name.startswith('.') and f.suffix in ('.jsonl', '.txt', '.json', '.csv')
+        ] if (dataset_dir / 'sources').exists() else [],
         'distilled_turns': conv_count,
         'total_estimated_turns': raw_stats.get('messages', 0) + conv_count,
     }
@@ -263,6 +305,57 @@ def _write_metadata(dataset_dir: Path, output_dir: Path, slug: str, name: str,
     (output_dir / 'metadata.json').write_text(
         json.dumps(meta, indent=2, ensure_ascii=False) + '\n'
     )
+
+
+def _compute_quality_report(output_dir: Path) -> dict:
+    """Compute quality metrics from the exported conversations.jsonl."""
+    conv_path = output_dir / 'conversations.jsonl'
+    assistant_lens = []
+    user_lens = []
+    questions = set()
+    topics = set()
+
+    if conv_path.exists():
+        for line in conv_path.open():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                turn = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            content = turn.get('content', '')
+            if turn.get('role') == 'assistant':
+                assistant_lens.append(len(content))
+            elif turn.get('role') == 'user':
+                user_lens.append(len(content))
+                questions.add(content)
+                topic_match = re.search(r'(?:about your |about )([\w\s-]+)', content, re.IGNORECASE)
+                if topic_match:
+                    topics.add(topic_match.group(1).strip().lower())
+
+    assistant_count = len(assistant_lens)
+    user_count = len(user_lens)
+    ratio = assistant_count / user_count if user_count > 0 else 0.0
+
+    report = {
+        'assistant_turns': assistant_count,
+        'user_turns': user_count,
+        'role_ratio': ratio,
+        'avg_assistant_len': sum(assistant_lens) / assistant_count if assistant_count else 0,
+        'avg_user_len': sum(user_lens) / user_count if user_count else 0,
+        'topic_count': len(topics),
+        'unique_questions': len(questions),
+    }
+
+    meta_path = output_dir / 'metadata.json'
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+        meta['quality'] = report
+        meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
+
+    return report
 
 
 if __name__ == '__main__':

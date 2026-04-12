@@ -57,6 +57,7 @@ def init_dataset(slug: str, name: str) -> Path:
 
     # --- dataset.json ---
     meta = {
+        'schema_version': 1,
         'slug': slug,
         'name': name,
         'created_at': datetime.now(timezone.utc).isoformat(),

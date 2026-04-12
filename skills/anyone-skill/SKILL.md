@@ -7,7 +7,6 @@ allowed-tools: Read Write Edit Bash WebSearch
 metadata:
   version: "1.0.0"
   author: acnlabs
----
 
 # anyone.skill — Distill Anyone
 
@@ -238,13 +237,14 @@ Before extraction, query MemPalace for an overview and use the wiki as a startin
 ```bash
 # Get a ~170-token overview of what's been ingested
 mempalace wake-up --wing {slug}
-
-# Read existing wiki pages for structured knowledge
-cat ~/.openpersona/datasets/{slug}/wiki/identity.md
-cat ~/.openpersona/datasets/{slug}/wiki/voice.md
-cat ~/.openpersona/datasets/{slug}/wiki/values.md
-cat ~/.openpersona/datasets/{slug}/wiki/thinking.md
 ```
+
+Then read existing wiki pages for structured knowledge using the `Read` tool:
+
+- `~/.openpersona/datasets/{slug}/wiki/identity.md`
+- `~/.openpersona/datasets/{slug}/wiki/voice.md`
+- `~/.openpersona/datasets/{slug}/wiki/values.md`
+- `~/.openpersona/datasets/{slug}/wiki/thinking.md`
 
 Use the wiki content as evidence-grounded starting points for each dimension. Fill gaps with semantic search: `mempalace search "decision making style" --wing {slug}`
 

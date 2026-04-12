@@ -1,6 +1,15 @@
 """
 Source adapters for persona-dataset.
 
+Three adapters cover all supported source formats:
+
+- universal:    Markdown dirs (Obsidian / GBrain export), .txt, .csv, .pdf,
+                .jsonl, .json — all pure file reading
+- chat_export:  WhatsApp / Telegram / Signal / iMessage — needs special
+                timestamp parsing and SQLite binary reading
+- social:       X (Twitter) / Instagram archive — needs JS wrapper stripping
+                and archive directory structure parsing
+
 Each adapter exposes a `parse(path, **kwargs) -> list[dict]` function
 that converts source data into a unified message format:
 
@@ -17,12 +26,9 @@ that converts source data into a unified message format:
 from pathlib import Path
 
 ADAPTER_REGISTRY = {
-    'obsidian': 'adapters.obsidian',
+    'universal': 'adapters.universal',
     'chat_export': 'adapters.chat_export',
     'social': 'adapters.social',
-    'plaintext': 'adapters.plaintext',
-    'jsonl': 'adapters.jsonl',
-    'gbrain': 'adapters.gbrain',
 }
 
 
@@ -31,20 +37,29 @@ def detect_adapter(source_path: str) -> str | None:
     p = Path(source_path)
 
     if p.is_dir():
-        if (p / '.obsidian').exists():
-            return 'obsidian'
-        if any(p.glob('*.md')) and not any(p.glob('*.json')):
-            return 'obsidian'
+        # Social archives (check first — they also contain .json files)
         if (p / 'data' / 'tweets.js').exists():
             return 'social'
         if (p / 'content' / 'posts_1.json').exists():
             return 'social'
-        return None
+
+        return 'universal'
 
     suffix = p.suffix.lower()
 
-    if suffix == '.jsonl':
-        return 'jsonl'
+    # Chat export detection
+    if suffix == '.db':
+        return 'chat_export'
+
+    if suffix == '.txt':
+        try:
+            head = p.read_text(errors='replace')[:1024]
+            import re
+            if re.search(r'\d+/\d+/\d+,\s*\d+:\d+\s*[AP]?M?\s*-\s*.+:', head):
+                return 'chat_export'
+        except OSError:
+            pass
+        return 'universal'
 
     if suffix == '.json':
         try:
@@ -54,26 +69,12 @@ def detect_adapter(source_path: str) -> str | None:
                 return 'chat_export'
             if isinstance(data, list) and data and 'sender' in data[0]:
                 return 'chat_export'
-            if isinstance(data, list) and data and 'role' in data[0]:
-                return 'jsonl'
-        except (json.JSONDecodeError, KeyError, IndexError):
+        except (json.JSONDecodeError, KeyError, IndexError, OSError):
             pass
-        return 'jsonl'
+        return 'universal'
 
-    if suffix == '.txt':
-        try:
-            head = p.read_text(errors='replace')[:1024]
-            import re
-            if re.search(r'\d+/\d+/\d+,\s*\d+:\d+\s*[AP]M\s*-\s*.+:', head):
-                return 'chat_export'
-        except OSError:
-            pass
-        return 'plaintext'
-
-    if suffix == '.db':
-        return 'chat_export'
-
-    if suffix in ('.csv', '.pdf'):
-        return 'plaintext'
+    # Everything else → universal
+    if suffix in ('.jsonl', '.csv', '.pdf', '.md'):
+        return 'universal'
 
     return None

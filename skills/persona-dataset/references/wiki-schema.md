@@ -4,7 +4,7 @@
 
 ## Architecture
 
-The wiki is a **derived artifact** — MemPalace is the source of truth for raw data, and the wiki is a structured, human-readable knowledge layer built on top of it. When in doubt, query MemPalace for authoritative data.
+The wiki is a **derived artifact** — `sources/` (immutable JSONL backups) is the source of truth for raw data. MemPalace is a derived search index built from `sources/`, and the wiki is a structured, human-readable knowledge layer built on top of both. If MemPalace is corrupted or missing, re-ingest from `sources/` to rebuild it.
 
 ## Page structure
 

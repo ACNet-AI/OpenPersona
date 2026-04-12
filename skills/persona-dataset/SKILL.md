@@ -17,7 +17,6 @@ metadata:
   optional:
     - anyone-skill (for distillation integration)
     - persona-model-trainer (consumes training/ export)
-    - GBrain MCP server (for gbrain adapter)
 ---
 
 # persona-dataset
@@ -100,21 +99,22 @@ Import data sources into the dataset. Can be called multiple times for increment
 python scripts/ingest.py --slug {slug} --source <path> [--adapter <name>] [--since <date>]
 ```
 
-**Adapter auto-detection** (by file type / directory structure):
+**Three adapters** cover all supported formats:
 
 | Source | Adapter | Detection |
 |--------|---------|-----------|
-| Obsidian vault | `obsidian` | Directory containing `.obsidian/` or `*.md` files |
+| Obsidian vault | `universal` | Directory containing `.obsidian/` or `*.md` files |
+| GBrain export dir | `universal` | Markdown directory with `.raw/` sidecar dirs |
+| `.md` / `.txt` / `.csv` / `.pdf` | `universal` | File extension |
+| `.jsonl` / `.json` | `universal` | File extension |
+| GBrain JSON export | `universal` | `.json` with `memories` key or `--entity` flag |
 | WhatsApp `.txt` export | `chat_export` | Matches WhatsApp timestamp pattern |
 | Telegram `result.json` | `chat_export` | JSON with `chats` key |
 | Signal export | `chat_export` | JSON with Signal message format |
 | iMessage `.db` | `chat_export` | SQLite with `message` + `handle` tables |
 | X (Twitter) archive | `social` | Directory containing `data/tweets.js` |
 | Instagram archive | `social` | Directory containing `content/posts_1.json` |
-| Slack / Discord JSON | delegates to `mempalace mine --mode convos` | JSON workspace export |
-| `.txt` / `.csv` / `.pdf` | `plaintext` | File extension |
-| `.jsonl` / `.json` | `jsonl` | File extension + `{role, content}` format |
-| GBrain MCP | `gbrain` | User specifies `--adapter gbrain --entity "Name"` |
+
 
 **Ingest pipeline** (per source):
 
@@ -255,12 +255,17 @@ Query the dataset using MemPalace's semantic search and Knowledge Graph:
 # Semantic search across all stored memories
 mempalace search "how does this person handle conflict" --wing {slug}
 
-# Knowledge Graph entity query
-python -c "
-from mempalace.knowledge_graph import KnowledgeGraph
-kg = KnowledgeGraph('~/.openpersona/datasets/{slug}/.mempalace/palace')
-print(kg.query_entity('{slug}'))
-"
+# Knowledge Graph: look up an entity's relationships
+python scripts/query_kg.py --slug {slug} --entity "Tom"
+
+# Knowledge Graph: shortest path between two entities
+python scripts/query_kg.py --slug {slug} --path "Tom" "Alice"
+
+# Knowledge Graph: overall statistics
+python scripts/query_kg.py --slug {slug} --stats
+
+# Knowledge Graph: JSON output (for programmatic use)
+python scripts/query_kg.py --slug {slug} --entity "Tom" --json
 
 # Wake-up summary (~170 tokens)
 mempalace wake-up --wing {slug}
@@ -306,17 +311,15 @@ Ongoing dataset management:
 | `scripts/ingest.py` | Unified ingestion: adapter dispatch + PII scan + dedup + MemPalace + KG |
 | `scripts/export_training.py` | Export sources/ + wiki → training/ directory |
 | `scripts/lint_wiki.py` | Wiki health check: broken links, contradictions, coverage gaps |
+| `scripts/query_kg.py` | Knowledge Graph query: entity lookup, shortest path, statistics |
 
 ## Adapters
 
 | Adapter | Sources | Format |
 |---------|---------|--------|
-| `obsidian` | Obsidian vault (.md + YAML frontmatter) | Markdown notes |
-| `chat_export` | WhatsApp / Telegram / Signal / iMessage | .txt / JSON / SQLite |
-| `social` | X (Twitter) / Instagram archive | JSON archive |
-| `plaintext` | .txt / .csv / .pdf | Generic files |
-| `gbrain` | GBrain MCP (optional) | MCP tool calls |
-| `jsonl` | Generic JSONL / JSON | {role, content} format |
+| `universal` | Obsidian vault, GBrain export, .md, .txt, .csv, .pdf, .jsonl, .json | All pure file reading |
+| `chat_export` | WhatsApp / Telegram / Signal / iMessage | .txt / JSON / SQLite (special parsing) |
+| `social` | X (Twitter) / Instagram archive | JS wrapper stripping + archive dirs |
 
 ---
 
