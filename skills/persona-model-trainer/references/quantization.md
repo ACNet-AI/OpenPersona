@@ -16,9 +16,9 @@ GGUF is the file format used by llama.cpp, Ollama, LM Studio, and Open WebUI. It
 | `Q2_K` | ~1.5 GB | High | Minimum viable / very old devices |
 
 **Default choices by model size:**
-- 1B → `Q8_0` (already small; preserve quality)
-- 4B → `Q4_K_M` (best balance for phones/laptops)
-- 12B → `Q4_K_M` (fits 8 GB VRAM/RAM)
+- E2B → `Q8_0` (already small; preserve quality)
+- E4B → `Q4_K_M` (best balance for phones/laptops)
+- 26B-A4B → `Q4_K_M` (fits 16 GB+ VRAM/RAM)
 
 ## Running GGUF Models
 
@@ -45,7 +45,7 @@ ollama run {slug}
 ### iPhone / Android (via llama.cpp iOS/Android port)
 - Copy the `.gguf` file to the app's documents directory
 - Apps: LLM Farm (iOS), MLC Chat (iOS/Android), Pocketpal AI (Android)
-- Recommended: `Q4_K_M` for 4B, `Q8_0` for 1B
+- Recommended: `Q4_K_M` for E4B/26B-A4B, `Q8_0` for E2B
 
 ## Context Length
 
