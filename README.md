@@ -46,8 +46,33 @@ _Agent workflows, runner protocol, and full 4+5+3 operational detail: [`skills/o
 |-------|---------|---------|
 | [`open-persona`](skills/open-persona/) | `npx skills add acnlabs/OpenPersona` | Framework meta-skill — create, install, and manage personas |
 | [`anyone-skill`](skills/anyone-skill/) | `npx skills add acnlabs/anyone-skill` | Distill any person or character into a persona skill pack |
-| [`persona-model-trainer`](skills/persona-model-trainer/) | `npx skills add acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops |
-| [`persona-dataset`](skills/persona-dataset/) | `npx skills add acnlabs/persona-dataset` | Persistent, searchable persona knowledge base — MemPalace + Knowledge Graph + Karpathy Wiki |
+| [`persona-knowledge`](skills/persona-knowledge/) | `npx skills add acnlabs/persona-knowledge` | Persistent, searchable persona knowledge base — MemPalace + Knowledge Graph + Karpathy Wiki |
+| [`persona-model-trainer`](skills/persona-model-trainer/) | `npx skills add acnlabs/persona-model-trainer` | Fine-tune a local model (Gemma 4, Qwen 3, Llama…) on persona data — runs on phones and laptops, no cloud required |
+
+#### Persona Pipeline — Distill → Know → Train → Run
+
+Turn any person or character into a locally-runnable AI model in four steps:
+
+```
+anyone-skill          persona-knowledge       persona-model-trainer
+──────────────        ─────────────────────   ──────────────────────────────
+Collect sources  ──►  Ingest & version    ──►  Fine-tune (Gemma 4 / Qwen 3)
+Chat logs             wiki/ + training/        LoRA adapter + GGUF export
+Documents             probes.json              Runs via Ollama / llama.cpp
+Public content        export versioning        No cloud, no latency
+```
+
+```bash
+# Install the full pipeline at once
+npx skills add acnlabs/openpersona
+
+# Or install individual skills
+npx skills add acnlabs/anyone-skill
+npx skills add acnlabs/persona-knowledge
+npx skills add acnlabs/persona-model-trainer
+```
+
+See [`skills/persona-model-trainer/references/pipeline-guide.md`](skills/persona-model-trainer/references/pipeline-guide.md) for the end-to-end walkthrough.
 
 ## Quick Start
 
@@ -640,7 +665,7 @@ npx openpersona create --preset ai-girlfriend --output ./my-personas
 skills/open-persona/    # Framework meta-skill (AI entry point)
 skills/anyone-skill/          # Universal persona distillation — any person or character → skill pack
 skills/persona-model-trainer/ # Fine-tune Gemma-4 locally on distilled data (Ollama/llama.cpp/mobile)
-skills/persona-dataset/      # Persistent persona knowledge base (MemPalace + KG + Karpathy Wiki)
+skills/persona-knowledge/      # Persistent persona knowledge base (MemPalace + KG + Karpathy Wiki)
 presets/                # Assembled products — complete persona bundles
   samantha/             #   Samantha (movie "Her") — voice + music skill + evolution
   ai-girlfriend/        #   Luna — selfie + music skills + voice + evolution
