@@ -7,13 +7,15 @@ Output structure:
       raw/                    # copied from sources/ (authentic voice)
       conversations.jsonl     # distilled Q-A pairs from wiki + sources
       profile.md              # character sheet from wiki summary
-      metadata.json           # aggregated stats
+      metadata.json           # aggregated stats + export version/hash
+      probes.json             # keyword probes for role consistency eval
 
 Usage:
     python scripts/export_training.py --slug sam --output training/
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -33,6 +35,8 @@ def main():
     parser.add_argument('--slug', required=True, help='Persona dataset slug')
     parser.add_argument('--output', default='training', help='Output directory (default: training/)')
     parser.add_argument('--wiki-only', action='store_true', help='Only generate conversations from wiki (skip raw copy)')
+    parser.add_argument('--version', help='Export version tag (default: auto-increment v1/v2/...)')
+    parser.add_argument('--list', action='store_true', help='List export history and exit')
 
     args = parser.parse_args()
 
@@ -40,6 +44,11 @@ def main():
     if not dataset_dir.exists():
         print(f'❌ Dataset not found: {dataset_dir}', file=sys.stderr)
         sys.exit(1)
+
+    # --- --list: show export history and exit ---
+    if args.list:
+        _list_exports(dataset_dir)
+        return
 
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -61,13 +70,31 @@ def main():
     # --- 3. Generate profile.md from wiki ---
     _generate_profile(dataset_dir, output_dir, name, slug)
 
-    # --- 4. Write metadata.json ---
-    _write_metadata(dataset_dir, output_dir, slug, name, raw_stats, conv_count)
+    # --- 4. Write metadata.json (with version fields) ---
+    version      = args.version or _next_version(dataset_dir)
+    export_hash  = _compute_export_hash(output_dir)
+    src_snapshot = _build_source_snapshot(dataset_dir)
 
-    # --- 5. Quality report ---
+    # Warn if explicit version already exists in history
+    existing = _load_export_history(dataset_dir)
+    if args.version and any(e.get('version') == args.version for e in existing):
+        print(f'Warning: version {args.version} already exists in export_history', file=sys.stderr)
+
+    _write_metadata(dataset_dir, output_dir, slug, name, raw_stats, conv_count,
+                    version, export_hash, src_snapshot)
+
+    # --- 5. Quality report (rewrites metadata.json to add quality field) ---
     quality = _compute_quality_report(output_dir)
 
+    # --- 6. Generate probes.json for probe-based evaluation ---
+    _generate_probes(dataset_dir, output_dir, name, slug)
+
+    # --- 7. Append export history (after export is fully complete) ---
+    _append_export_history(dataset_dir, version, export_hash, src_snapshot, conv_count,
+                           {'wiki_only': args.wiki_only})
+
     print(f'\n✅ Export complete: {output_dir}/')
+    print(f'   version: {version}  hash: {export_hash}')
     print(f'   raw/: {raw_stats["files"]} files')
     print(f'   conversations.jsonl: {conv_count} turns')
     print(f'   profile.md: generated')
@@ -276,15 +303,111 @@ def _count_total_words(dataset_dir: Path) -> int:
     return total
 
 
+def _next_version(dataset_dir: Path) -> str:
+    """Auto-increment export version based on export_history in dataset.json."""
+    meta_path = dataset_dir / 'dataset.json'
+    if not meta_path.exists():
+        return 'v1'
+    meta = json.loads(meta_path.read_text())
+    history = meta.get('export_history', [])
+    if not history:
+        return 'v1'
+    last = history[-1].get('version', '')
+    try:
+        n = int(last.lstrip('v'))
+        return f'v{n + 1}'
+    except ValueError:
+        return f'v{len(history) + 1}'   # non-standard tag fallback
+
+
+def _compute_export_hash(output_dir: Path) -> str:
+    """SHA-256 of conversations.jsonl — captures export content identity."""
+    conv = output_dir / 'conversations.jsonl'
+    if not conv.exists():
+        return 'sha256:empty'
+    return 'sha256:' + hashlib.sha256(conv.read_bytes()).hexdigest()[:16]
+
+
+def _build_source_snapshot(dataset_dir: Path) -> dict:
+    """Hash each source file to record which sources existed at export time."""
+    snapshot = {}
+    sources_dir = dataset_dir / 'sources'
+    if not sources_dir.exists():
+        return snapshot
+    for f in sorted(sources_dir.iterdir()):
+        if f.name.startswith('.') or f.suffix not in ('.jsonl', '.txt', '.json', '.csv'):
+            continue
+        snapshot[f.name] = 'sha256:' + hashlib.sha256(f.read_bytes()).hexdigest()[:16]
+    return snapshot
+
+
+def _load_export_history(dataset_dir: Path) -> list:
+    """Read export_history from dataset.json; returns [] on any failure."""
+    meta_path = dataset_dir / 'dataset.json'
+    if not meta_path.exists():
+        return []
+    try:
+        return json.loads(meta_path.read_text()).get('export_history', [])
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def _list_exports(dataset_dir: Path) -> None:
+    """Print export history table and exit."""
+    history = _load_export_history(dataset_dir)
+    if not history:
+        print('No exports yet.')
+        return
+    for entry in history:
+        ver   = entry.get('version', '?')
+        ts    = entry.get('exported_at', '')[:16].replace('T', ' ')
+        turns = entry.get('conversation_count', '?')
+        h     = entry.get('export_hash', '')
+        nsrc  = len(entry.get('source_snapshot', {}))
+        print(f'{ver:<4}  {ts}  {turns} turns  {h}  {nsrc} sources')
+
+
+def _append_export_history(dataset_dir: Path, version: str, export_hash: str,
+                           source_snapshot: dict, conv_count: int,
+                           export_params: dict) -> None:
+    """Append one record to dataset.json export_history (last step after full export)."""
+    meta_path = dataset_dir / 'dataset.json'
+    if not meta_path.exists():
+        print('Warning: dataset.json not found — skipping history append', file=sys.stderr)
+        return
+    meta = json.loads(meta_path.read_text())
+    meta.setdefault('export_history', [])
+    meta['export_history'].append({
+        'version':            version,
+        'exported_at':        datetime.now(timezone.utc).isoformat(),
+        'export_hash':        export_hash,
+        'source_snapshot':    source_snapshot,
+        'conversation_count': conv_count,
+        'export_params':      export_params,
+    })
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
+
+
 def _write_metadata(dataset_dir: Path, output_dir: Path, slug: str, name: str,
-                    raw_stats: dict, conv_count: int):
+                    raw_stats: dict, conv_count: int,
+                    version: str, export_hash: str, source_snapshot: dict):
     total_words = _count_total_words(dataset_dir)
 
+    # Load dataset.json for extra fields
+    dataset_meta_path = dataset_dir / 'dataset.json'
+    dm = json.loads(dataset_meta_path.read_text()) if dataset_meta_path.exists() else {}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
     meta = {
         'slug': slug,
         'name': name,
-        'exported_at': datetime.now(timezone.utc).isoformat(),
-        'source': f'persona-dataset ({dataset_dir})',
+        'subject_type': dm.get('subject_type', 'personal'),
+        'created_at': dm.get('created_at', now_iso),   # matches persona-model-trainer Phase 1 spec
+        'exported_at': now_iso,
+        'export_version':  version,
+        'export_hash':     export_hash,
+        'source_snapshot': source_snapshot,
+        'source': f'persona-knowledge ({dataset_dir})',
         'source_count': raw_stats['files'],
         'total_words': total_words,
         'raw_files': [
@@ -296,9 +419,7 @@ def _write_metadata(dataset_dir: Path, output_dir: Path, slug: str, name: str,
     }
 
     # Merge dataset.json stats
-    dataset_meta_path = dataset_dir / 'dataset.json'
-    if dataset_meta_path.exists():
-        dm = json.loads(dataset_meta_path.read_text())
+    if dm:
         stats = dm.get('stats', {})
         meta['dataset_stats'] = stats
 
@@ -356,6 +477,79 @@ def _compute_quality_report(output_dir: Path) -> dict:
         meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
 
     return report
+
+
+def _extract_wiki_keywords(wiki_dir: Path, page_name: str, max_chars: int = 20) -> list:
+    """Extract a short keyword string from a wiki page's Content section.
+
+    Uses a character-slice approach (v1 simplification) that works for both
+    Chinese (no word boundaries) and English personas without requiring a
+    tokenizer or stopword list.
+    """
+    page = wiki_dir / f'{page_name}.md'
+    if not page.exists():
+        return []
+    text = page.read_text(encoding='utf-8')
+    m = re.search(r'## Content\s*\n(.*?)(?=\n## |\Z)', text, re.DOTALL)
+    if not m:
+        return []
+    content = m.group(1).strip()
+    # Strip markup annotations like [L1:label]
+    content = re.sub(r'\[L\d+:?[\w-]*\]', '', content).strip()
+    if not content or '(awaiting' in content:
+        return []
+    snippet = content[:max_chars].strip()
+    return [snippet] if snippet else []
+
+
+def _generate_probes(dataset_dir: Path, output_dir: Path, name: str, slug: str):
+    """Generate probes.json for keyword-based role consistency evaluation.
+
+    The name probe (weight 1.0) checks if the model knows its own name.
+    The identity probe (weight 0.8) checks a short snippet from the identity wiki page.
+    The voice probe (weight 0.5) checks a snippet from the voice wiki page.
+
+    Probes with empty keywords are omitted to avoid trivially-passing checks.
+    """
+    wiki_dir = dataset_dir / 'wiki'
+    probes = []
+
+    # Name probe — most critical; always included
+    probes.append({
+        'id': 'name',
+        'question': 'What is your name?',
+        'keywords': [name],
+        'weight': 1.0,
+    })
+
+    # Identity probe — from wiki/identity.md Content section
+    identity_kw = _extract_wiki_keywords(wiki_dir, 'identity', max_chars=20)
+    if identity_kw:
+        probes.append({
+            'id': 'identity',
+            'question': 'Tell me about yourself.',
+            'keywords': identity_kw,
+            'weight': 0.8,
+        })
+
+    # Voice probe — from wiki/voice.md Content section
+    voice_kw = _extract_wiki_keywords(wiki_dir, 'voice', max_chars=10)
+    if voice_kw:
+        probes.append({
+            'id': 'voice',
+            'question': 'Say something in your own style.',
+            'keywords': voice_kw,
+            'weight': 0.5,
+        })
+
+    probes_data = {
+        'version': '1',
+        'slug': slug,
+        'probes': probes,
+    }
+    probes_path = output_dir / 'probes.json'
+    probes_path.write_text(json.dumps(probes_data, indent=2, ensure_ascii=False) + '\n')
+    print(f'   probes.json: {len(probes)} probe(s) generated')
 
 
 if __name__ == '__main__':

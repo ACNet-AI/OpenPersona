@@ -1,6 +1,6 @@
 # Source Formats
 
-> Supported data source formats and adapter details for persona-dataset.
+> Supported data source formats and adapter details for persona-knowledge.
 
 ## Adapter overview
 
@@ -210,9 +210,9 @@ The `role` assignment:
 
 ## Interop with anyone-skill preprocess.py
 
-`anyone-skill/scripts/preprocess.py` outputs a different schema (`{time, sender, content, platform}`) designed for direct agent reading, not for persona-dataset ingestion. When feeding preprocess.py output into persona-dataset, the `universal` adapter handles the mapping automatically:
+`anyone-skill/scripts/preprocess.py` outputs a different schema (`{time, sender, content, platform}`) designed for direct agent reading, not for persona-knowledge ingestion. When feeding preprocess.py output into persona-knowledge, the `universal` adapter handles the mapping automatically:
 
-| preprocess.py field | persona-dataset field | Mapping |
+| preprocess.py field | persona-knowledge field | Mapping |
 |---|---|---|
 | `sender` | `role` | Matched against `--persona-name`; persona → `assistant`, others → `user` |
 | `content` | `content` | Direct |

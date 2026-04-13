@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Knowledge Graph query tool for persona-dataset.
+Knowledge Graph query tool for persona-knowledge.
 
 Provides entity lookup, shortest-path search, and statistics
 over the persona's relationship graph.

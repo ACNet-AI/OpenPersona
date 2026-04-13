@@ -1,11 +1,11 @@
 ---
-name: create-anyone
+name: anyone-skill
 description: "Distill anyone into a runnable OpenPersona skill pack — real or fictional, personal or public, living or historical. Collects chat logs, documents, and public content, extracts a 4-dimension persona, and generates a portable OpenPersona pack via skills/open-persona. Use when asked to distill, clone, or create a persona for any person or character."
 license: MIT
-compatibility: Designed for Claude Code. Requires Python 3. Uses WebSearch for public figures and fictional characters.
+compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3. Uses WebSearch for public figures and fictional characters."
 allowed-tools: Read Write Edit Bash WebSearch
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: acnlabs
 
 # anyone.skill — Distill Anyone
@@ -15,16 +15,17 @@ metadata:
 
 anyone-skill is a **distillation front-end** for OpenPersona. It handles data collection, 4-dimension extraction, and evidence grading. The final output is a full OpenPersona persona pack generated via `skills/open-persona`.
 
-**Dependency chain**: `anyone-skill` → `skills/open-persona` → `openpersona create`
+**Dependency chain**: `anyone-skill` → `skills/open-persona` → `openpersona create`  
+**Extended chain (local model)**: `anyone-skill` → `persona-knowledge` → `persona-model-trainer` → runnable persona model
 
-**Optional integration**: When `persona-dataset` is installed (`skills/persona-dataset/`), anyone-skill uses it for persistent storage, semantic search, and Knowledge Graph instead of writing directly to `training/raw/`. Detection:
+**Optional integration**: When `persona-knowledge` is installed (`skills/persona-knowledge/`), anyone-skill uses it for persistent storage, semantic search, and Knowledge Graph instead of writing directly to `training/raw/`. Detection:
 
 ```bash
-# Check at start of Phase 3 — if this directory exists, use persona-dataset integration
-ls skills/persona-dataset/SKILL.md 2>/dev/null && echo "persona-dataset detected"
+# Check at start of Phase 3 — if this directory exists, use persona-knowledge integration
+ls skills/persona-knowledge/SKILL.md 2>/dev/null && echo "persona-knowledge detected"
 ```
 
-When detected, data flow becomes: `source → persona-dataset ingest → MemPalace + KG + wiki → persona-dataset export → training/`
+When detected, data flow becomes: `source → persona-knowledge ingest → MemPalace + KG + wiki → persona-knowledge export → training/`
 
 ## Trigger phrases
 
@@ -152,21 +153,21 @@ For each file provided:
 - **SQLite `.db` files** (iMessage `chat.db`, WeChat PyWxDump) → run `preprocess.py --input <file.db>`
 - **Very large files** (>5 MB or clearly >5000 messages) → run `preprocess.py --input <file> --max 3000`
 
-#### Path A: persona-dataset detected
+#### Path A: persona-knowledge detected
 
-If `persona-dataset` is installed, ingest each source via its pipeline:
+If `persona-knowledge` is installed, ingest each source via its pipeline:
 
 ```bash
-python skills/persona-dataset/scripts/ingest.py \
+python skills/persona-knowledge/scripts/ingest.py \
   --slug {slug} --source <path> --persona-name "{Name}"
 ```
 
 This automatically handles PII scanning, deduplication, MemPalace storage, KG extraction, and `sources/` backup. No manual `training/raw/` writing needed.
 
 Report after each source:
-`✅ [N] messages from [source] → persona-dataset/{slug}`
+`✅ [N] messages from [source] → persona-knowledge/{slug}`
 
-#### Path B: no persona-dataset (default)
+#### Path B: no persona-knowledge (default)
 
 **After processing each source, immediately save a copy to `training/raw/`** (do not wait for Step 6-D):
 
@@ -230,7 +231,7 @@ Skip data collection. Proceed directly to Phase 4 based on Phase 2 impressions.
 
 After all source material is processed, extract along 4 dimensions.
 
-#### persona-dataset integration (when detected)
+#### persona-knowledge integration (when detected)
 
 Before extraction, query MemPalace for an overview and use the wiki as a starting point:
 
@@ -248,7 +249,7 @@ Then read existing wiki pages for structured knowledge using the `Read` tool:
 
 Use the wiki content as evidence-grounded starting points for each dimension. Fill gaps with semantic search: `mempalace search "decision making style" --wing {slug}`
 
-After extraction, update the wiki pages with new insights (following Phase 3 of persona-dataset's SKILL.md).
+After extraction, update the wiki pages with new insights (following Phase 3 of persona-knowledge's SKILL.md).
 
 ### Dimension 1: Procedure — *How do they think?*
 
@@ -383,89 +384,40 @@ npx openpersona switch {slug}
 
 ### Step 6-D: Export Training Data (for persona-model-trainer)
 
-Export a `training/` directory alongside the skill pack. This feeds `persona-model-trainer` with **both layers** of data.
+> Full procedure and file templates: [references/training-export.md](references/training-export.md)
 
-#### Path A: persona-dataset detected
+Export a `training/` directory with raw source files, distilled conversation turns, a character profile, and metadata. If `persona-knowledge` is available, run `export_training.py`; otherwise build files manually from Phase 3–4 outputs.
 
-Run the export script — it generates the entire `training/` directory from the dataset:
+**With persona-knowledge** (versioned export — preferred):
 
 ```bash
-python skills/persona-dataset/scripts/export_training.py --slug {slug} --output training/
+python skills/persona-knowledge/scripts/export_training.py \
+  --slug {slug} --output training/
+# Auto-assigns version (v1, v2, …). Override with --version v2.
+# Writes export_version + export_hash to training/metadata.json.
+# persona-model-trainer will record these as dataset_version + dataset_export_hash
+# in training_summary.json, forming a complete provenance chain.
 ```
 
-This copies `sources/` → `training/raw/`, generates `conversations.jsonl` from wiki, and creates `profile.md` + `metadata.json`. Skip to the "After export" report below.
+View export history at any time:
 
-#### Path B: no persona-dataset (default)
-
-```
-training/
-  raw/                      ← original source files (authentic voice, unmodified)
-    chat_logs.jsonl         ← chat exports: {role, content} turns
-    books.txt               ← long-form text: treated as persona's monologue
-    interviews.jsonl        ← Q&A format: {role:"user"|"assistant", content}
-    social_posts.jsonl      ← short posts: {role:"assistant", content}
-    [... one file per source]
-  conversations.jsonl       ← distilled & structured turns (from Phase 4 extraction)
-  profile.md                ← concise character profile (system prompt seed)
-  metadata.json             ← slug, name, source count, word count, timestamp
+```bash
+python skills/persona-knowledge/scripts/export_training.py --slug {slug} --list
 ```
 
-**How to build each file:**
+**→ To train a local model**, pass the exported `probes.json` to `persona-model-trainer`:
 
-> `training/raw/` is already populated progressively during Phase 3 as each source is processed. Do not re-write it here.
-
-`**training/conversations.jsonl`** — write distilled turns from Phase 4 extraction:
-
-Each line is one turn: `{"role": "user"|"assistant", "content": "..."}`.  
-Represent the persona's voice as `assistant` turns. Synthesize realistic user prompts for `user` turns.
-
-Minimum 50 turns; aim for 200–500 if source material allows.
-
-`**training/profile.md`** — write a concise 300–500 word character sheet:
-
-```markdown
-# {Name} — Character Profile
-
-## Identity
-[1–2 sentences: who they are, era, role]
-
-## Voice
-[Key vocabulary, catchphrases, sentence rhythm, emotional temperature]
-
-## Core Values
-[3 non-negotiable principles]
-
-## Immutable Traits
-[3–5 qualities that never change regardless of context]
-
-## Do Not Cross
-[Layer 0 prohibitions: what they would never say or do]
+```bash
+bash skills/persona-model-trainer/scripts/pipeline.sh \
+  --slug {slug} \
+  --model google/gemma-4-E4B-it \
+  --source ./training \
+  --method mlx \       # or: unsloth (NVIDIA) / colab (no GPU)
+  --preset gemma4 \
+  --probes ./training/probes.json
 ```
 
-`**training/metadata.json**`:
-
-```json
-{
-  "slug": "{slug}",
-  "name": "{display name}",
-  "subject_type": "personal|public|fictional|historical|archetype",
-  "source_count": N,
-  "total_words": N,
-  "distilled_turns": N,
-  "raw_files": ["chat_logs.jsonl", "essays.txt"],
-  "created_at": "ISO-8601 timestamp"
-}
-```
-
-**After export, print:**
-
-```
-📦 Training data ready → training/
-   raw/          {N} source files  (~{M} words authentic voice)
-   conversations.jsonl  {N} distilled turns
-   profile.md    {N} words
-   → Ready for: persona-model-trainer
-```
+> Full walkthrough: [`persona-model-trainer/references/pipeline-guide.md`](../persona-model-trainer/references/pipeline-guide.md)
 
 ### persona.md (always keep locally)
 

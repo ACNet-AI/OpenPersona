@@ -1,5 +1,5 @@
 """
-Source adapters for persona-dataset.
+Source adapters for persona-knowledge.
 
 Three adapters cover all supported source formats:
 

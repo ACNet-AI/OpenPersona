@@ -1,31 +1,23 @@
 ---
-name: persona-dataset
+name: persona-knowledge
 description: "Persistent, incremental, searchable persona knowledge base. Ingests data from Obsidian vaults, chat exports, X/Twitter archives, and more into a MemPalace-backed store with a Karpathy LLM Wiki knowledge layer. Exports training/ directories for persona-model-trainer."
-version: 0.1.0
 license: MIT
-author: acnlabs
-compatibility:
-  agents:
-    - claude-code
-    - cursor
-    - openclaw
+compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+ and mempalace >= 3.1.0."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  requires:
-    - python >= 3.11
-    - mempalace >= 3.1.0 (pip install mempalace)
-  optional:
-    - anyone-skill (for distillation integration)
-    - persona-model-trainer (consumes training/ export)
+  version: "0.2.0"
+  author: acnlabs
+  requires: "python >= 3.11, mempalace >= 3.1.0 (pip install mempalace)"
+  optional: "anyone-skill (distillation integration), persona-model-trainer (consumes training/ export)"
 ---
 
-# persona-dataset
+# persona-knowledge
 
 Persistent, incremental, searchable persona knowledge base — the **data layer** between raw sources and persona training.
 
 **Architecture**: MemPalace (storage + search) + Knowledge Graph (relationships + timeline) + Karpathy LLM Wiki (knowledge accumulation)
 
-**Dependency chain**: `data sources` → `persona-dataset` → `anyone-skill` / `persona-model-trainer`
+**Dependency chain**: `data sources` → `persona-knowledge` → `anyone-skill` / `persona-model-trainer`
 
 ---
 
@@ -226,6 +218,20 @@ Generate a `training/` directory compatible with persona-model-trainer:
 python scripts/export_training.py --slug {slug} --output training/
 ```
 
+Each export is automatically versioned (`v1`, `v2`, …). Override with `--version`:
+
+```bash
+python scripts/export_training.py --slug {slug} --output training/ --version v3
+```
+
+List export history:
+
+```bash
+python scripts/export_training.py --slug {slug} --list
+# v1  2026-04-01 10:00  142 turns  sha256:a3f9c2d1  3 sources
+# v2  2026-04-10 14:22  198 turns  sha256:c7d2e1f3  4 sources
+```
+
 Output:
 
 ```
@@ -233,7 +239,7 @@ training/
   raw/                      # copied from sources/ (authentic voice, unmodified)
   conversations.jsonl       # generated from wiki pages (structured Q-A pairs)
   profile.md                # summarized from wiki identity/voice/values
-  metadata.json             # slug, source count, turn count, export timestamp
+  metadata.json             # slug, source count, turn count, export version + hash
 ```
 
 **How each file is built:**
@@ -241,9 +247,30 @@ training/
 - `training/raw/` — direct copy of `sources/*.jsonl` and `sources/*.txt` files
 - `training/conversations.jsonl` — the agent reads wiki pages and generates distilled user/assistant turn pairs representing the persona's voice, knowledge, and values
 - `training/profile.md` — 300-500 word character sheet derived from `identity.md`, `voice.md`, `values.md`
-- `training/metadata.json` — aggregated stats from `dataset.json` + source index
+- `training/metadata.json` — `slug`, `name`, `subject_type`, `created_at`, `source_count`, `total_words`, `distilled_turns`, `raw_files` + versioning fields:
+  - `export_version` — version tag (e.g. `"v2"`)
+  - `export_hash` — SHA-256 of `conversations.jsonl` (e.g. `"sha256:c7d2e1f3..."`)
+  - `source_snapshot` — `{filename: sha256_hash}` dict of all source files at export time
+
+Export history is appended to `dataset.json` → `export_history[]` after each run.
+
+**Downstream traceability:** `persona-model-trainer`'s `pipeline.sh` reads `export_version` and `export_hash` from `metadata.json` and injects them as `dataset_version` / `dataset_export_hash` into `training_summary.json`, forming a complete provenance chain from source data to trained model adapter.
 
 This output is directly consumable by `persona-model-trainer`'s `prepare_data.py` — no changes needed downstream.
+
+**→ Next step — train a local persona model:**
+
+```bash
+bash skills/persona-model-trainer/scripts/pipeline.sh \
+  --slug {slug} \
+  --model google/gemma-4-E4B-it \
+  --source ./training \
+  --method mlx \       # or: unsloth (NVIDIA GPU) / colab (no GPU)
+  --preset gemma4 \
+  --probes ./training/probes.json
+```
+
+> Full guide: [`persona-model-trainer/references/pipeline-guide.md`](../persona-model-trainer/references/pipeline-guide.md)
 
 ---
 

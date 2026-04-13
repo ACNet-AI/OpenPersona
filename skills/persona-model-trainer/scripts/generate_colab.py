@@ -32,8 +32,9 @@ import sys
 from pathlib import Path
 
 
-def build_notebook(slug: str, model: str, lora_rank: int, epochs: int,
-                   batch_size: int, learning_rate: float,
+def build_notebook(slug: str, model: str, lora_rank: int, lora_alpha: int,
+                   lora_layers: int, warmup_ratio: float,
+                   epochs: int, batch_size: int, learning_rate: float,
                    train_data: list[dict], eval_data: list[dict],
                    profile_text: str) -> dict:
     """Build a Jupyter notebook dict from the given parameters."""
@@ -128,15 +129,17 @@ if not torch.cuda.is_available():
         # ── Cell 4: Config ─────────────────────────────────────────────────
         _code(f"""\
 # ── Configuration (auto-generated — edit if needed) ──────────────────────
-SLUG        = "{slug}"
-MODEL_ID    = {json.dumps(model)}
-LORA_RANK   = {lora_rank}
-LORA_ALPHA  = {lora_rank * 2}
-EPOCHS      = {epochs}
-BATCH_SIZE  = {batch_size}
+SLUG          = "{slug}"
+MODEL_ID      = {json.dumps(model)}
+LORA_RANK     = {lora_rank}
+LORA_ALPHA    = {lora_alpha}   # default = rank (Gemma 4 recommendation: alpha == rank)
+LORA_LAYERS   = {lora_layers}  # informational; Unsloth applies LoRA to all layers by default
+WARMUP_RATIO  = {warmup_ratio}
+EPOCHS        = {epochs}
+BATCH_SIZE    = {batch_size}
 LEARNING_RATE = {learning_rate}
-MAX_SEQ_LEN = 2048
-OUTPUT_DIR  = f"/content/models/{{SLUG}}"
+MAX_SEQ_LEN   = 2048
+OUTPUT_DIR    = f"/content/models/{{SLUG}}"
 
 import os
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -235,10 +238,11 @@ training_args = TrainingArguments(
     output_dir=f"{OUTPUT_DIR}/checkpoints",
     num_train_epochs=EPOCHS,
     per_device_train_batch_size=BATCH_SIZE,
+    per_device_eval_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=4,
     learning_rate=LEARNING_RATE,
     lr_scheduler_type="cosine",
-    warmup_ratio=0.05,
+    warmup_ratio=WARMUP_RATIO,
     logging_steps=10,
     eval_strategy="epoch" if HAS_EVAL else "no",
     save_strategy="epoch",
@@ -264,26 +268,40 @@ trainer.train()
 print("\\n✅ Training complete!")
 """),
 
-        # ── Cell 9: Save adapter ──────────────────────────────────────────
+        # ── Cell 9: Save adapter + write training summary ─────────────────
         _code("""\
-import json
+import json, math
 
 adapter_path = f"{OUTPUT_DIR}/adapter_weights"
 model.save_pretrained(adapter_path)
 tokenizer.save_pretrained(adapter_path)
 print(f"✅ Adapter saved → {adapter_path}")
 
+# Extract eval_loss from training log history (populated when eval data exists)
+eval_loss = next(
+    (e["eval_loss"] for e in reversed(trainer.state.log_history) if "eval_loss" in e),
+    None,
+)
+
 # Write training summary (compatible with pipeline.sh / pack-integration)
 summary = {
     "base_model": MODEL_ID,
     "method": "unsloth-colab",
     "lora_rank": LORA_RANK,
+    "lora_alpha": LORA_ALPHA,
     "epochs": EPOCHS,
     "train_samples": len(train_data),
     "eval_samples": len(eval_data),
     "device": "colab-t4",
     "adapter_path": adapter_path,
 }
+if eval_loss is not None:
+    summary["evaluation"] = {
+        "eval_loss":  round(eval_loss, 4),
+        "perplexity": round(math.exp(eval_loss), 2),
+    }
+    print(f"   Perplexity: {summary['evaluation']['perplexity']:.2f}  (eval_loss={eval_loss:.4f})")
+
 summary_path = f"{OUTPUT_DIR}/training_summary.json"
 with open(summary_path, "w") as f:
     json.dump(summary, f, indent=2)
@@ -387,10 +405,18 @@ def main():
     parser.add_argument("--batch-size",   type=int,   default=2,
                         help="Per-device batch size (default 2 for T4 16 GB)")
     parser.add_argument("--lora-rank",    type=int,   default=16)
+    parser.add_argument("--lora-alpha",   type=int,   default=None,
+                        help="LoRA alpha (default: auto = lora-rank)")
+    parser.add_argument("--lora-layers",  type=int,   default=16,
+                        help="Transformer layers to apply LoRA (informational for Colab/Unsloth)")
+    parser.add_argument("--warmup-ratio", type=float, default=0.05,
+                        help="LR warmup ratio (default 0.05; gemma4 preset uses 0.1)")
     parser.add_argument("--learning-rate",type=float, default=2e-4)
     parser.add_argument("--output",       default=None,
                         help="Output .ipynb path (default: colab_train_{slug}.ipynb)")
     args = parser.parse_args()
+    if args.lora_alpha is None:
+        args.lora_alpha = args.lora_rank
 
     # Validate slug — must be safe for use in Python string literals, filenames, and paths.
     # OpenPersona slugs are lowercase alphanumeric + hyphens; reject anything else early.
@@ -429,6 +455,9 @@ def main():
         slug=args.slug,
         model=args.model,
         lora_rank=args.lora_rank,
+        lora_alpha=args.lora_alpha,
+        lora_layers=args.lora_layers,
+        warmup_ratio=args.warmup_ratio,
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,

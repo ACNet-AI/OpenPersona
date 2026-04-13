@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unified ingestion pipeline for persona-dataset.
+Unified ingestion pipeline for persona-knowledge.
 
 Dispatches to the appropriate source adapter, runs PII scanning,
 content-hash deduplication, writes to MemPalace, extracts KG triples,

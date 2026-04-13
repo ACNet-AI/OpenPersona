@@ -179,6 +179,19 @@ def cmd_activate(args: argparse.Namespace) -> None:
     if voice_src.exists():
         shutil.copy(voice_src, export_dir / "voice_test_results.json")
 
+    # 2b. Optionally restore prepared/ dataset for training reproducibility
+    if getattr(args, "restore_data", False):
+        prepared_dir = base_dir / "prepared"
+        data_src = adapter_archive / "data"
+        if data_src.exists():
+            if prepared_dir.exists():
+                shutil.rmtree(prepared_dir)
+            shutil.copytree(data_src, prepared_dir)
+            print(f"  Restored dataset → {prepared_dir}")
+        else:
+            print("  Warning: no data/ archive for this version — skipping restore",
+                  file=sys.stderr)
+
     # 3. Re-run export.py to rebuild gguf/ollama/vllm/onnx
     # export.py derives output dir from adapter_path.parent when --output-dir is absent.
     # Since adapter_path is absolute, parent = export_dir. ✓
@@ -234,10 +247,14 @@ def cmd_diff(args: argparse.Namespace) -> None:
         ("epochs",       "epochs"),
         ("lora_rank",    "lora_rank"),
         ("train_turns",  "train_samples"),
-        ("fidelity",     None),  # special: from voice_test_results.json
-        ("formats",      "formats"),
-        ("quant",        "quant"),
-        ("trained_at",   "trained_at"),
+        ("fidelity",     None),     # special: from voice_test_results.json
+        ("perplexity",   None),     # special: from evaluation block
+        ("probe_score",  None),     # special: from evaluation block
+        ("formats",       "formats"),
+        ("quant",         "quant"),
+        ("trained_at",    "trained_at"),
+        ("data_samples",  "data_samples"),
+        ("data_hash",     "data_hash"),
     ]
 
     voice_a = _load_summary(adapters_dir / va / "voice_test_results.json")
@@ -250,7 +267,13 @@ def cmd_diff(args: argparse.Namespace) -> None:
         if key == "base_model":
             val_a = (sa.get(key) or "—")[:29]
             val_b = (sb.get(key) or "—")[:29]
-        elif key is None:  # fidelity
+        elif label in ("perplexity", "probe_score"):
+            # Nested inside training_summary.json["evaluation"]
+            raw_a = sa.get("evaluation", {}).get(label)
+            raw_b = sb.get("evaluation", {}).get(label)
+            val_a = f"{raw_a:.2f}" if raw_a is not None else "—"
+            val_b = f"{raw_b:.2f}" if raw_b is not None else "—"
+        elif key is None:  # fidelity: from voice_test_results.json
             raw_a = voice_a.get("overall_score") if voice_a else None
             raw_b = voice_b.get("overall_score") if voice_b else None
             val_a = f"{raw_a:.1f}/5.0" if raw_a is not None else "—"
@@ -289,6 +312,7 @@ def cmd_push(args: argparse.Namespace) -> None:
         repo_id=args.hf_repo,
         repo_type="model",
         commit_message=f"{args.version}: adapter weights for {args.slug}",
+        ignore_patterns=["data/*"],  # exclude training data — use --include-data for dataset push
     )
     api.create_tag(
         repo_id=args.hf_repo,
@@ -296,6 +320,27 @@ def cmd_push(args: argparse.Namespace) -> None:
         tag=args.version,
     )
     print(f"✅ Pushed and tagged {args.version} on {args.hf_repo}")
+
+    if getattr(args, "include_data", False):
+        data_dir = version_dir / "data"
+        if not data_dir.exists():
+            print("Warning: no data/ archive — skipping dataset push", file=sys.stderr)
+        else:
+            dataset_repo = f"{args.hf_repo}-dataset"
+            print(f"\n⚠️  Dataset push: repo will be PRIVATE ({dataset_repo})")
+            confirm = input("   Contains training conversations. Confirm? [y/N] ").strip().lower()
+            if confirm != "y":
+                print("  Skipped.")
+            else:
+                api.create_repo(dataset_repo, repo_type="dataset", private=True, exist_ok=True)
+                api.upload_folder(
+                    folder_path=str(data_dir),
+                    repo_id=dataset_repo,
+                    repo_type="dataset",
+                    commit_message=f"{args.version}: prepared dataset for {args.slug}",
+                )
+                api.create_tag(repo_id=dataset_repo, repo_type="dataset", tag=args.version)
+                print(f"✅ Dataset pushed and tagged {args.version} on {dataset_repo}")
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────
@@ -324,10 +369,12 @@ def main() -> None:
     p_ac.add_argument("--slug",     required=True)
     p_ac.add_argument("--version",  required=True)
     p_ac.add_argument("--base-dir", default=None)
-    p_ac.add_argument("--formats",  default=None,
+    p_ac.add_argument("--formats",       default=None,
                       help="Override export formats (default: value from training_summary.json)")
-    p_ac.add_argument("--quant",    default=None,
+    p_ac.add_argument("--quant",         default=None,
                       help="Override GGUF quantization (default: value from training_summary.json)")
+    p_ac.add_argument("--restore-data",  action="store_true",
+                      help="Also restore prepared/ dataset from archived data/ (for training reproducibility)")
 
     # diff
     p_df = sub.add_parser("diff", help="Compare two versions")
@@ -342,7 +389,9 @@ def main() -> None:
     p_pu.add_argument("--version",  required=True)
     p_pu.add_argument("--hf-repo",  required=True, dest="hf_repo",
                       help="HuggingFace Hub repo ID (e.g. alice/samantha-persona)")
-    p_pu.add_argument("--base-dir", default=None)
+    p_pu.add_argument("--base-dir",      default=None)
+    p_pu.add_argument("--include-data",  action="store_true",
+                      help="Also push prepared dataset to a private HF Hub dataset repo")
 
     args = parser.parse_args()
 

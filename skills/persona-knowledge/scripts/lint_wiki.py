@@ -63,8 +63,10 @@ def lint_wiki(wiki_dir: Path, dataset_dir: Path, *, fix_links: bool = False) -> 
     issues = []
     warnings = []
 
-    # 1. Broken wikilinks
+    # 1. Broken wikilinks (skip system pages — they contain example/doc wikilinks)
     for page_name, content in pages.items():
+        if page_name.startswith('_'):
+            continue
         for match in WIKILINK_PATTERN.finditer(content):
             target = match.group(1).strip()
             if target not in pages:

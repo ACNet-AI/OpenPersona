@@ -8,7 +8,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_BASE = Path(".claude/skills")
@@ -42,7 +42,7 @@ def list_skills(base_dir: Path):
 def init_skill(slug: str, base_dir: Path, subject_type: str = "personal"):
     skill_dir = base_dir / slug
     skill_dir.mkdir(parents=True, exist_ok=True)
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     meta = {
         "slug": slug,
         "version": "0.1.0",
@@ -67,7 +67,7 @@ def update_meta(slug: str, base_dir: Path, patch: dict):
         sys.exit(1)
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     meta.update(patch)
-    meta["updated-at"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    meta["updated-at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"✅ Updated meta.json for {slug}")
 

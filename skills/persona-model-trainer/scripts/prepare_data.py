@@ -26,6 +26,7 @@ so the output is model-agnostic and works for any instruction-tuned model.
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -328,6 +329,10 @@ def main():
     save_jsonl(train_samples, output_dir / "train.jsonl")
     save_jsonl(eval_samples, output_dir / "eval.jsonl")
 
+    data_hash = "sha256:" + hashlib.sha256(
+        (output_dir / "train.jsonl").read_bytes()
+    ).hexdigest()[:16]
+
     stats = {
         "total_turns": len(all_turns),
         "raw_turns": len(raw_turns),
@@ -339,6 +344,7 @@ def main():
         "model": args.model,
         "max_chars_per_sample": max_chars,
         "pii_flags": pii_flags,
+        "data_hash": data_hash,
     }
     (output_dir / "stats.json").write_text(json.dumps(stats, indent=2))
 

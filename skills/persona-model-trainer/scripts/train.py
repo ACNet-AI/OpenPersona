@@ -19,11 +19,24 @@ Usage:
 
 import argparse
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+def _parse_eval_loss(lines: list) -> float | None:
+    """Extract the last Val loss value from mlx_lm.lora stdout/stderr lines.
+
+    mlx_lm.lora prints: "Iter 259: Val loss 6.359, Val took 17.220s"
+    Returns None when no Val loss line is found (no eval data or parse failure).
+    """
+    matches = re.findall(r'Val loss (\d+\.?\d*(?:[eE][+-]?\d+)?)', ''.join(lines))
+    return float(matches[-1]) if matches else None
+
 
 def _version_fields(args) -> dict:
     """Build version-tracking fields for training_summary.json.
@@ -89,6 +102,11 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
                 fout.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
     print(f"  Converted training data for mlx-lm → {mlx_data_dir}")
 
+    # mlx_lm.lora has two distinct concepts:
+    #   --lora-layers N  — how many transformer layers to apply LoRA to (depth)
+    #   --rank R         — the LoRA rank / dimensionality of adapter matrices
+    # These must be passed separately; conflating them (old bug) silently used
+    # mlx-lm's default rank instead of the user-specified value.
     cmd = [
         sys.executable, "-m", "mlx_lm.lora",
         "--model", args.model,
@@ -97,7 +115,8 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
         "--save-every", "100",
         "--adapter-path", str(adapter_path),
         "--iters", str(args.epochs * 500),  # approx epoch → iters
-        "--lora-layers", str(args.lora_rank),
+        "--lora-layers", str(args.lora_layers),
+        "--rank", str(args.lora_rank),
         "--learning-rate", str(args.learning_rate),
         "--batch-size", str(args.batch_size),
     ]
@@ -106,15 +125,27 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
 
     print(f"Training with MLX (Apple Silicon native)…")
     print(f"Command: {' '.join(cmd)}")
-    ret = subprocess.call(cmd)
-    if ret != 0:
-        sys.exit(ret)
+
+    # Popen tee: stream output to terminal while capturing for Val loss parsing.
+    # subprocess.call would lose the output; capture_output would hide it from the user.
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    captured = []
+    for line in proc.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        captured.append(line)
+    proc.wait()
+    if proc.returncode != 0:
+        sys.exit(proc.returncode)
+
+    eval_loss = _parse_eval_loss(captured)  # None when no eval data or no Val loss line
 
     # MLX saves adapters as .safetensors — write summary
     summary = {
         "base_model": args.model,
         "method": "mlx",
         "lora_rank": args.lora_rank,
+        "lora_layers": args.lora_layers,
         "epochs": args.epochs,
         "train_samples": train_count,
         "eval_samples": eval_count,
@@ -122,11 +153,16 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
         "adapter_path": str(adapter_path),
         **_version_fields(args),
     }
+    if eval_loss is not None:
+        summary["evaluation"] = {
+            "eval_loss":  round(eval_loss, 4),
+            "perplexity": round(math.exp(eval_loss), 2),
+        }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\n✅ MLX adapter saved → {adapter_path}")
 
 
-def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count: int = 0):
+def train_unsloth(args, output_dir, train_path, eval_path, train_count: int = 0, eval_count: int = 0):
     """NVIDIA GPU training via Unsloth (2–5× faster than vanilla HF)."""
     try:
         from unsloth import FastLanguageModel
@@ -158,7 +194,10 @@ def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count
         use_gradient_checkpointing="unsloth",
     )
 
-    dataset = load_dataset("json", data_files={"train": str(train_path)})
+    data_files = {"train": str(train_path)}
+    if eval_path.exists():
+        data_files["eval"] = str(eval_path)
+    dataset = load_dataset("json", data_files=data_files)
 
     # Apply model-agnostic chat template via formatting_func.
     # prepare_data.py outputs {"messages": [...]} — apply_chat_template handles
@@ -175,15 +214,18 @@ def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count
             for msgs in examples["messages"]
         ]
 
+    has_eval = eval_path.exists()
     training_args = TrainingArguments(
         output_dir=str(output_dir / "checkpoints"),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=4,
         learning_rate=args.learning_rate,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.05,
+        warmup_ratio=args.warmup_ratio,
         logging_steps=10,
+        eval_strategy="epoch" if has_eval else "no",
         save_strategy="epoch",
         fp16=True,
         report_to="none",
@@ -193,6 +235,7 @@ def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count
         model=model,
         args=training_args,
         train_dataset=dataset["train"],
+        eval_dataset=dataset.get("eval"),
         tokenizer=tokenizer,
         formatting_func=formatting_func,
         max_seq_length=2048,
@@ -202,6 +245,11 @@ def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count
     trainer.train()
     model.save_pretrained(str(adapter_path))
     tokenizer.save_pretrained(str(adapter_path))
+
+    eval_loss = next(
+        (e["eval_loss"] for e in reversed(trainer.state.log_history) if "eval_loss" in e),
+        None,
+    )
 
     summary = {
         "base_model": args.model,
@@ -214,6 +262,11 @@ def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count
         "adapter_path": str(adapter_path),
         **_version_fields(args),
     }
+    if eval_loss is not None:
+        summary["evaluation"] = {
+            "eval_loss":  round(eval_loss, 4),
+            "perplexity": round(math.exp(eval_loss), 2),
+        }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\n✅ Unsloth adapter saved → {adapter_path}")
 
@@ -225,8 +278,14 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--method", default="unsloth",
                         choices=["unsloth", "qlora", "mlx", "lora", "full"])
-    parser.add_argument("--lora-rank", type=int, default=16)
-    parser.add_argument("--lora-alpha", type=int, default=32)
+    parser.add_argument("--lora-rank",    type=int,   default=16,
+                        help="LoRA rank — dimensionality of adapter matrices (default: 16)")
+    parser.add_argument("--lora-alpha",   type=int,   default=None,
+                        help="LoRA alpha — scaling factor (default: auto = lora-rank; alpha==rank is Gemma 4 recommendation)")
+    parser.add_argument("--lora-layers",  type=int,   default=16,
+                        help="MLX only: number of transformer layers to apply LoRA to (default: 16)")
+    parser.add_argument("--warmup-ratio", type=float, default=0.05,
+                        help="Warmup ratio for LR scheduler (default: 0.05; Gemma 4 preset uses 0.1)")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
@@ -242,6 +301,10 @@ def main():
     parser.add_argument("--quant",    default="Q4_K_M",
                         help="GGUF quantization level recorded in summary for version activate")
     args = parser.parse_args()
+    # Resolve lora_alpha: default to lora_rank (alpha == rank is the Gemma 4 recommendation
+    # and works well for most persona fine-tuning tasks; avoids silent global default changes).
+    if args.lora_alpha is None:
+        args.lora_alpha = args.lora_rank
 
     data_dir = Path(args.data)
     output_dir = Path(args.output)
@@ -259,6 +322,9 @@ def main():
     eval_count = sum(1 for _ in open(eval_path)) if eval_path.exists() else 0
     print(f"Training data: {train_count} samples | Eval: {eval_count} samples")
     print(f"Method: {args.method}")
+    print(f"Hyperparameters: lora_rank={args.lora_rank} lora_alpha={args.lora_alpha} "
+          f"lora_layers={args.lora_layers} warmup_ratio={args.warmup_ratio} "
+          f"epochs={args.epochs} batch_size={args.batch_size} lr={args.learning_rate}")
 
     if args.dry_run:
         print("✅ Dry run complete — setup looks good.")
@@ -269,7 +335,7 @@ def main():
         train_mlx(args, output_dir, train_path, eval_path, train_count, eval_count)
         return
     if args.method == "unsloth":
-        train_unsloth(args, output_dir, train_path, train_count, eval_count)
+        train_unsloth(args, output_dir, train_path, eval_path, train_count, eval_count)
         return
 
     # Import training dependencies
@@ -356,7 +422,7 @@ def main():
         gradient_accumulation_steps=4,
         learning_rate=args.learning_rate,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.05,
+        warmup_ratio=args.warmup_ratio,
         logging_steps=10,
         eval_strategy="epoch" if eval_path.exists() else "no",
         save_strategy="epoch",
@@ -395,6 +461,12 @@ def main():
     print(f"\nStarting training ({args.epochs} epochs)…")
     trainer.train()
 
+    # Extract eval_loss from training log history (populated when eval data exists)
+    eval_loss = next(
+        (e["eval_loss"] for e in reversed(trainer.state.log_history) if "eval_loss" in e),
+        None,
+    )
+
     # Save adapter weights
     adapter_path = output_dir / "adapter_weights"
     model.save_pretrained(str(adapter_path))
@@ -413,6 +485,11 @@ def main():
         "adapter_path": str(adapter_path),
         **_version_fields(args),
     }
+    if eval_loss is not None:
+        summary["evaluation"] = {
+            "eval_loss":  round(eval_loss, 4),
+            "perplexity": round(math.exp(eval_loss), 2),
+        }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"   Training summary → {output_dir}/training_summary.json")
     print("\nNext: run scripts/voice_test.py to validate, then scripts/export.py")

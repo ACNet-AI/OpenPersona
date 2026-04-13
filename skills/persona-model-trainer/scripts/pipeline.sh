@@ -12,7 +12,7 @@
 # Required:
 #   --slug    Persona slug (used for output dir and Ollama model name)
 #   --model   HuggingFace model ID (e.g. google/gemma-4-E4B-it, Qwen/Qwen3-4B-Instruct)
-#   --source  Path to training/ folder (output of anyone-skill or persona-dataset export)
+#   --source  Path to training/ folder (output of anyone-skill or persona-knowledge export)
 #
 # Optional:
 #   --method          Training backend: unsloth | qlora | mlx | lora | colab | skip-train
@@ -21,8 +21,14 @@
 #                       qlora/lora — NVIDIA/CPU fallback
 #                       colab      — no local GPU: generate a Colab notebook, then exit
 #                       skip-train — resume after Colab: skip training, run voice_test + export
+#   --preset          Named hyperparameter preset: gemma4
+#                       gemma4 — sets lora-rank=16, lora-layers=16, warmup-ratio=0.1, lora-alpha=16
+#                                optimised for google/gemma-4-E4B-it and google/gemma-4-27B-it
 #   --epochs          Training epochs (default: 3)
-#   --lora-rank       LoRA rank (default: 16)
+#   --lora-rank       LoRA rank — dimensionality of adapter matrices (default: 16)
+#   --lora-alpha      LoRA alpha — scaling factor (default: auto = lora-rank; gemma4 uses rank==alpha)
+#   --lora-layers     MLX only: transformer layers to apply LoRA to (default: 16)
+#   --warmup-ratio    LR warmup ratio (default: 0.05; gemma4 preset uses 0.1)
 #   --batch-size      Per-device batch size (default: 2 — safe for Colab T4 and local with grad-accum=4)
 #   --learning-rate   Learning rate (default: 2e-4)
 #   --output-dir      Version management root dir (default: models/{slug})
@@ -31,6 +37,7 @@
 #   --formats         Export formats, comma-sep: gguf,ollama,vllm,onnx  (default: gguf,ollama)
 #   --quant           GGUF quantization: Q4_K_M | Q8_0 | Q6_K | ...  (default: Q4_K_M)
 #   --max-chars       Max chars per training sample (default: 2048)
+#   --probes          Path to probes.json (from persona-knowledge export); enables probe evaluation
 #   --skip-voice-test Skip Phase 4a voice validation
 #   --dry-run         Validate pipeline setup without actual training or export
 
@@ -54,12 +61,20 @@ fail()  { echo -e "${RED}❌  $*${RESET}" >&2; exit 1; }
 info()  { echo -e "${DIM}   $*${RESET}"; }
 
 # ── Defaults ─────────────────────────────────────────────────────────────
+# Preset-controlled params use empty-string sentinels so that:
+#   1. Arg parsing records explicitly-set values (non-empty).
+#   2. Preset block fills only the still-empty ones → explicit flags always win.
+#   3. Final defaults fill anything still unset after preset.
 SLUG=""
 MODEL=""
 SOURCE=""
 METHOD="unsloth"
-EPOCHS=3
-LORA_RANK=16
+PRESET=""
+EPOCHS=""
+LORA_RANK=""
+LORA_LAYERS=""
+WARMUP_RATIO=""
+LORA_ALPHA=""          # empty = let train.py compute as lora_rank (alpha == rank)
 BATCH_SIZE=2          # default 2: safe for both local (with grad-accum=4) and Colab T4 (15 GB)
 LEARNING_RATE="2e-4"
 BASE_DIR=""           # set after arg parsing; --output-dir overrides
@@ -67,6 +82,8 @@ VERSION=""            # auto-inferred as v{N+1} if not set
 FORMATS="gguf,ollama"
 QUANT="Q4_K_M"
 MAX_CHARS=2048
+PROBES_FILE=""
+PROBE_SCORE=""
 SKIP_VOICE_TEST=false
 DRY_RUN=false
 
@@ -77,8 +94,12 @@ while [[ $# -gt 0 ]]; do
     --model)           MODEL="$2";          shift 2 ;;
     --source)          SOURCE="$2";         shift 2 ;;
     --method)          METHOD="$2";         shift 2 ;;
+    --preset)          PRESET="$2";         shift 2 ;;
     --epochs)          EPOCHS="$2";         shift 2 ;;
     --lora-rank)       LORA_RANK="$2";      shift 2 ;;
+    --lora-alpha)      LORA_ALPHA="$2";     shift 2 ;;
+    --lora-layers)     LORA_LAYERS="$2";    shift 2 ;;
+    --warmup-ratio)    WARMUP_RATIO="$2";   shift 2 ;;
     --batch-size)      BATCH_SIZE="$2";     shift 2 ;;
     --learning-rate)   LEARNING_RATE="$2";  shift 2 ;;
     --output-dir)      BASE_DIR="$2";       shift 2 ;;
@@ -86,6 +107,7 @@ while [[ $# -gt 0 ]]; do
     --formats)         FORMATS="$2";        shift 2 ;;
     --quant)           QUANT="$2";          shift 2 ;;
     --max-chars)       MAX_CHARS="$2";      shift 2 ;;
+    --probes)          PROBES_FILE="$2";     shift 2 ;;
     --skip-voice-test) SKIP_VOICE_TEST=true; shift ;;
     --dry-run)         DRY_RUN=true;        shift ;;
     -h|--help)
@@ -96,6 +118,30 @@ while [[ $# -gt 0 ]]; do
     *) fail "Unknown argument: $1 (use --help for usage)" ;;
   esac
 done
+
+# ── Apply preset — only fills params not already set by explicit flags ────────
+if [[ -n "$PRESET" ]]; then
+  case "$PRESET" in
+    gemma4)
+      # Explicit flags (non-empty after arg parsing) take priority over preset.
+      [[ -z "$LORA_RANK"    ]] && LORA_RANK=16
+      [[ -z "$LORA_LAYERS"  ]] && LORA_LAYERS=16
+      [[ -z "$WARMUP_RATIO" ]] && WARMUP_RATIO="0.1"
+      # lora_alpha: only set when user didn't specify; alpha==rank is Gemma 4 recommendation.
+      # train.py computes alpha=rank automatically when --lora-alpha is absent.
+      info "Preset gemma4 applied (explicit flags take priority):"
+      info "  lora-rank=${LORA_RANK}  lora-layers=${LORA_LAYERS}  warmup-ratio=${WARMUP_RATIO}  lora-alpha=${LORA_ALPHA:-<auto=rank>}"
+      info "  Recommended model: google/gemma-4-E4B-it  (MLX: mlx-community/gemma-4-E4B-it-4bit)"
+      ;;
+    *) fail "Unknown preset: $PRESET  (supported: gemma4)" ;;
+  esac
+fi
+
+# ── Apply final defaults for any param still unset ───────────────────────────
+EPOCHS="${EPOCHS:-3}"
+LORA_RANK="${LORA_RANK:-16}"
+LORA_LAYERS="${LORA_LAYERS:-16}"
+WARMUP_RATIO="${WARMUP_RATIO:-0.05}"
 
 # ── Validate required args ────────────────────────────────────────────────
 [[ -z "$SLUG"   ]] && fail "--slug is required"
@@ -122,15 +168,17 @@ START_TS=$(date +%s)
 # ── Header ────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}persona-model-trainer pipeline${RESET}"
-echo -e "  ${DIM}slug:    ${RESET}$SLUG"
-echo -e "  ${DIM}model:   ${RESET}$MODEL"
-echo -e "  ${DIM}source:  ${RESET}$SOURCE"
-echo -e "  ${DIM}method:  ${RESET}$METHOD"
-echo -e "  ${DIM}epochs:  ${RESET}$EPOCHS"
-echo -e "  ${DIM}version: ${RESET}$VERSION"
-echo -e "  ${DIM}base:    ${RESET}$BASE_DIR"
-echo -e "  ${DIM}export:  ${RESET}$EXPORT_DIR"
-echo -e "  ${DIM}formats: ${RESET}$FORMATS"
+echo -e "  ${DIM}slug:         ${RESET}$SLUG"
+echo -e "  ${DIM}model:        ${RESET}$MODEL"
+echo -e "  ${DIM}source:       ${RESET}$SOURCE"
+echo -e "  ${DIM}method:       ${RESET}$METHOD"
+[[ -n "$PRESET" ]] && echo -e "  ${DIM}preset:       ${RESET}$PRESET"
+echo -e "  ${DIM}epochs:       ${RESET}$EPOCHS"
+echo -e "  ${DIM}lora-rank:    ${RESET}$LORA_RANK  alpha: ${LORA_ALPHA:-<auto=rank>}  layers: $LORA_LAYERS  warmup: $WARMUP_RATIO"
+echo -e "  ${DIM}version:      ${RESET}$VERSION"
+echo -e "  ${DIM}base:         ${RESET}$BASE_DIR"
+echo -e "  ${DIM}export:       ${RESET}$EXPORT_DIR"
+echo -e "  ${DIM}formats:      ${RESET}$FORMATS"
 $DRY_RUN && warn "DRY RUN — no actual training or export"
 
 # ── Step 1: Pre-flight ────────────────────────────────────────────────────
@@ -151,7 +199,7 @@ fi
 HAS_DATA=false
 [[ -f "$SOURCE/conversations.jsonl" ]] && HAS_DATA=true
 [[ -d "$SOURCE/raw" ]] && HAS_DATA=true
-$HAS_DATA || fail "No data found in $SOURCE. Expected conversations.jsonl and/or raw/  Run anyone-skill or persona-dataset first."
+$HAS_DATA || fail "No data found in $SOURCE. Expected conversations.jsonl and/or raw/  Run anyone-skill or persona-knowledge first."
 
 [[ -f "$PROFILE" ]] && info "profile.md: found" || warn "profile.md not found — system prompt will be empty"
 
@@ -182,15 +230,20 @@ step "Step 3/4  Fine-tune  (method: $METHOD, epochs: $EPOCHS)"
 if [[ "$METHOD" == "colab" ]]; then
   # Generate a Colab notebook instead of running training locally
   NOTEBOOK_PATH="colab_train_${SLUG}.ipynb"
-  python3 "$SCRIPT_DIR/generate_colab.py" \
-    --slug          "$SLUG" \
-    --model         "$MODEL" \
-    --training-dir  "$PREPARED_DIR" \
-    --epochs        "$EPOCHS" \
-    --lora-rank     "$LORA_RANK" \
-    --batch-size    "$BATCH_SIZE" \
-    --learning-rate "$LEARNING_RATE" \
+  COLAB_ARGS=(
+    --slug          "$SLUG"
+    --model         "$MODEL"
+    --training-dir  "$PREPARED_DIR"
+    --epochs        "$EPOCHS"
+    --lora-rank     "$LORA_RANK"
+    --lora-layers   "$LORA_LAYERS"
+    --warmup-ratio  "$WARMUP_RATIO"
+    --batch-size    "$BATCH_SIZE"
+    --learning-rate "$LEARNING_RATE"
     --output        "$NOTEBOOK_PATH"
+  )
+  [[ -n "$LORA_ALPHA" ]] && COLAB_ARGS+=(--lora-alpha "$LORA_ALPHA")
+  python3 "$SCRIPT_DIR/generate_colab.py" "${COLAB_ARGS[@]}"
 
   echo ""
   warn "Colab mode: training will run in Google Colab, not locally."
@@ -217,13 +270,17 @@ else
     --method        "$METHOD"
     --epochs        "$EPOCHS"
     --lora-rank     "$LORA_RANK"
+    --lora-layers   "$LORA_LAYERS"
+    --warmup-ratio  "$WARMUP_RATIO"
     --batch-size    "$BATCH_SIZE"
     --learning-rate "$LEARNING_RATE"
     --version       "$VERSION"
     --formats       "$FORMATS"
     --quant         "$QUANT"
   )
-  [[ -f "$PROFILE" ]] && TRAIN_ARGS+=(--profile "$PROFILE")
+  # --lora-alpha: only passed when explicitly set; otherwise train.py auto-computes alpha=rank
+  [[ -n "$LORA_ALPHA" ]] && TRAIN_ARGS+=(--lora-alpha "$LORA_ALPHA")
+  [[ -f "$PROFILE"    ]] && TRAIN_ARGS+=(--profile "$PROFILE")
   $DRY_RUN && TRAIN_ARGS+=(--dry-run)
 
   python3 "$SCRIPT_DIR/train.py" "${TRAIN_ARGS[@]}"
@@ -293,6 +350,54 @@ if ! $DRY_RUN; then
 
   python3 "$SCRIPT_DIR/export.py" "${EXPORT_ARGS[@]}"
 
+  # ── Step 4c: Probe evaluation (optional) ─────────────────────────────────
+  if [[ -n "$PROBES_FILE" ]]; then
+    step "Step 4c/4  Probe evaluation"
+    if [[ ! -d "$EXPORT_DIR/adapter_weights" ]]; then
+      warn "adapter_weights/ not found — skipping probe evaluation"
+    else
+      PROBE_OUT="$EXPORT_DIR/probe_results.json"
+      # eval_probe.py only supports mlx|hf — map pipeline method accordingly
+      if [[ "$METHOD" == "mlx" ]]; then
+        EVAL_PROBE_METHOD="mlx"
+      else
+        EVAL_PROBE_METHOD="hf"
+      fi
+      PROBE_ARGS=(
+        --adapter    "$EXPORT_DIR/adapter_weights"
+        --probes     "$PROBES_FILE"
+        --output     "$PROBE_OUT"
+        --method     "$EVAL_PROBE_METHOD"
+      )
+      [[ "$EVAL_PROBE_METHOD" == "hf" ]] && PROBE_ARGS+=(--base-model "$MODEL")
+      python3 "$SCRIPT_DIR/eval_probe.py" "${PROBE_ARGS[@]}"
+
+      # Inject probe_score into training_summary.json
+      python3 -c "
+import json, sys; from pathlib import Path
+sp = Path('$EXPORT_DIR/training_summary.json')
+pp = Path('$PROBE_OUT')
+if not sp.exists() or not pp.exists(): sys.exit(0)
+s = json.loads(sp.read_text()); p = json.loads(pp.read_text())
+probe_score = p.get('probe_score')
+if probe_score is None: sys.exit(0)
+ev = s.setdefault('evaluation', {})
+if 'probe_score' not in ev:
+    ev['probe_score'] = probe_score
+    sp.write_text(json.dumps(s, indent=2))
+"
+      PROBE_SCORE=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$PROBE_OUT'))
+    print(f\"{d.get('probe_score', 0):.0%}\")
+except Exception:
+    print('?')
+" 2>/dev/null || echo "?")
+      ok "Probe evaluation complete → $PROBE_OUT  (score: $PROBE_SCORE)"
+    fi
+  fi
+
   # ── Inject version fields (skip-train / Colab path: train.py never ran) ──
   # For normal training these fields are already written by train.py (no-op here).
   python3 -c "
@@ -314,6 +419,41 @@ if changed:
     p.write_text(json.dumps(s, indent=2))
 "
 
+  # ── Inject data stats into export training_summary.json ─────────────────
+  # Reads from PREPARED_DIR/stats.json (always present after Step 2).
+  # No-op if fields already present or either file is missing.
+  python3 -c "
+import json, sys; from pathlib import Path
+sp = Path('$EXPORT_DIR/training_summary.json')
+dp = Path('$PREPARED_DIR/stats.json')
+if not sp.exists() or not dp.exists(): sys.exit(0)
+s = json.loads(sp.read_text()); d = json.loads(dp.read_text())
+changed = False
+for k, v in [('data_samples', d.get('train')), ('data_eval_samples', d.get('eval')), ('data_hash', d.get('data_hash'))]:
+    if k not in s and v is not None:
+        s[k] = v; changed = True
+if changed:
+    sp.write_text(json.dumps(s, indent=2))
+"
+
+  # ── Inject dataset version from source metadata.json ────────────────────
+  # Reads export_version / export_hash from $SOURCE/metadata.json (persona-knowledge output).
+  # No-op if $METADATA missing, fields already present, or either file is absent.
+  python3 -c "
+import json, sys; from pathlib import Path
+sp = Path('$EXPORT_DIR/training_summary.json')
+mp = Path('$METADATA')
+if not sp.exists() or not mp.exists(): sys.exit(0)
+s = json.loads(sp.read_text()); m = json.loads(mp.read_text())
+changed = False
+for k, v in [('dataset_version', m.get('export_version')),
+             ('dataset_export_hash', m.get('export_hash'))]:
+    if k not in s and v is not None:
+        s[k] = v; changed = True
+if changed:
+    sp.write_text(json.dumps(s, indent=2))
+"
+
   # ── Archive version ──────────────────────────────────────────────────────
   step "Archive  (version: $VERSION)"
   ARCHIVE="$BASE_DIR/adapters/$VERSION"
@@ -322,6 +462,10 @@ if changed:
   cp -r "$EXPORT_DIR/adapter_weights"          "$ARCHIVE/"
   cp    "$EXPORT_DIR/training_summary.json"   "$ARCHIVE/" 2>/dev/null || true
   cp    "$EXPORT_DIR/voice_test_results.json" "$ARCHIVE/" 2>/dev/null || true
+  cp    "$EXPORT_DIR/probe_results.json"      "$ARCHIVE/" 2>/dev/null || true
+  # Archive prepared data snapshot (train/eval JSONL + stats.json)
+  # data fields already written to training_summary.json via inject step above
+  cp -r "$PREPARED_DIR" "$ARCHIVE/data"
 
   python3 "$SCRIPT_DIR/version.py" update-manifest \
     --slug "$SLUG" --version "$VERSION" \
@@ -347,7 +491,8 @@ echo -e "  ${DIM}Version:  ${RESET}$VERSION"
 echo -e "  ${DIM}Archive:  ${RESET}$BASE_DIR/adapters/$VERSION/"
 echo -e "  ${DIM}Export:   ${RESET}$EXPORT_DIR/"
 echo -e "  ${DIM}Summary:  ${RESET}$EXPORT_DIR/training_summary.json"
-[[ -n "$VOICE_SCORE" ]] && echo -e "  ${DIM}Voice:    ${RESET}$VOICE_SCORE / 5.0"
+[[ -n "$VOICE_SCORE"  ]] && echo -e "  ${DIM}Voice:    ${RESET}$VOICE_SCORE / 5.0"
+[[ -n "$PROBE_SCORE"  ]] && echo -e "  ${DIM}Probe:    ${RESET}$PROBE_SCORE"
 echo ""
 
 if ! $DRY_RUN; then

@@ -1,11 +1,11 @@
-# persona-dataset
+# persona-knowledge
 
 Persistent, incremental, searchable persona knowledge base — the **data layer** between raw sources and persona training.
 
 ## What it does
 
 ```
-Data sources                  persona-dataset                 Downstream consumers
+Data sources                  persona-knowledge                 Downstream consumers
 ───────────────          →   ──────────────────────      →   ──────────────────────
 Obsidian vault                Storage: MemPalace              anyone-skill
 GBrain export                 Graph: Knowledge Graph            (4D extraction)
@@ -20,7 +20,7 @@ iMessage / Signal
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                persona-dataset                   │
+│                persona-knowledge                   │
 │                                                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
 │  │ MemPalace│  │Knowledge │  │  Karpathy    │  │
@@ -154,12 +154,12 @@ Three adapters cover all formats:
 ## Dependency chain
 
 ```
-persona-dataset   →   anyone-skill   →   persona-model-trainer
+persona-knowledge   →   anyone-skill   →   persona-model-trainer
 (data management)     (distillation)     (fine-tuning)
 ```
 
-- `persona-dataset` is optional — `anyone-skill` works standalone
-- When present, `anyone-skill` uses `persona-dataset` for persistent storage and semantic search
+- `persona-knowledge` is optional — `anyone-skill` works standalone
+- When present, `anyone-skill` uses `persona-knowledge` for persistent storage and semantic search
 - `persona-model-trainer` consumes the `training/` export directly
 
 ## License

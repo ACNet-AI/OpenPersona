@@ -61,7 +61,7 @@ def init_dataset(slug: str, name: str) -> Path:
         'slug': slug,
         'name': name,
         'created_at': datetime.now(timezone.utc).isoformat(),
-        'framework': 'persona-dataset',
+        'framework': 'persona-knowledge',
         'version': '0.1.0',
         'stats': {
             'sources': 0,
@@ -71,6 +71,7 @@ def init_dataset(slug: str, name: str) -> Path:
             'kg_relationships': 0,
             'wiki_pages': len(WIKI_PAGES),
         },
+        'export_history': [],
     }
     (root / 'dataset.json').write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n')
 

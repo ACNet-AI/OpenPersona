@@ -8,7 +8,7 @@ import argparse
 import json
 import shutil
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_BASE = Path(".claude/skills")
@@ -47,7 +47,7 @@ def bump(slug: str, base_dir: Path):
     parts[-1] = str(int(parts[-1]) + 1)
     new_version = ".".join(parts)
     meta["version"] = new_version
-    meta["updated-at"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    meta["updated-at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"🔄 Version bumped: {current} → {new_version}")
 
