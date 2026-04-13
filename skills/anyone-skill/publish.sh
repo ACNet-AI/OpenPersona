@@ -32,6 +32,13 @@ rsync -a \
   --exclude='.pytest_cache/' \
   --exclude='__pycache__/' \
   --exclude='*.pyc' \
+  --exclude='.agents/' \
+  --exclude='.claude/' \
+  --exclude='.continue/' \
+  --exclude='.kiro/' \
+  --exclude='.trae/' \
+  --exclude='.windsurf/' \
+  --exclude='skills-lock.json' \
   "${SKILL_DIR}/" "${DIST_DIR}/"
 
 echo "→ Package contents:"
