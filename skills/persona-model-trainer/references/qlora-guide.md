@@ -41,14 +41,26 @@ QLoRA (Quantized Low-Rank Adaptation) fine-tunes a 4-bit quantized base model by
 
 **Fix**: increase rank (16 → 32), increase epochs, check data quality (too many short turns?)
 
-## Target Modules for Gemma-4
+## Target Modules
 
-Always fine-tune attention layers:
+**Recommended: omit `target_modules` entirely** — PEFT auto-detects the appropriate layers for any model:
+
 ```python
-target_modules = ["q_proj", "v_proj", "k_proj", "o_proj"]
+# In get_peft_model() — omit target_modules for universal compatibility
+model = get_peft_model(model, LoraConfig(r=16, lora_alpha=32, ...))
+# PEFT defaults to all linear layers, which works for any architecture
 ```
 
-For richer adaptation, add MLP layers (at the cost of more memory):
-```python
-target_modules = ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-```
+If you need to specify manually (e.g. for memory savings), common configurations by model family:
+
+| Family | Attention only | Attention + MLP |
+|--------|---------------|-----------------|
+| Llama / Qwen / Gemma | `["q_proj","v_proj","k_proj","o_proj"]` | add `"gate_proj","up_proj","down_proj"` |
+| Phi-4 | `["q_proj","v_proj","k_proj","o_proj"]` | add `"fc1","fc2"` |
+| Mistral | same as Llama | same as Llama |
+
+> For models not listed here, check the model card or community fine-tuning guides. Per-model notes are also tracked in [model-registry.md](model-registry.md).
+
+## Model-Specific Inference Notes
+
+Per-model inference configuration (thinking mode, sampling parameters, architecture limitations) is maintained centrally in [model-registry.md](model-registry.md) → "Per-Model Training Notes" section. Check there before running voice tests or inference on a model with a thinking mode (Gemma 4, Qwen 3, etc.).

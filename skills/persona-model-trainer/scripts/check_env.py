@@ -47,17 +47,17 @@ def recommend_model():
         if torch.cuda.is_available():
             vram = torch.cuda.get_device_properties(0).total_memory // (1024**3)
             method = "Unsloth QLoRA" if _has_pkg("unsloth") else "vanilla QLoRA"
-            if vram >= 16:
-                return f"E4B or 26B-A4B · {method} (VRAM: {vram} GB)"
+            if vram >= 24:
+                return f"Large tier · {method} (VRAM: {vram} GB) — see model-registry.md Large section"
             if vram >= 8:
-                return f"E4B · {method} (VRAM: {vram} GB)"
-            return f"E2B · {method} (VRAM: {vram} GB — limited)"
+                return f"Medium tier · {method} (VRAM: {vram} GB) — see model-registry.md Medium section"
+            return f"Small tier · {method} (VRAM: {vram} GB — limited)"
         if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             method = "MLX" if _has_pkg("mlx_lm") else "PyTorch MPS LoRA"
             if ram_gb >= 16:
-                return f"E4B · {method} ({ram_gb} GB RAM)"
-            return f"E2B · {method} ({ram_gb} GB RAM)"
-        return f"E2B CPU-only ({ram_gb} GB RAM — expect 20–30h)"
+                return f"Medium tier · {method} ({ram_gb} GB RAM) — see model-registry.md Medium section"
+            return f"Small tier · {method} ({ram_gb} GB RAM)"
+        return f"Small tier CPU-only ({ram_gb} GB RAM — expect 20–30h)"
     except Exception:
         return "unable to determine"
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fine-tuning for persona models based on Gemma-4.
+Fine-tune any HuggingFace instruction-tuned model for a persona.
 
 Supported methods (pick by hardware):
   unsloth  — NVIDIA GPU, recommended (2–5× faster QLoRA via Unsloth)
@@ -10,9 +10,9 @@ Supported methods (pick by hardware):
 
 Usage:
   python scripts/train.py \
-    --model google/gemma-4-E4B-it \
+    --model <hf-model-id> \
     --data training/prepared/ \
-    --output models/{slug}/ \
+    --output models/{slug}/export/ \
     --method unsloth \
     --epochs 3
 """
@@ -22,25 +22,78 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-def train_mlx(args, output_dir, train_path, eval_path):
+def _version_fields(args) -> dict:
+    """Build version-tracking fields for training_summary.json.
+
+    These fields are informational only — they do not affect training logic.
+    They are read by version.py activate to reconstruct the export step.
+    """
+    profile_path = getattr(args, "profile", None)
+    return {
+        "version":      getattr(args, "version", "v1"),
+        "trained_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "profile_path": str(Path(profile_path).resolve()) if profile_path else None,
+        "formats":      getattr(args, "formats", "gguf,ollama"),
+        "quant":        getattr(args, "quant", "Q4_K_M"),
+    }
+
+
+def _chat_template_extra_kwargs(tokenizer) -> dict:
+    """Probe tokenizer once for Gemma 4 enable_thinking support.
+    Gemma 4 generates thinking tokens by default; disable them for persona
+    fine-tuning so training targets clean persona responses only.
+    Other tokenizers raise TypeError on unknown kwargs — caught and ignored.
+    """
+    try:
+        tokenizer.apply_chat_template([], tokenize=False, enable_thinking=False)
+        return {"enable_thinking": False}
+    except Exception:
+        return {}
+
+
+def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eval_count: int = 0):
     """Apple Silicon native training via mlx-lm."""
     try:
         import mlx_lm  # noqa: F401
-    except ImportError:
-        print("❌ mlx-lm not installed. Run: uv pip install mlx-lm")
+        from transformers import AutoTokenizer
+    except ImportError as e:
+        print(f"❌ Missing dependency: {e}")
+        print("   Run: uv pip install mlx-lm transformers")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     adapter_path = output_dir / "adapter_weights"
     adapter_path.mkdir(parents=True, exist_ok=True)
 
+    # Convert {"messages": [...]} → {"text": "..."} for mlx-lm compatibility.
+    # mlx-lm's native messages support varies by version; pre-converting is safer.
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    extra = _chat_template_extra_kwargs(tokenizer)
+    mlx_data_dir = output_dir / "mlx_data"
+    mlx_data_dir.mkdir(parents=True, exist_ok=True)
+
+    for src, dst_name in [(train_path, "train.jsonl"), (eval_path, "valid.jsonl")]:
+        if not Path(src).exists():
+            continue
+        dst = mlx_data_dir / dst_name
+        with open(src) as fin, open(dst, "w") as fout:
+            for line in fin:
+                sample = json.loads(line)
+                msgs = sample.get("messages", [])
+                text = tokenizer.apply_chat_template(
+                    msgs, tokenize=False, add_generation_prompt=False, **extra
+                )
+                fout.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+    print(f"  Converted training data for mlx-lm → {mlx_data_dir}")
+
     cmd = [
         sys.executable, "-m", "mlx_lm.lora",
         "--model", args.model,
         "--train",
-        "--data", str(Path(args.data)),
+        "--data", str(mlx_data_dir),
         "--save-every", "100",
         "--adapter-path", str(adapter_path),
         "--iters", str(args.epochs * 500),  # approx epoch → iters
@@ -63,13 +116,17 @@ def train_mlx(args, output_dir, train_path, eval_path):
         "method": "mlx",
         "lora_rank": args.lora_rank,
         "epochs": args.epochs,
+        "train_samples": train_count,
+        "eval_samples": eval_count,
+        "device": "apple-silicon",
         "adapter_path": str(adapter_path),
+        **_version_fields(args),
     }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\n✅ MLX adapter saved → {adapter_path}")
 
 
-def train_unsloth(args, output_dir, train_path):
+def train_unsloth(args, output_dir, train_path, train_count: int = 0, eval_count: int = 0):
     """NVIDIA GPU training via Unsloth (2–5× faster than vanilla HF)."""
     try:
         from unsloth import FastLanguageModel
@@ -95,13 +152,28 @@ def train_unsloth(args, output_dir, train_path):
         model,
         r=args.lora_rank,
         lora_alpha=args.lora_alpha,
-        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+        # target_modules omitted: PEFT auto-detects all linear layers for any architecture
         lora_dropout=0.05,
         bias="none",
         use_gradient_checkpointing="unsloth",
     )
 
     dataset = load_dataset("json", data_files={"train": str(train_path)})
+
+    # Apply model-agnostic chat template via formatting_func.
+    # prepare_data.py outputs {"messages": [...]} — apply_chat_template handles
+    # format differences across Gemma, Qwen, Llama, Phi, Mistral, etc.
+    # Gemma 4 requires enable_thinking=False to suppress thinking tokens so the
+    # model trains on clean persona responses only (probed once, cached in extra).
+    extra = _chat_template_extra_kwargs(tokenizer)
+
+    def formatting_func(examples):
+        return [
+            tokenizer.apply_chat_template(
+                msgs, tokenize=False, add_generation_prompt=False, **extra
+            )
+            for msgs in examples["messages"]
+        ]
 
     training_args = TrainingArguments(
         output_dir=str(output_dir / "checkpoints"),
@@ -122,7 +194,7 @@ def train_unsloth(args, output_dir, train_path):
         args=training_args,
         train_dataset=dataset["train"],
         tokenizer=tokenizer,
-        dataset_text_field="text",
+        formatting_func=formatting_func,
         max_seq_length=2048,
     )
 
@@ -136,7 +208,11 @@ def train_unsloth(args, output_dir, train_path):
         "method": "unsloth",
         "lora_rank": args.lora_rank,
         "epochs": args.epochs,
+        "train_samples": train_count,
+        "eval_samples": eval_count,
+        "device": "cuda",
         "adapter_path": str(adapter_path),
+        **_version_fields(args),
     }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\n✅ Unsloth adapter saved → {adapter_path}")
@@ -144,7 +220,7 @@ def train_unsloth(args, output_dir, train_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="google/gemma-4-E4B-it")
+    parser.add_argument("--model", required=True, help="HuggingFace model ID (e.g. google/gemma-4-E4B-it)")
     parser.add_argument("--data", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--method", default="unsloth",
@@ -155,6 +231,16 @@ def main():
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
     parser.add_argument("--dry-run", action="store_true", help="Validate setup without training")
+    # Version-tracking fields — informational only, recorded in training_summary.json
+    # for use by version.py activate when reconstructing the export step.
+    parser.add_argument("--version",  default="v1",
+                        help="Version label (e.g. v1, v2) written to training_summary.json")
+    parser.add_argument("--profile",  default=None,
+                        help="Path to profile.md — absolute path recorded in summary for version activate")
+    parser.add_argument("--formats",  default="gguf,ollama",
+                        help="Export formats recorded in summary (e.g. gguf,ollama,vllm,onnx)")
+    parser.add_argument("--quant",    default="Q4_K_M",
+                        help="GGUF quantization level recorded in summary for version activate")
     args = parser.parse_args()
 
     data_dir = Path(args.data)
@@ -180,10 +266,10 @@ def main():
 
     # Route to optimized training backend
     if args.method == "mlx":
-        train_mlx(args, output_dir, train_path, eval_path)
+        train_mlx(args, output_dir, train_path, eval_path, train_count, eval_count)
         return
     if args.method == "unsloth":
-        train_unsloth(args, output_dir, train_path)
+        train_unsloth(args, output_dir, train_path, train_count, eval_count)
         return
 
     # Import training dependencies
@@ -243,12 +329,12 @@ def main():
     if bnb_config:
         model = prepare_model_for_kbit_training(model)
 
-    # LoRA configuration
+    # LoRA configuration — target_modules omitted: PEFT auto-detects all linear
+    # layers for any architecture (Gemma, Qwen, Llama, Phi, Mistral, etc.)
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=args.lora_rank,
         lora_alpha=args.lora_alpha,
-        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
         lora_dropout=0.05,
         bias="none",
     )
@@ -283,13 +369,26 @@ def main():
         logging_dir=str(output_dir / "logs"),
     )
 
+    # formatting_func applies tokenizer.apply_chat_template() on {"messages": [...]}
+    # output of prepare_data.py — model-agnostic across all supported architectures.
+    # Gemma 4: enable_thinking=False suppresses thinking tokens during training.
+    extra = _chat_template_extra_kwargs(tokenizer)
+
+    def formatting_func(examples):
+        return [
+            tokenizer.apply_chat_template(
+                msgs, tokenize=False, add_generation_prompt=False, **extra
+            )
+            for msgs in examples["messages"]
+        ]
+
     trainer = SFTTrainer(
         model=model,
         args=training_args,
         train_dataset=dataset["train"],
         eval_dataset=dataset.get("eval"),
         tokenizer=tokenizer,
-        dataset_text_field="text",
+        formatting_func=formatting_func,
         max_seq_length=2048,
     )
 
@@ -312,6 +411,7 @@ def main():
         "eval_samples": eval_count,
         "device": device,
         "adapter_path": str(adapter_path),
+        **_version_fields(args),
     }
     (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"   Training summary → {output_dir}/training_summary.json")

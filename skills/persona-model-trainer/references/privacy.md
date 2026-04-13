@@ -56,4 +56,4 @@ To fully destroy a fine-tuned model:
 rm -rf models/{slug}/
 ```
 
-The base model (Gemma-4) is unaffected. Only the adapter weights contain persona-specific information.
+The base model (`{model_id}`) is unaffected. Only the adapter weights contain persona-specific information.

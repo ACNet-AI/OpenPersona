@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepare training data → instruction-tuning dataset for Gemma-4.
+Prepare training data → instruction-tuning dataset for any HuggingFace instruction-tuned model.
 
 Reads from TWO layers (anyone-skill output):
   1. training/conversations.jsonl  — distilled & structured turns (quality)
@@ -17,7 +17,11 @@ Usage:
     --raw-dir training/raw/ \
     --profile training/profile.md \
     --output training/prepared/ \
-    --model-size e4b
+    --model <hf-model-id>
+
+Output format: {"messages": [{"role": "system", ...}, {"role": "user", ...}, {"role": "assistant", ...}]}
+The training script (train.py) applies tokenizer.apply_chat_template() at training time,
+so the output is model-agnostic and works for any instruction-tuned model.
 """
 
 import argparse
@@ -27,18 +31,10 @@ import re
 import sys
 from pathlib import Path
 
-GEMMA_CHAT_TEMPLATE = (
-    "<start_of_turn>user\n{user}<end_of_turn>\n"
-    "<start_of_turn>model\n{model}<end_of_turn>"
-)
-
-SYSTEM_PREFIX_TEMPLATE = (
-    "<start_of_turn>user\n[System: {system_prompt}]\n\n{user}<end_of_turn>\n"
-    "<start_of_turn>model\n{model}<end_of_turn>"
-)
-
-# Rough max tokens per model size (leave room for context)
-MAX_TOKENS = {"1b": 1024, "e2b": 1024, "4b": 2048, "e4b": 2048, "12b": 4096, "26b": 4096}
+# Default max chars per sample (rough proxy for token limit).
+# train.py applies tokenizer.apply_chat_template() — format is model-agnostic.
+# Increase via --max-chars for long-context models (128K+).
+DEFAULT_MAX_CHARS = 8192
 
 # Generic prompts used to pair with monologue turns from raw text
 GENERIC_PROMPTS = [
@@ -189,32 +185,31 @@ def load_conversations(path: Path) -> list:
 
 def build_samples(turns, system_prompt: str, max_chars: int):
     """
-    Build (user_turn, assistant_turn) pairs from the flat turn list.
-    Each pair: a 'user' turn immediately followed by an 'assistant' turn.
+    Build message-list samples from the flat turn list.
+    Output format: {"messages": [{role, content}, ...]}
+    train.py applies tokenizer.apply_chat_template() at training time,
+    keeping the format model-agnostic (works for Gemma, Qwen, Llama, Phi, Mistral, etc.).
     """
     samples = []
     i = 0
     while i < len(turns) - 1:
         if turns[i]["role"] == "user" and turns[i + 1]["role"] == "assistant":
             user_text = turns[i]["content"].strip()
-            model_text = turns[i + 1]["content"].strip()
+            assistant_text = turns[i + 1]["content"].strip()
             # Skip empty or very short turns
-            if len(user_text) < 3 or len(model_text) < 5:
+            if len(user_text) < 3 or len(assistant_text) < 5:
                 i += 1
                 continue
-            total = len(user_text) + len(model_text)
+            total = len(user_text) + len(assistant_text)
             if total > max_chars:
-                # Truncate model response, keep user intact
-                model_text = model_text[: max_chars - len(user_text) - 50] + "…"
+                # Truncate assistant response, keep user intact
+                assistant_text = assistant_text[: max_chars - len(user_text) - 50] + "…"
+            messages = []
             if system_prompt:
-                text = SYSTEM_PREFIX_TEMPLATE.format(
-                    system_prompt=system_prompt,
-                    user=user_text,
-                    model=model_text,
-                )
-            else:
-                text = GEMMA_CHAT_TEMPLATE.format(user=user_text, model=model_text)
-            samples.append({"text": text})
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": user_text})
+            messages.append({"role": "assistant", "content": assistant_text})
+            samples.append({"messages": messages})
             i += 2
         else:
             i += 1
@@ -260,8 +255,10 @@ def main():
                         help="Directory of original source files (authentic voice)")
     parser.add_argument("--profile", default="training/profile.md")
     parser.add_argument("--output", required=True)
-    parser.add_argument("--model-size", default="e4b",
-                        choices=["1b", "4b", "12b", "e2b", "e4b", "26b"])
+    parser.add_argument("--model", default="",
+                        help="HuggingFace model ID (informational; recorded in stats.json)")
+    parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS,
+                        help="Max chars per sample (default: 8192). Increase for 128K+ context models.")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -317,7 +314,7 @@ def main():
         system_prompt = load_profile(profile_path)
         print(f"  System prompt: {system_prompt[:80]}…")
 
-    max_chars = MAX_TOKENS[args.model_size] * 4
+    max_chars = args.max_chars
     samples = build_samples(all_turns, system_prompt, max_chars)
     print(f"  Built {len(samples)} training samples")
 
@@ -339,7 +336,7 @@ def main():
         "samples": len(samples),
         "train": len(train_samples),
         "eval": len(eval_samples),
-        "model_size": args.model_size,
+        "model": args.model,
         "max_chars_per_sample": max_chars,
         "pii_flags": pii_flags,
     }

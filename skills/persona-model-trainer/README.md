@@ -1,13 +1,13 @@
 # persona-model-trainer
 
-Fine-tune a small local model (Gemma-4 E2B/E4B/26B-A4B) on persona data. Turn an [anyone-skill](https://github.com/acnlabs/anyone-skill) persona into a **self-contained model** that runs on phones and personal computers — no cloud API, no latency, no subscription.
+Fine-tune any HuggingFace instruction-tuned model (Gemma 4, Qwen 3, Llama, Phi, Mistral, and more) on persona data. Turn an [anyone-skill](https://github.com/acnlabs/anyone-skill) persona into a **self-contained model** that runs on phones and personal computers — no cloud API, no latency, no subscription.
 
 ## What it does
 
 ```
 anyone-skill output          persona-model-trainer           Runnable model
 ─────────────────────   →   ──────────────────────────  →   ──────────────────────
-training/                    Fine-tune Gemma-4               models/{slug}/
+training/                    Fine-tune {model_id}            models/{slug}/
   raw/        (authentic)    via Unsloth / MLX / QLoRA        adapter_weights/
   conversations.jsonl        + voice validation                gguf/{slug}.gguf
   profile.md                 + optional autoresearch           ollama/Modelfile
@@ -51,11 +51,11 @@ python scripts/prepare_data.py \
   --raw-dir training/raw/ \
   --profile training/profile.md \
   --output training/prepared/ \
-  --model-size e4b
+  --model {model_id}        # used for documentation; format is model-agnostic ({messages: [...]})
 
 # 5. Fine-tune (pick method by hardware)
 python scripts/train.py \
-  --model google/gemma-4-E4B-it \
+  --model {model_id} \
   --data training/prepared/ \
   --output models/{slug}/ \
   --method unsloth   # or: mlx, qlora, lora
@@ -63,14 +63,14 @@ python scripts/train.py \
 # 6. Validate voice fidelity
 python scripts/voice_test.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --profile training/profile.md \
   --output models/{slug}/voice_test_results.json
 
 # 7. Export (pick formats)
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --slug {slug} \
   --formats gguf,ollama   # or: vllm, onnx, or all
 
@@ -84,7 +84,7 @@ ollama run {slug}
 | Phase               | Script                 | Purpose                                                                     |
 | ------------------- | ---------------------- | --------------------------------------------------------------------------- |
 | 1. Pre-flight       | `check_env.py`         | Detect hardware, estimate turn count, verify data quality                   |
-| 2. Model selection  | (interactive)          | Choose E2B / E4B / 26B-A4B                                                 |
+| 2. Model selection  | (interactive)          | Detect hardware tier, consult model-registry.md, set {model_id}            |
 | 3. Environment      | `uv pip install`       | Install training stack (Unsloth / MLX / HF — pick by platform)             |
 | 4. Data prep        | `prepare_data.py`      | Merge raw/ + conversations.jsonl → instruction-tuning dataset (dual-layer)  |
 | 5. Fine-tuning      | `train.py`             | Unsloth / vanilla QLoRA / MLX / PyTorch MPS LoRA (auto-routed by --method) |
@@ -115,7 +115,8 @@ Training bakes your data into model weights permanently. See `references/privacy
 
 ## References
 
-- [Model Selection Guide](references/model-selection.md) — hardware requirements, size trade-offs, backend comparison
+- [Model Registry](references/model-registry.md) — curated model list with VRAM requirements and inference_config per tier
+- [Model Selection Guide](references/model-selection.md) — hardware tier detection, backend selection, quality vs. size trade-offs
 - [QLoRA Guide](references/qlora-guide.md) — hyperparameter tuning
 - [Quantization Guide](references/quantization.md) — GGUF levels, vLLM serving, ONNX mobile deployment
 - [Privacy Guide](references/privacy.md) — data handling, PII risks, consent

@@ -16,9 +16,9 @@ GGUF is the file format used by llama.cpp, Ollama, LM Studio, and Open WebUI. It
 | `Q2_K` | ~1.5 GB | High | Minimum viable / very old devices |
 
 **Default choices by model size:**
-- E2B → `Q8_0` (already small; preserve quality)
-- E4B → `Q4_K_M` (best balance for phones/laptops)
-- 26B-A4B → `Q4_K_M` (fits 16 GB+ VRAM/RAM)
+- 1–3B params → `Q8_0` (already small; preserve quality)
+- 4–8B params → `Q4_K_M` (best balance for phones/laptops)
+- 14–32B params → `Q4_K_M` (fits 16 GB+ VRAM/RAM)
 
 ## Running GGUF Models
 
@@ -45,11 +45,11 @@ ollama run {slug}
 ### iPhone / Android (via llama.cpp iOS/Android port)
 - Copy the `.gguf` file to the app's documents directory
 - Apps: LLM Farm (iOS), MLC Chat (iOS/Android), Pocketpal AI (Android)
-- Recommended: `Q4_K_M` for E4B/26B-A4B, `Q8_0` for E2B
+- Recommended: `Q4_K_M` for 4B–32B models, `Q8_0` for 1–3B models
 
 ## Context Length
 
-Gemma-4 supports up to 128K tokens context (E2B/E4B). For conversation-heavy personas, use `--ctx-size 4096` or higher. Larger context uses more RAM linearly.
+Context window varies by model — check `references/model-registry.md` for the selected `{model_id}`. For conversation-heavy personas, use `--ctx-size 4096` or higher (up to the model's max). Larger context uses more RAM linearly.
 
 ---
 
@@ -100,14 +100,14 @@ python scripts/export.py --formats onnx --slug {slug} ...
 | Target | Runtime | Notes |
 |--------|---------|-------|
 | Android / iOS | ONNX Runtime Mobile | INT8 quantize for phones |
-| Browser (WASM) | onnxruntime-web | E2B model recommended |
+| Browser (WASM) | onnxruntime-web | Small tier model recommended |
 | Desktop Python | onnxruntime | Fast CPU inference |
 | Raspberry Pi | onnxruntime | ARM-optimized |
 
 **When to use ONNX:**
 - Need to run offline on a phone without a companion app server
 - Browser-based chat interface (WASM)
-- IoT / embedded devices (Raspberry Pi, Jetson Nano — aligns with E2B/E4B spec)
+- IoT / embedded devices (Raspberry Pi, Jetson Nano — Small tier models only)
 - CI/CD regression testing without GPU
 
-**Size after ONNX export (E4B, INT8):** ~2–3 GB (comparable to GGUF Q4_K_M)
+**Size after ONNX export (4–8B model, INT8):** ~2–5 GB (comparable to GGUF Q4_K_M)

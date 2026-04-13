@@ -6,10 +6,12 @@ Scores how well the model's outputs match the distilled persona profile.
 Usage:
   python scripts/voice_test.py \
     --model models/{slug}/adapter_weights/ \
-    --base-model google/gemma-4-E4B-it \
+    --base-model <hf-model-id> \
     --profile training/profile.md \
     --questions 10
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -41,27 +43,64 @@ def load_profile_traits(profile_path: Path) -> str:
     return profile_path.read_text(encoding="utf-8")[:1000]
 
 
-def generate_response(model, tokenizer, prompt: str, max_tokens: int = 200) -> str:
+def probe_chat_template_kwargs(tokenizer) -> dict:
+    """Probe tokenizer ONCE for Gemma 4 / Qwen 3 enable_thinking support.
+    Call this once after model load and pass the result to generate_response().
+    Gemma 4 requires enable_thinking=False to suppress thinking tokens during
+    inference; other tokenizers raise TypeError on unknown kwargs.
+    """
+    try:
+        tokenizer.apply_chat_template([], tokenize=False, enable_thinking=False)
+        return {"enable_thinking": False}
+    except Exception:
+        return {}
+
+
+def generate_response(model, tokenizer, prompt: str, system_prompt: str = "",
+                      max_tokens: int = 200,
+                      temperature: float = 1.0,
+                      top_p: float = 0.95,
+                      top_k: int = 64,
+                      chat_template_extra: dict | None = None) -> str:
+    """Generate a response using tokenizer.apply_chat_template() — model-agnostic.
+
+    Default sampling params follow official Gemma 4 recommendations
+    (temperature=1.0, top_p=0.95, top_k=64). Adjust per model-registry.md
+    if using a different base model.
+
+    Pass `chat_template_extra` from probe_chat_template_kwargs() — computed once
+    before the test loop, not per-call.
+    """
     import torch
-    inputs = tokenizer(
-        f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n",
-        return_tensors="pt",
-    ).to(model.device)
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    extra = chat_template_extra or {}
+    # apply_chat_template handles format differences across Gemma, Qwen, Llama, Phi, Mistral, etc.
+    input_text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+        **extra,
+    )
+    inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
+    input_len = inputs["input_ids"].shape[1]
+
     with torch.no_grad():
         output = model.generate(
             **inputs,
             max_new_tokens=max_tokens,
             do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
             pad_token_id=tokenizer.eos_token_id,
         )
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-    # Extract only the model's response part
-    marker = "<start_of_turn>model\n"
-    if marker in decoded:
-        return decoded.split(marker)[-1].strip()
-    return decoded.strip()
+    # Decode only the newly generated tokens (after the prompt)
+    new_tokens = output[0][input_len:]
+    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
 
 def score_response(question: str, response: str, category: str, profile: str) -> dict:
@@ -104,11 +143,23 @@ def score_response(question: str, response: str, category: str, profile: str) ->
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Path to adapter_weights/")
-    parser.add_argument("--base-model", default="google/gemma-4-E4B-it")
+    parser.add_argument("--base-model", required=True, help="HuggingFace model ID used as base (e.g. google/gemma-4-E4B-it)")
     parser.add_argument("--profile", default="training/profile.md")
-    parser.add_argument("--questions", type=int, default=10)
+    parser.add_argument("--questions", type=int, default=10,
+                        help=f"Number of voice probe questions (1–{len(DEFAULT_PROBES)}, default: %(default)s)",
+                        metavar="N")
     parser.add_argument("--output", default=None, help="JSON output path (default: alongside model)")
+    parser.add_argument("--temperature", type=float, default=1.0,
+                        help="Sampling temperature (default: 1.0 per Gemma 4 official recommendation)")
+    parser.add_argument("--top-p", type=float, default=0.95,
+                        help="Top-p nucleus sampling (default: 0.95)")
+    parser.add_argument("--top-k", type=int, default=64,
+                        help="Top-k sampling (default: 64)")
     args = parser.parse_args()
+
+    if args.questions < 1:
+        print("❌ --questions must be at least 1")
+        sys.exit(1)
 
     model_path = Path(args.model)
     profile_path = Path(args.profile)
@@ -134,6 +185,11 @@ def main():
     model = PeftModel.from_pretrained(base, str(model_path))
     model.eval()
 
+    # Probe tokenizer once — passed into generate_response() per call (not re-probed)
+    chat_template_extra = probe_chat_template_kwargs(tokenizer)
+    if chat_template_extra:
+        print(f"   enable_thinking=False: active (Gemma 4 / Qwen 3 mode)")
+
     profile = load_profile_traits(profile_path)
     probes = DEFAULT_PROBES[: args.questions]
 
@@ -143,7 +199,11 @@ def main():
     print(f"\nRunning {len(probes)} voice probes…\n")
     for i, (question, category) in enumerate(probes, 1):
         print(f"[{i}/{len(probes)}] {category}: {question[:60]}…")
-        response = generate_response(model, tokenizer, question)
+        response = generate_response(
+            model, tokenizer, question, system_prompt=profile,
+            temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
+            chat_template_extra=chat_template_extra,
+        )
         scoring = score_response(question, response, category, profile)
         total_score += scoring["score"]
 

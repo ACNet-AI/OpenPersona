@@ -1,33 +1,21 @@
 ---
-name: persona-model-trainer
-description: Fine-tune a small local model (Gemma-4 E2B/E4B/26B-A4B) on persona data (raw + distilled) from anyone-skill. Produces a self-contained, locally runnable persona model that works on phones and personal computers — no cloud API required.
-version: 0.1.0
+
+## name: persona-model-trainer
+description: "Fine-tune any HuggingFace instruction-tuned model (Gemma 4, Qwen 3, Llama, Phi, Mistral, and more) on persona data from anyone-skill. Produces a self-contained, locally runnable persona model — no cloud API required."
 license: MIT
-author: acnlabs
-compatibility:
-  agents:
-    - claude-code
-    - cursor
-    - openclaw
+compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+, uv, and 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large). Optional: CUDA GPU + Unsloth or Apple Silicon + MLX."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  requires:
-    - anyone-skill (for training data)
-    - python >= 3.11
-    - uv (pip install uv)
-    - 4 GB+ RAM for E2B model, 8 GB+ for E4B model
-  optional:
-    - CUDA GPU + Unsloth (2–5× faster QLoRA)
-    - Apple Silicon + MLX (Apple-native, faster than PyTorch MPS)
-    - autoresearch skill (Phase 6.5 hyperparameter refinement loop)
-
----
+  version: "0.1.0"
+  author: acnlabs
+  requires: "anyone-skill (training data), python >= 3.11, uv, 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large)"
+  optional: "CUDA GPU + Unsloth (2-5x faster), Apple Silicon + MLX (Small/Medium tier), autoresearch skill"
 
 # persona-model-trainer
 
 Fine-tune a small local model on persona data (raw + distilled). Turn anyone-skill's output into a self-contained model that **is** the person — no prompting, no cloud, no latency.
 
-**Dependency chain**: `anyone-skill` → `persona-model-trainer` → runnable Gemma-4 persona model
+**Dependency chain**: `anyone-skill` → `persona-model-trainer` → runnable persona model (`{model_id}`)
 
 **Input**: `training/` folder produced by `anyone-skill` Step 6-D (raw/ populated in Phase 3)  
 **Output**: LoRA/QLoRA adapter weights + GGUF / Ollama / vLLM / ONNX exports
@@ -50,6 +38,53 @@ Trigger phrases:
 - User only wants a quick prompt-based persona (use anyone-skill alone)
 
 > Fictional characters and historical figures can be trained if `training/raw/` contains scripts, lore, speeches, or biographies — check actual turn count, not subject type.
+
+---
+
+## Quick Start — Pipeline Script
+
+For standard use cases, `pipeline.sh` chains all phases (prepare → train → voice test → export) in one command:
+
+```bash
+# Local GPU — Apple Silicon (mlx) or NVIDIA (unsloth / qlora / lora):
+bash scripts/pipeline.sh \
+  --slug {slug} \
+  --model {model_id} \
+  --source ./training \
+  --method mlx \
+  --lora-rank 16 \
+  --batch-size 2 \
+  --learning-rate 2e-4 \
+  --epochs 3
+
+# No local GPU — train in Google Colab (free T4):
+bash scripts/pipeline.sh \
+  --slug {slug} \
+  --model {model_id} \
+  --source ./training \
+  --method colab        # generates colab_train_{slug}.ipynb, then exits
+# → Upload .ipynb to colab.research.google.com → Run all → download adapter zip
+# → Unzip into models/{slug}/export/ then:
+bash scripts/pipeline.sh --slug {slug} --model {model_id} --source ./training \
+  --method skip-train   # runs voice_test + export on the downloaded adapter
+
+# Dry-run to validate setup (writes nothing):
+bash scripts/pipeline.sh ... --dry-run
+
+# After the script finishes, run the model with Ollama:
+ollama create {slug} -f models/{slug}/export/ollama/Modelfile
+ollama run {slug}
+
+# Phase 8–9: bundle into installed persona pack
+# --model-dir points to the version management root (BASE_DIR), not export/ directly
+python scripts/pack_integrate.py \
+  --slug {slug} \
+  --model-dir models/{slug}/
+  # --pack-dir ~/.openpersona/personas/persona-{slug}/   # optional; auto-discovered if omitted
+# → resolves export/ via manifest.json, copies artifacts, updates persona.json
+```
+
+Use the phases below for custom workflows, debugging, or when individual steps need tuning.
 
 ---
 
@@ -112,19 +147,31 @@ Read `slug` from `metadata.json["slug"]` — used as `{slug}` in all subsequent 
 
 ## Phase 2: Model Selection
 
-Ask once (hardware will be verified in Phase 3 after environment setup):
+Any HuggingFace instruction-tuned model with a standard chat template works with this pipeline. The training data format is auto-detected via `tokenizer.apply_chat_template()`.
 
-> *"Which model size do you want?"*
->
-> - **E2B** (`google/gemma-4-E2B-it`, ~~2B active params) — runs on phones (4 GB RAM), fastest training (~~1–2h on M2), lower fidelity
-> - **E4B** (`google/gemma-4-E4B-it`, ~~4B active params) — laptop-class (8 GB RAM), better voice capture (~~4–6h on M2), **recommended**
-> - **26B-A4B** (`google/gemma-4-26B-A4B-it`, 26B MoE / 4B active) — high quality, complex to fine-tune, requires 24 GB+ RAM
+**Step 1 — Determine hardware tier:**
 
-Default recommendation:
 
-- Apple Silicon (M1/M2/M3/M4) → **E4B** via MLX (Apple-native; fallback: PyTorch MPS LoRA)
-- NVIDIA GPU ≥ 8 GB VRAM → **E4B** via Unsloth QLoRA (fallback: vanilla QLoRA)
-- CPU only → **E2B** (warn: very slow, ~20h+)
+| Available hardware                   | Tier   | QLoRA VRAM budget |
+| ------------------------------------ | ------ | ----------------- |
+| Apple Silicon ≤ 16 GB / CPU          | Small  | ≤ 6 GB            |
+| Apple Silicon 16 GB+ / NVIDIA ≥ 8 GB | Medium | 6–16 GB           |
+| NVIDIA ≥ 24 GB / A100                | Large  | 16 GB+            |
+
+
+**Step 2 — Consult `references/model-registry.md` for the detected tier**, then ask:
+
+> *"Which model do you want to use? (or enter a custom HuggingFace model ID)"*
+
+Default if user has no preference: `**google/gemma-4-E4B-it*`* (Medium tier, best-tested, 128K context).
+
+**Step 3 — Set `{model_id}` for all subsequent phases.** Confirm once:
+
+*"Using `{model_id}`. Hardware: [detected]. Estimated training time: ~Xh. Proceed?"*
+
+> **Custom models**: Any instruction-tuned model on HuggingFace works. If the model is not in the registry, use `WebSearch` to look up its QLoRA memory requirements and any fine-tuning quirks before proceeding.
+
+> **Model-specific inference config** (e.g. disabling thinking mode for Gemma 4 / Qwen 3): see `references/model-registry.md` → Per-Model Training Notes.
 
 ---
 
@@ -140,6 +187,8 @@ source .venv-trainer/bin/activate
 ```
 
 **Install training stack — pick by platform:**
+
+> The commands below work for all models in `references/model-registry.md`. Unsloth supports Llama / Qwen / Gemma / Phi / Mistral and most major dense architectures. mlx-lm supports most models — if the chosen `{model_id}` is not yet supported, fall back to PyTorch MPS. Large-tier models (31B+) are CUDA-only; MLX is practical for Small and Medium tier only.
 
 ```bash
 # NVIDIA GPU (CUDA) — Unsloth (official recommended QLoRA path, 2–5× faster than vanilla HF)
@@ -179,10 +228,12 @@ python scripts/check_env.py
 
 `prepare_data.py` reads from **two layers** and merges them:
 
-| Layer | Path | Content | Role in training |
-|-------|------|---------|-----------------|
-| Raw sources | `training/raw/` | Original files (.jsonl / .json / .txt / .csv) | Authentic voice — teaches real wording |
-| Distilled | `training/conversations.jsonl` | Structured turns from anyone-skill | Coherent Q→A pairs |
+
+| Layer       | Path                           | Content                                       | Role in training                       |
+| ----------- | ------------------------------ | --------------------------------------------- | -------------------------------------- |
+| Raw sources | `training/raw/`                | Original files (.jsonl / .json / .txt / .csv) | Authentic voice — teaches real wording |
+| Distilled   | `training/conversations.jsonl` | Structured turns from anyone-skill            | Coherent Q→A pairs                     |
+
 
 ```bash
 python scripts/prepare_data.py \
@@ -190,7 +241,7 @@ python scripts/prepare_data.py \
   --raw-dir training/raw/ \
   --profile training/profile.md \
   --output training/prepared/ \
-  --model-size {e2b|e4b|26b}
+  --model {model_id}
 ```
 
 Both `--input` and `--raw-dir` are optional — the script works if at least one exists.  
@@ -199,17 +250,19 @@ To use distilled only (original behavior): omit `--raw-dir` or leave `training/r
 
 **Raw format auto-detection:**
 
-| File type | Handling |
-|-----------|---------|
-| `.jsonl` / `.json` | Parsed as `{role, content}` turns directly |
-| `.txt` | Paragraphs → assistant turns, paired with generic user prompts |
-| `.csv` | Auto-detects speaker/content columns; falls back to monologue |
+
+| File type          | Handling                                                       |
+| ------------------ | -------------------------------------------------------------- |
+| `.jsonl` / `.json` | Parsed as `{role, content}` turns directly                     |
+| `.txt`             | Paragraphs → assistant turns, paired with generic user prompts |
+| `.csv`             | Auto-detects speaker/content columns; falls back to monologue  |
+
 
 **What this does:**
 
 1. Loads raw/ files → converts to `{role, content}` turns (authentic voice layer)
 2. Loads `conversations.jsonl` → appends as structured turns (distilled layer)
-3. Formats all turns into Gemma-4 instruction-tuning format with profile system prompt
+3. Structures all turns into `{"messages": [...]}` format with `profile.md` as a `system` message — `train.py` calls `tokenizer.apply_chat_template()` at training time, keeping the output model-agnostic (works for all models in the registry without re-running data prep)
 4. Scans for PII patterns (SSN, credit card, email, passwords)
 5. Splits train (90%) / eval (10%) preserving temporal order
 6. Reports composition: `{N}% authentic voice + {N}% distilled`
@@ -220,12 +273,12 @@ To use distilled only (original behavior): omit `--raw-dir` or leave `training/r
 
 Generate and run the training config:
 
-**Pick method by hardware:**
+**Pick method by hardware (`{model_id}` set in Phase 2):**
 
 ```bash
 # NVIDIA GPU — Unsloth QLoRA (recommended: 2–5× faster, less VRAM)
 python scripts/train.py \
-  --model google/gemma-4-E4B-it \
+  --model {model_id} \
   --data training/prepared/ \
   --output models/{slug}/ \
   --method unsloth \
@@ -234,7 +287,7 @@ python scripts/train.py \
 
 # NVIDIA GPU — vanilla QLoRA fallback (if Unsloth unavailable)
 python scripts/train.py \
-  --model google/gemma-4-E4B-it \
+  --model {model_id} \
   --data training/prepared/ \
   --output models/{slug}/ \
   --method qlora \
@@ -243,21 +296,23 @@ python scripts/train.py \
 
 # Apple Silicon — MLX (recommended: Apple-native, faster than PyTorch MPS)
 python scripts/train.py \
-  --model google/gemma-4-E4B-it \
+  --model {model_id} \
   --data training/prepared/ \
   --output models/{slug}/ \
   --method mlx \
   --lora-rank 16 --epochs 3 --learning-rate 2e-4
 
-# Apple Silicon fallback — PyTorch MPS LoRA (if MLX doesn't support model yet)
+# Apple Silicon fallback — PyTorch MPS LoRA (if mlx-lm doesn't support {model_id} yet)
 python scripts/train.py \
-  --model google/gemma-4-E4B-it \
+  --model {model_id} \
   --data training/prepared/ \
   --output models/{slug}/ \
   --method lora \
   --lora-rank 16 --lora-alpha 32 \
   --epochs 3 --batch-size 2 --learning-rate 2e-4
 ```
+
+> **Large tier models** (≥ 24 GB VRAM): use `qlora` method with `--batch-size 1` or `2` to stay within memory. Reduce `--lora-rank` to 8 if still OOM.
 
 **Training loop** (behavior varies by method):
 
@@ -294,10 +349,13 @@ After training completes, run automated voice test:
 ```bash
 python scripts/voice_test.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --profile training/profile.md \
   --output models/{slug}/voice_test_results.json \
   --questions 10
+  # Sampling defaults (Gemma 4 official): temperature 1.0, top-p 0.95, top-k 64
+  # Override: --temperature 0.8 --top-p 0.9 --top-k 50
+  # enable_thinking=False injected automatically for Gemma 4 / Qwen 3
 ```
 
 The script generates 10 test prompts covering:
@@ -322,153 +380,13 @@ If overall score < 3.0 → check conditions below before proceeding to Phase 6.5
 
 ---
 
-## Phase 6.5: Hyperparameter Refinement (optional — autoresearch loop)
+## Phase 6.5: Hyperparameter Refinement (optional)
 
-**Activate only when ALL three conditions are met:**
+**Activate only when** voice score < 3.0 AND data ≥ 1000 turns AND user agrees.
 
-1. Voice fidelity score < 3.0
-2. Training data has ≥ 1000 assistant-role turns
-3. User agrees to spend additional training time
+> Full procedure: [references/autoresearch-integration.md](references/autoresearch-integration.md)
 
-If conditions not met → skip to Phase 7 and note the shortfall in `training_summary.json`.
-
----
-
-### Step 1 — Diagnose weak dimensions
-
-From voice test results, identify which categories scored lowest:
-
-- `off_topic` weak → model broke persona, sounded like a generic AI assistant
-- `values` weak → over-hedged, no distinctive opinion
-- `casual` weak → register mismatch, too formal or too generic
-- `expression` weak → vocabulary and rhythm not captured
-
-### Step 2 — Generate `program.md`
-
-Write a `program.md` file at the working directory root:
-
-```markdown
-# Hyperparameter Refinement — {slug}
-
-## Objective
-Maximize voice_fidelity_score. Target: ≥ 3.5. Current best: {score}.
-
-## Weak dimensions
-{list from voice test, e.g. "humor: 2.1, off_topic: 2.3"}
-
-## Metric
-val_bpb printed to stdout by train.py wrapper (lower is better; maps to 1 - voice_score/5)
-
-## Variables to explore (one change per iteration)
-- lora_rank: try 8, 16, 32
-- learning_rate: try 1e-4, 2e-4, 5e-4
-- epochs: try 2, 3, 4
-- lora_dropout: try 0.0, 0.05, 0.1
-- target_modules: try ["q_proj","v_proj"] vs ["q_proj","v_proj","k_proj","o_proj"]
-
-## Constraints
-- Max 5 iterations
-- Revert to previous best if val_bpb increases
-- Stop when val_bpb ≤ 0.30 (= voice score ≥ 3.5) or iterations exhausted
-```
-
-### Step 3 — Prepare autoresearch entry points
-
-autoresearch expects `train.py` at the project root and reads `val_bpb` (lower is better) from its stdout to track improvement. Create a root-level wrapper that runs training **and** the voice test, then prints the metric autoresearch reads:
-
-```bash
-# Create root-level train.py wrapper (training + voice test in one step)
-cat > train.py << 'EOF'
-"""autoresearch entry point: train → voice test → print val_bpb-compatible metric."""
-import subprocess, sys, json, pathlib
-
-meta_path = pathlib.Path("training/metadata.json")
-meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
-slug_name = meta.get("slug", "persona")
-adapter_path = f"models/{slug_name}/adapter_weights"
-results_path = f"models/{slug_name}/voice_test_results.json"
-
-# Read base model from training summary (written by train.py after each run)
-summary_path = pathlib.Path(f"models/{slug_name}/training_summary.json")
-base_model = "google/gemma-4-E4B-it"  # fallback default
-if summary_path.exists():
-    try:
-        base_model = json.loads(summary_path.read_text()).get("base_model", base_model)
-    except Exception:
-        pass
-
-# Step 1: run training
-ret = subprocess.call([sys.executable, "scripts/train.py"] + sys.argv[1:])
-if ret != 0:
-    sys.exit(ret)
-
-# Step 2: run voice test (with correct base model)
-subprocess.call([
-    sys.executable, "scripts/voice_test.py",
-    "--model", adapter_path,
-    "--base-model", base_model,
-    "--profile", "training/profile.md",
-    "--output", results_path,
-])
-
-# Step 3: print metric for autoresearch to read (inverted score = val_bpb style)
-try:
-    score = json.loads(pathlib.Path(results_path).read_text())["overall_score"]
-    val_bpb = round(1.0 - score / 5.0, 4)   # 5.0 → 0.0 (best), 1.0 → 0.8 (worst)
-    print(f"val_bpb {val_bpb}")
-except Exception:
-    print("val_bpb 1.0")  # signal failure
-EOF
-
-# Create root-level prepare.py wrapper (autoresearch setup step — idempotent check)
-cat > prepare.py << 'EOF'
-"""autoresearch entry point: verify training data is ready (idempotent — no args needed)."""
-import pathlib, sys
-
-prepared = pathlib.Path("training/prepared")
-train_file = prepared / "train.jsonl"
-if train_file.exists():
-    count = sum(1 for _ in open(train_file))
-    print(f"✅ training data ready: {count} samples in {train_file}")
-    sys.exit(0)
-else:
-    print("❌ training/prepared/train.jsonl not found.")
-    print("   Run Phase 4 first:")
-    print("   python scripts/prepare_data.py --input training/conversations.jsonl --raw-dir training/raw/ --profile training/profile.md --output training/prepared/ --model-size e4b")
-    sys.exit(1)
-EOF
-```
-
-This makes autoresearch's built-in `val_bpb` tracking work correctly: a voice score of 5.0 maps to `val_bpb = 0.0` (best), 3.5 → `0.30`, 3.0 → `0.40`. autoresearch keeps iterations that lower `val_bpb`.
-
-### Step 4 — Invoke autoresearch skill
-
-> Read and follow the `autoresearch` skill from `.agents/skills/autoresearch/SKILL.md`.
-> Let it drive the iteration loop: modify hyperparameters → run → evaluate → keep improvements.
-
-**Important**: autoresearch modifies `train.py` at the root level. The root `train.py` is a thin wrapper — **hyperparameters live in `scripts/train.py`**. In `program.md`, add this constraint so autoresearch targets the right file:
-
-```markdown
-## Implementation note
-Hyperparameters are in `scripts/train.py` (not the root train.py wrapper).
-Modify `scripts/train.py` to change lora_rank, learning_rate, epochs, etc.
-The root train.py runs training then voice_test and prints val_bpb to stdout.
-```
-
-The autoresearch skill will:
-
-1. Read `program.md` to understand objective and constraints
-2. Modify hyperparameters in `scripts/train.py` one variable at a time
-3. Run `uv run train.py` — this trains, runs voice_test, and prints `val_bpb` to stdout
-4. Keep if `val_bpb` decreased (= voice score improved), revert if not
-5. Repeat up to 5 iterations or until `val_bpb ≤ 0.30` (= voice score ≥ 3.5)
-
-### Step 5 — Return to main flow
-
-Once autoresearch completes (score ≥ 3.5 or iterations exhausted):
-
-- Record best configuration in `training_summary.json`
-- Proceed to Phase 7 with the best checkpoint
+Uses the `autoresearch` skill to iterate hyperparameters (lora_rank, learning_rate, epochs, etc.) up to 5 times, targeting voice score ≥ 3.5. If conditions not met → skip to Phase 7.
 
 ---
 
@@ -476,39 +394,41 @@ Once autoresearch completes (score ≥ 3.5 or iterations exhausted):
 
 Choose formats based on your deployment target:
 
-| Format | Use case | Command flag |
-|--------|----------|-------------|
-| `gguf` | Offline / laptop / mobile (llama.cpp, LM Studio) | `--formats gguf` |
-| `ollama` | Local CLI chat via Ollama | `--formats gguf,ollama` |
-| `vllm` | Production OpenAI-compatible API server | `--formats vllm` |
-| `onnx` | Edge / WASM / Android / iOS runtimes | `--formats onnx` |
+
+| Format   | Use case                                         | Command flag            |
+| -------- | ------------------------------------------------ | ----------------------- |
+| `gguf`   | Offline / laptop / mobile (llama.cpp, LM Studio) | `--formats gguf`        |
+| `ollama` | Local CLI chat via Ollama                        | `--formats gguf,ollama` |
+| `vllm`   | Production OpenAI-compatible API server          | `--formats vllm`        |
+| `onnx`   | Edge / WASM / Android / iOS runtimes             | `--formats onnx`        |
+
 
 ```bash
 # Local use (default) — GGUF + Ollama
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --slug {slug} \
   --formats gguf,ollama
 
 # API server — vLLM (OpenAI-compatible, NVIDIA GPU)
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --slug {slug} \
   --formats vllm
 
 # Edge / mobile — ONNX (requires: uv pip install optimum[exporters])
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --slug {slug} \
   --formats onnx
 
 # All formats at once
 python scripts/export.py \
   --model models/{slug}/adapter_weights/ \
-  --base-model google/gemma-4-E4B-it \
+  --base-model {model_id} \
   --slug {slug} \
   --formats gguf,ollama,vllm,onnx
 ```
@@ -534,12 +454,14 @@ models/{slug}/
 ```
 
 **Run locally with Ollama:**
+
 ```bash
 ollama create {slug} -f models/{slug}/ollama/Modelfile
 ollama run {slug}
 ```
 
 **Serve as API with vLLM** (OpenAI-compatible, NVIDIA GPU):
+
 ```bash
 pip install vllm
 bash models/{slug}/vllm/launch.sh
@@ -547,6 +469,7 @@ bash models/{slug}/vllm/launch.sh
 ```
 
 **Run on mobile / Edge with ONNX:**
+
 ```bash
 # Android / iOS: copy onnx/ directory into your app
 # WASM: use onnxruntime-web in browser
@@ -554,82 +477,110 @@ bash models/{slug}/vllm/launch.sh
 ```
 
 **Run with llama.cpp directly:**
+
 ```bash
 ./llama-cli -m models/{slug}/gguf/{slug}.gguf --interactive
 ```
 
 ---
 
-## Phase 8: Pack Integration
+## Phase 8–9: Pack Integration & Usage
 
-Bundle the model into the persona skill pack:
+Bundle trained model into the installed persona skill pack and generate run instructions.
+
+```bash
+# Preview changes first (recommended)
+python scripts/pack_integrate.py \
+  --slug {slug} \
+  --model-dir models/{slug}/ \
+  --dry-run
+
+# Apply (auto-discovers pack via registry; or pass --pack-dir explicitly)
+python scripts/pack_integrate.py \
+  --slug {slug} \
+  --model-dir models/{slug}/
+```
+
+**What this does:**
+
+- Copies `adapter_weights/`, `gguf/`, `Modelfile`, `training_summary.json`, `voice_test_results.json` → `{pack}/model/`
+- Injects `body.runtime.models` entry into `persona.json` (idempotent — re-running updates, never duplicates)
+- Generates `model/RUNNING.md` with Ollama / LM Studio / llama.cpp / vLLM / ONNX / OpenClaw run instructions
+
+**Pack directory layout after integration:**
 
 ```
-{slug}-skill/
-  SKILL.md
-  persona.json
-  soul/injection.md
-  ...
-  model/                    ← NEW
-    adapter_weights/        ← LoRA weights (versioned)
-    gguf/{slug}.gguf        ← quantized model
-    ollama/Modelfile
-    training_summary.json   ← fidelity scores, data stats, base model
+{pack}/
+  persona.json         ← body.runtime.models entry added
+  model/
+    adapter_weights/   ← LoRA weights
+    gguf/{slug}.gguf   ← quantized model
+    ollama/Modelfile   ← ollama create {slug} -f Modelfile
+    training_summary.json
     voice_test_results.json
+    RUNNING.md         ← platform-specific run guide
 ```
 
-Update `persona.json` to declare the bundled model:
-
-```json
-{
-  "body": {
-    "runtime": {
-      "models": [
-        {
-          "id": "{slug}-local",
-          "type": "fine-tuned",
-          "base": "google/gemma-4-E4B-it",
-          "adapter": "./model/adapter_weights/",
-          "gguf": "./model/gguf/{slug}.gguf",
-          "fidelity_score": 3.8,
-          "trainable": true
-        }
-      ]
-    }
-  }
-}
-```
+> Full schema: [references/pack-integration.md](references/pack-integration.md)
 
 ---
 
-## Phase 9: Usage Instructions
+## Model Version Management
 
-Generate a `model/RUNNING.md` with platform-specific run instructions:
+Every pipeline run archives a version. Adapter weights are kept for all versions (`adapters/vN/`); `export/` holds only the **current active version's** large artifacts (gguf, ollama, vllm).
 
-```markdown
-# Running {DisplayName} locally
+```
+models/{slug}/
+  manifest.json          ← current active version + versions list
+  adapters/
+    v1/                  ← archived: adapter_weights + training_summary + voice results
+    v2/
+    …
+  export/                ← current active version full artifacts (one copy at a time)
+    adapter_weights/
+    gguf/{slug}.gguf
+    ollama/Modelfile
+    training_summary.json
+  prepared/              ← training inputs (shared across versions)
+```
 
-## Ollama (recommended — macOS / Linux / Windows)
-ollama run {slug}
+### Version Workflow
 
-## LM Studio (GUI, all platforms)
-Open LM Studio → Load Model → select {slug}.gguf
+```bash
+# Training accumulates a new version automatically (v{N+1} auto-inferred):
+bash scripts/pipeline.sh --slug {slug} --model {model_id} --source ./training
 
-## llama.cpp (advanced)
-./llama-cli -m model/gguf/{slug}.gguf --interactive --ctx-size 4096
+# List all versions:
+python scripts/version.py list --slug {slug}
+# OUTPUT EXAMPLE:
+#     VERSION    TURNS    FIDELITY     BASE MODEL                   DATE
+#   ----------- -------- ------------ ---------------------------- ------------
+# * v2          1240     4.3/5.0      google/gemma-4-E4B-it        2026-04-15
+#   v1          890      3.8/5.0      google/gemma-4-E4B-it        2026-03-01
 
-## vLLM — OpenAI-compatible API server (NVIDIA GPU)
-pip install vllm
-bash model/vllm/launch.sh
-# → http://localhost:8000/v1/chat/completions
+# Switch to an earlier version (re-exports from archived adapter):
+python scripts/version.py activate --slug {slug} --version v1
 
-## ONNX — Edge / mobile / browser
-# Android / iOS: bundle model/onnx/ into your app with ONNX Runtime Mobile
-# Browser: use onnxruntime-web
+# Compare two versions:
+python scripts/version.py diff --slug {slug} --version-a v1 --version-b v2
 
-## OpenClaw integration
-# persona.json already declares the local model — OpenClaw picks it up automatically
-openpersona switch {slug}
+# Push a version's adapter to HuggingFace Hub (optional, for sharing):
+python scripts/version.py push --slug {slug} --version v2 --hf-repo you/{slug}-persona
+```
+
+### Incremental Training
+
+Accumulate new conversation data in `training/` and re-run `pipeline.sh`. Each run trains **from the base HuggingFace model** on all accumulated data, producing an independent `vN` adapter. This is more robust than chaining adapters.
+
+```bash
+# Add new data to training/ then train again:
+bash scripts/pipeline.sh \
+  --slug {slug} \
+  --model google/gemma-4-E4B-it \
+  --source ./training \
+  --formats gguf,ollama \
+  --quant Q4_K_M
+# → auto-labeled v3 (or whatever is next), archived to adapters/v3/
 ```
 
 ---
@@ -637,12 +588,12 @@ openpersona switch {slug}
 ## Tools
 
 
-| Tool        | Purpose                                                                     |
-| ----------- | --------------------------------------------------------------------------- |
-| `Bash`      | Run training pipeline, check hardware, export models                        |
-| `Read`      | Load `training/conversations.jsonl`, `profile.md`, `metadata.json`          |
-| `Write`     | Generate training configs, Modelfile, RUNNING.md                            |
-| `WebSearch` | Fetch latest Gemma-4 model card, HuggingFace model IDs, quantization guides |
+| Tool        | Purpose                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `Bash`      | Run training pipeline, check hardware, export models                                             |
+| `Read`      | Load `training/conversations.jsonl`, `profile.md`, `metadata.json`                               |
+| `Write`     | Generate training configs, Modelfile, RUNNING.md                                                 |
+| `WebSearch` | Fetch HuggingFace model cards, QLoRA memory requirements, fine-tuning quirks for unlisted models |
 
 
 ---
@@ -650,21 +601,36 @@ openpersona switch {slug}
 ## Scripts
 
 
-| Script                    | Purpose                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------- |
-| `scripts/check_env.py`    | Detect hardware, recommend model size and training backend                      |
-| `scripts/prepare_data.py` | Merge raw/ + conversations.jsonl → instruction-tuning dataset (dual-layer)      |
-| `scripts/train.py`        | Fine-tuning: Unsloth / vanilla QLoRA / MLX / PyTorch MPS LoRA (auto-routed)    |
-| `scripts/voice_test.py`   | Automated voice fidelity scoring against profile.md (1–5 scale)                 |
-| `scripts/export.py`       | Export to GGUF / Ollama / vLLM launch script / ONNX (pick one or all)          |
+| Script                      | Purpose                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `scripts/pipeline.sh`       | **One-command orchestrator**: prepare → train → voice test → export                        |
+| `scripts/generate_colab.py` | Generate a ready-to-run Colab notebook (no local GPU needed)                               |
+| `scripts/check_env.py`      | Detect hardware, recommend model size and training backend                                 |
+| `scripts/prepare_data.py`   | Merge raw/ + conversations.jsonl → instruction-tuning dataset (dual-layer)                 |
+| `scripts/train.py`          | Fine-tuning: Unsloth / vanilla QLoRA / MLX / PyTorch MPS LoRA (auto-routed)                |
+| `scripts/voice_test.py`     | Automated voice fidelity scoring against profile.md (1–5 scale, Gemma 4 sampling defaults) |
+| `scripts/export.py`         | Export to GGUF / Ollama / vLLM launch script / ONNX (pick one or all)                      |
+| `scripts/pack_integrate.py` | Bundle model into persona pack: copy artifacts, update persona.json, generate RUNNING.md   |
+| `scripts/version.py`        | Version management: list / activate / diff / push adapter versions                         |
 
 
 ---
 
 ## References
 
-- `references/model-selection.md` — hardware requirements, quality vs. size trade-offs
+- `references/model-registry.md` — curated model list with VRAM requirements, MLX support, Gemma 4 official sampling params, and enable_thinking handling
+- `references/model-selection.md` — hardware tier detection, backend selection, quality vs. size trade-offs
 - `references/qlora-guide.md` — QLoRA hyperparameter tuning guide
 - `references/quantization.md` — GGUF quantization levels (Q4_K_M recommended for balance)
 - `references/privacy.md` — what gets baked into the model weights; data handling guidance
+- `references/autoresearch-integration.md` — Phase 6.5 hyperparameter refinement loop (autoresearch)
+- `references/pack-integration.md` — Phases 8–9 model bundling and usage instructions
+
+**Testing** (no GPU required):
+
+```bash
+# Python unit tests (prepare_data, generate_colab, pack_integrate, voice_test helpers, train dry-run)
+python -m unittest discover skills/persona-model-trainer/tests/ -v
+# or: python -m pytest skills/persona-model-trainer/tests/ -v
+```
 

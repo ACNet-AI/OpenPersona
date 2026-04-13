@@ -11,7 +11,7 @@ Supported --formats (comma-separated):
 Usage:
   python scripts/export.py \
     --model models/{slug}/adapter_weights/ \
-    --base-model google/gemma-4-E4B-it \
+    --base-model <hf-model-id> \
     --slug {slug} \
     --formats gguf,ollama,vllm,onnx
 """
@@ -24,15 +24,7 @@ import sys
 from pathlib import Path
 
 
-GGUF_QUANT_LEVELS = {
-    "e2b": "Q8_0",    # E2B: already tiny — preserve quality
-    "e4b": "Q4_K_M",  # E4B: best balance for phones/laptops
-    "26b": "Q4_K_M",  # 26B A4B: balance for workstations
-    # legacy keys kept for backward compat
-    "1b": "Q8_0",
-    "4b": "Q4_K_M",
-    "12b": "Q4_K_M",
-}
+GGUF_QUANT_DEFAULT = "Q4_K_M"  # Best balance for 4B+ models; use Q8_0 for 1–3B models
 
 OLLAMA_MODELFILE_TEMPLATE = """\
 FROM {gguf_path}
@@ -234,12 +226,14 @@ def export_onnx(merged_path: Path, output_path: Path, slug: str):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Path to adapter_weights/")
-    parser.add_argument("--base-model", default="google/gemma-4-E4B-it")
+    parser.add_argument("--base-model", required=True,
+                        help="HuggingFace model ID used as base (e.g. google/gemma-4-E4B-it)")
     parser.add_argument("--slug", required=True)
     parser.add_argument("--formats", default="gguf,ollama",
                         help="Comma-separated: gguf,ollama,vllm,onnx")
-    parser.add_argument("--model-size", default="e4b",
-                        choices=["e2b", "e4b", "26b", "1b", "4b", "12b"])
+    parser.add_argument("--quant", default=GGUF_QUANT_DEFAULT,
+                        choices=["Q2_K", "Q3_K_M", "Q4_0", "Q4_K_M", "Q6_K", "Q8_0"],
+                        help="GGUF quantization level (default: Q4_K_M; use Q8_0 for 1–3B models)")
     parser.add_argument("--profile", default="training/profile.md")
     parser.add_argument("--output-dir", default=None)
     args = parser.parse_args()
@@ -268,7 +262,7 @@ def main():
         ok = merge_adapter(args.base_model, adapter_path, merged_path)
         if ok:
             if "gguf" in formats or "ollama" in formats:
-                quant = GGUF_QUANT_LEVELS.get(args.model_size, "Q4_K_M")
+                quant = args.quant
                 gguf_path = export_gguf(merged_path, gguf_output, quant, args.slug)
         else:
             print("⚠️  Merge failed — skipping formats that require merged model.")
@@ -285,8 +279,35 @@ def main():
     if "onnx" in formats:
         export_onnx(merged_path, onnx_output, args.slug)
 
+    # Update training_summary.json with export info for pack-integration (Phase 8-9)
+    summary_path = base_output / "training_summary.json"
+    summary = {}
+    if summary_path.exists():
+        try:
+            summary = json.loads(summary_path.read_text())
+        except json.JSONDecodeError:
+            pass
+
+    export_info = {"formats": formats, "quant": args.quant}
+    if gguf_path and gguf_path.exists():
+        export_info["gguf"] = str(gguf_path)
+    if "ollama" in formats:
+        modelfile = ollama_output / "Modelfile"
+        if modelfile.exists():
+            export_info["ollama_modelfile"] = str(modelfile)
+    if "vllm" in formats:
+        launch_sh = vllm_output / "launch.sh"
+        if launch_sh.exists():
+            export_info["vllm_launch"] = str(launch_sh)
+    if "onnx" in formats:
+        export_info["onnx_dir"] = str(onnx_output)
+
+    summary["export"] = export_info
+    summary_path.write_text(json.dumps(summary, indent=2))
+
     print(f"\n✅ Export complete — outputs in {base_output}/")
     print("Formats exported:", ", ".join(formats))
+    print(f"   training_summary.json updated with export paths")
 
 
 if __name__ == "__main__":
