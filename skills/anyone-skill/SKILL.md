@@ -7,6 +7,7 @@ allowed-tools: Read Write Edit Bash WebSearch
 metadata:
   version: "1.1.0"
   author: acnlabs
+---
 
 # anyone.skill — Distill Anyone
 
