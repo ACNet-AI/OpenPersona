@@ -24,9 +24,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-DATASETS_ROOT = Path(os.environ.get(
-    'OPENPERSONA_DATASETS',
-    Path.home() / '.openpersona' / 'datasets'
+KNOWLEDGE_ROOT = Path(os.environ.get(
+    'OPENPERSONA_KNOWLEDGE',
+    Path.home() / '.openpersona' / 'knowledge'
 ))
 
 
@@ -40,7 +40,7 @@ def main():
 
     args = parser.parse_args()
 
-    dataset_dir = DATASETS_ROOT / args.slug
+    dataset_dir = KNOWLEDGE_ROOT / args.slug
     if not dataset_dir.exists():
         print(f'❌ Dataset not found: {dataset_dir}', file=sys.stderr)
         sys.exit(1)
@@ -128,9 +128,9 @@ def _copy_raw_sources(dataset_dir: Path, output_dir: Path) -> dict:
         stats['files'] += 1
 
         if src_file.suffix == '.jsonl':
-            stats['messages'] += sum(1 for line in src_file.open() if line.strip())
+            stats['messages'] += sum(1 for line in src_file.open(encoding='utf-8') if line.strip())
         elif src_file.suffix == '.txt':
-            stats['messages'] += len(re.findall(r'\n{2,}', src_file.read_text()))
+            stats['messages'] += len(re.findall(r'\n{2,}', src_file.read_text(encoding='utf-8')))
 
     print(f'   raw/: copied {stats["files"]} source files')
     return stats
@@ -179,7 +179,7 @@ def _generate_conversations(dataset_dir: Path, output_dir: Path, name: str,
         sources_dir = dataset_dir / 'sources'
         if sources_dir.exists():
             for jsonl_file in sources_dir.glob('*.jsonl'):
-                for line in jsonl_file.open():
+                for line in jsonl_file.open(encoding='utf-8'):
                     line = line.strip()
                     if not line:
                         continue
@@ -191,7 +191,7 @@ def _generate_conversations(dataset_dir: Path, output_dir: Path, name: str,
                     except json.JSONDecodeError:
                         continue
 
-    with open(conv_path, 'w') as f:
+    with open(conv_path, 'w', encoding='utf-8') as f:
         for turn in turns:
             f.write(json.dumps(turn, ensure_ascii=False) + '\n')
 
@@ -275,7 +275,7 @@ def _generate_profile(dataset_dir: Path, output_dir: Path, name: str, slug: str)
     if len(sections) <= 1:
         sections.append('(No wiki content available yet. Ingest data and build wiki first.)\n')
 
-    profile_path.write_text('\n'.join(sections))
+    profile_path.write_text('\n'.join(sections), encoding='utf-8')
     print(f'   profile.md: generated')
 
 
@@ -437,7 +437,7 @@ def _compute_quality_report(output_dir: Path) -> dict:
     topics = set()
 
     if conv_path.exists():
-        for line in conv_path.open():
+        for line in conv_path.open(encoding='utf-8'):
             line = line.strip()
             if not line:
                 continue

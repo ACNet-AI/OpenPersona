@@ -1,12 +1,12 @@
 """
 Integration smoke tests for the full knowledge → export → prepare → version chain.
 
-Runs real CLI scripts (no mocking of I/O) against a temp OPENPERSONA_DATASETS
-directory.  No GPU or MemPalace required — init_dataset.py gracefully stubs
+Runs real CLI scripts (no mocking of I/O) against a temp OPENPERSONA_KNOWLEDGE
+directory.  No GPU or MemPalace required — init_knowledge.py gracefully stubs
 MemPalace when the package is absent.
 
 Covered path:
-  persona-knowledge/init_dataset.py
+  persona-knowledge/init_knowledge.py
     → (manual wiki/source seeding)
   persona-knowledge/export_training.py
     → training/ (conversations.jsonl + raw/ + profile.md + metadata.json + probes.json)
@@ -79,7 +79,7 @@ def _seed_dataset(dataset_dir: Path, slug: str, name: str) -> None:
 
 
 class TestInitDataset(unittest.TestCase):
-    """init_dataset.py creates expected directory structure."""
+    """init_knowledge.py creates expected directory structure."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -89,8 +89,8 @@ class TestInitDataset(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_creates_dataset_structure(self):
-        env = {"OPENPERSONA_DATASETS": self.tmp}
-        result = _run(PK_SCRIPTS / "init_dataset.py",
+        env = {"OPENPERSONA_KNOWLEDGE": self.tmp}
+        result = _run(PK_SCRIPTS / "init_knowledge.py",
                       ["--slug", "smoke-init", "--name", "Test Person"],
                       env=env)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -103,8 +103,8 @@ class TestInitDataset(unittest.TestCase):
         self.assertTrue((dataset_dir / "wiki" / "voice.md").exists())
 
     def test_dataset_json_fields(self):
-        env = {"OPENPERSONA_DATASETS": self.tmp}
-        _run(PK_SCRIPTS / "init_dataset.py",
+        env = {"OPENPERSONA_KNOWLEDGE": self.tmp}
+        _run(PK_SCRIPTS / "init_knowledge.py",
              ["--slug", "smoke-fields", "--name", "Field Person"],
              env=env)
         meta = json.loads((Path(self.tmp) / "smoke-fields" / "dataset.json").read_text())
@@ -114,10 +114,10 @@ class TestInitDataset(unittest.TestCase):
         self.assertEqual(meta["export_history"], [])
 
     def test_duplicate_slug_exits_nonzero(self):
-        env = {"OPENPERSONA_DATASETS": self.tmp}
-        _run(PK_SCRIPTS / "init_dataset.py",
+        env = {"OPENPERSONA_KNOWLEDGE": self.tmp}
+        _run(PK_SCRIPTS / "init_knowledge.py",
              ["--slug", "dupe", "--name", "First"], env=env)
-        result = _run(PK_SCRIPTS / "init_dataset.py",
+        result = _run(PK_SCRIPTS / "init_knowledge.py",
                       ["--slug", "dupe", "--name", "Second"], env=env)
         self.assertNotEqual(result.returncode, 0)
 
@@ -129,11 +129,11 @@ class TestExportTraining(unittest.TestCase):
         self.tmp    = tempfile.mkdtemp()
         self.slug   = "smoke-export"
         self.name   = "Ada Smoke"
-        self.ds_dir = Path(self.tmp) / "datasets" / self.slug
+        self.ds_dir = Path(self.tmp) / "knowledge" / self.slug
         self.out_dir = Path(self.tmp) / "training"
         self.ds_dir.mkdir(parents=True)
         _seed_dataset(self.ds_dir, self.slug, self.name)
-        self.env = {"OPENPERSONA_DATASETS": str(self.ds_dir.parent)}
+        self.env = {"OPENPERSONA_KNOWLEDGE": str(self.ds_dir.parent)}
 
     def tearDown(self):
         import shutil
@@ -227,12 +227,12 @@ class TestPrepareData(unittest.TestCase):
         self.tmp     = tempfile.mkdtemp()
         self.slug    = "smoke-prepare"
         self.name    = "Prep Person"
-        self.ds_dir  = Path(self.tmp) / "datasets" / self.slug
+        self.ds_dir  = Path(self.tmp) / "knowledge" / self.slug
         self.train_dir   = Path(self.tmp) / "training"
         self.prepared_dir = Path(self.tmp) / "prepared"
         self.ds_dir.mkdir(parents=True)
         _seed_dataset(self.ds_dir, self.slug, self.name)
-        self.env = {"OPENPERSONA_DATASETS": str(self.ds_dir.parent)}
+        self.env = {"OPENPERSONA_KNOWLEDGE": str(self.ds_dir.parent)}
         # Export first so prepare_data has real input
         _run(PK_SCRIPTS / "export_training.py",
              ["--slug", self.slug, "--output", str(self.train_dir)],
@@ -368,11 +368,11 @@ class TestTraceabilityChain(unittest.TestCase):
         self.tmp     = tempfile.mkdtemp()
         self.slug    = "smoke-trace"
         self.name    = "Trace Test"
-        self.ds_dir  = Path(self.tmp) / "datasets" / self.slug
+        self.ds_dir  = Path(self.tmp) / "knowledge" / self.slug
         self.train_dir = Path(self.tmp) / "training"
         self.ds_dir.mkdir(parents=True)
         _seed_dataset(self.ds_dir, self.slug, self.name)
-        self.env = {"OPENPERSONA_DATASETS": str(self.ds_dir.parent)}
+        self.env = {"OPENPERSONA_KNOWLEDGE": str(self.ds_dir.parent)}
         _run(PK_SCRIPTS / "export_training.py",
              ["--slug", self.slug, "--output", str(self.train_dir)],
              env=self.env)

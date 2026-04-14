@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+ and mempalace >= 3.1.0."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   author: acnlabs
   requires: "python >= 3.11, mempalace >= 3.1.0 (pip install mempalace)"
   optional: "anyone-skill (distillation integration), persona-model-trainer (consumes training/ export)"
@@ -45,13 +45,13 @@ Trigger phrases:
 Create a new persona dataset:
 
 ```bash
-python scripts/init_dataset.py --slug {slug} --name "Display Name"
+python scripts/init_knowledge.py --slug {slug} --name "Display Name"
 ```
 
-This creates `~/.openpersona/datasets/{slug}/` with:
+This creates `~/.openpersona/knowledge/{slug}/` with:
 
 ```
-~/.openpersona/datasets/{slug}/
+~/.openpersona/knowledge/{slug}/
   dataset.json                 # metadata: slug, name, created_at, stats
   .mempalace/                  # MemPalace local data (per-dataset isolation via palace_path)
     palace/                    # MemPalace internal store (ChromaDB + KG)
@@ -302,7 +302,7 @@ The agent can also search programmatically during wiki build or distillation:
 
 ```python
 from mempalace.searcher import search_memories
-results = search_memories("vocabulary patterns", palace_path="~/.openpersona/datasets/{slug}/.mempalace/palace")
+results = search_memories("vocabulary patterns", palace_path="~/.openpersona/knowledge/{slug}/.mempalace/palace")
 ```
 
 ---
@@ -314,8 +314,8 @@ Ongoing dataset management:
 - **Add new source**: run Phase 2 (Ingest) again with new files → triggers wiki update
 - **Remove source**: delete from `sources/` + re-index → run wiki lint to flag orphaned content
 - **Wiki lint**: `python scripts/lint_wiki.py --slug {slug}` — health check
-- **Dataset stats**: `python scripts/init_dataset.py --slug {slug} --stats` — show current stats
-- **List datasets**: `ls ~/.openpersona/datasets/` — all available datasets
+- **Dataset stats**: `python scripts/init_knowledge.py --slug {slug} --stats` — show current stats
+- **List datasets**: `ls ~/.openpersona/knowledge/` — all available datasets
 
 ---
 
@@ -334,7 +334,7 @@ Ongoing dataset management:
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/init_dataset.py` | Initialize dataset directory + MemPalace wing + KG |
+| `scripts/init_knowledge.py` | Initialize knowledge directory + MemPalace wing + KG |
 | `scripts/ingest.py` | Unified ingestion: adapter dispatch + PII scan + dedup + MemPalace + KG |
 | `scripts/export_training.py` | Export sources/ + wiki → training/ directory |
 | `scripts/lint_wiki.py` | Wiki health check: broken links, contradictions, coverage gaps |

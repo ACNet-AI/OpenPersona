@@ -45,7 +45,7 @@ Trigger: "I want to train a model for [name]"
 
 ```bash
 # Initialize a dataset
-python skills/persona-knowledge/scripts/init_dataset.py --slug {slug} --name "{Name}"
+python skills/persona-knowledge/scripts/init_knowledge.py --slug {slug} --name "{Name}"
 
 # Add sources to datasets/{slug}/sources/
 # Add wiki pages to datasets/{slug}/wiki/ (identity.md, voice.md, ...)

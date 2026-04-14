@@ -21,9 +21,9 @@ import re
 import sys
 from pathlib import Path
 
-DATASETS_ROOT = Path(os.environ.get(
-    'OPENPERSONA_DATASETS',
-    Path.home() / '.openpersona' / 'datasets'
+KNOWLEDGE_ROOT = Path(os.environ.get(
+    'OPENPERSONA_KNOWLEDGE',
+    Path.home() / '.openpersona' / 'knowledge'
 ))
 
 WIKILINK_PATTERN = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
@@ -38,7 +38,7 @@ def main():
 
     args = parser.parse_args()
 
-    dataset_dir = DATASETS_ROOT / args.slug
+    dataset_dir = KNOWLEDGE_ROOT / args.slug
     wiki_dir = dataset_dir / 'wiki'
 
     if not wiki_dir.exists():
@@ -58,7 +58,7 @@ def main():
 def lint_wiki(wiki_dir: Path, dataset_dir: Path, *, fix_links: bool = False) -> dict:
     pages = {}
     for md in wiki_dir.glob('*.md'):
-        pages[md.stem] = md.read_text()
+        pages[md.stem] = md.read_text(encoding='utf-8')
 
     issues = []
     warnings = []

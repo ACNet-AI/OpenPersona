@@ -4,8 +4,8 @@ Initialize a persona dataset with MemPalace-backed storage,
 Knowledge Graph, wiki structure, and source backup directory.
 
 Usage:
-    python scripts/init_dataset.py --slug sam --name "Samantha"
-    python scripts/init_dataset.py --slug sam --stats
+    python scripts/init_knowledge.py --slug sam --name "Samantha"
+    python scripts/init_knowledge.py --slug sam --stats
 """
 
 import argparse
@@ -15,9 +15,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-DATASETS_ROOT = Path(os.environ.get(
-    'OPENPERSONA_DATASETS',
-    Path.home() / '.openpersona' / 'datasets'
+KNOWLEDGE_ROOT = Path(os.environ.get(
+    'OPENPERSONA_KNOWLEDGE',
+    Path.home() / '.openpersona' / 'knowledge'
 ))
 
 HALLS = [
@@ -43,7 +43,7 @@ WIKI_PAGES = [
 
 
 def dataset_path(slug: str) -> Path:
-    return DATASETS_ROOT / slug
+    return KNOWLEDGE_ROOT / slug
 
 
 def init_dataset(slug: str, name: str) -> Path:

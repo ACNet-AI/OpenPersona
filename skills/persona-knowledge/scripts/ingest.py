@@ -29,9 +29,9 @@ sys.path.insert(0, str(SKILL_DIR))
 
 from adapters import detect_adapter
 
-DATASETS_ROOT = Path(os.environ.get(
-    'OPENPERSONA_DATASETS',
-    Path.home() / '.openpersona' / 'datasets'
+KNOWLEDGE_ROOT = Path(os.environ.get(
+    'OPENPERSONA_KNOWLEDGE',
+    Path.home() / '.openpersona' / 'knowledge'
 ))
 
 # PII patterns (conservative — flag, don't block)
@@ -56,10 +56,10 @@ def main():
 
     args = parser.parse_args()
 
-    dataset_dir = DATASETS_ROOT / args.slug
+    dataset_dir = KNOWLEDGE_ROOT / args.slug
     if not dataset_dir.exists():
         print(f'❌ Dataset not found: {dataset_dir}', file=sys.stderr)
-        print(f'   Run: python scripts/init_dataset.py --slug {args.slug} --name "..."', file=sys.stderr)
+        print(f'   Run: python scripts/init_knowledge.py --slug {args.slug} --name "..."', file=sys.stderr)
         sys.exit(1)
 
     # --- Resolve adapter ---
@@ -166,7 +166,7 @@ def _load_existing_hashes(dataset_dir: Path) -> set[str]:
     hashes = set()
     sources_dir = dataset_dir / 'sources'
     for jsonl_file in sources_dir.glob('*.jsonl'):
-        for line in jsonl_file.open():
+        for line in jsonl_file.open(encoding='utf-8'):
             line = line.strip()
             if not line:
                 continue
@@ -218,14 +218,14 @@ def _write_sources_backup(dataset_dir: Path, messages: list[dict], adapter_name:
         counter += 1
 
     # Write JSONL
-    with open(sources_dir / filename, 'w') as f:
+    with open(sources_dir / filename, 'w', encoding='utf-8') as f:
         for msg in messages:
             f.write(json.dumps(msg, ensure_ascii=False) + '\n')
 
     # Update source index
     index_path = sources_dir / '.source-index.json'
     if index_path.exists():
-        index = json.loads(index_path.read_text())
+        index = json.loads(index_path.read_text(encoding='utf-8'))
     else:
         index = {'files': [], 'last_updated': ''}
 
@@ -427,7 +427,10 @@ def _write_kg(palace_dir: Path, entities: set[str], relationships: list[dict]):
 
 def _update_stats(dataset_dir: Path, messages: list[dict], kg_stats: dict):
     meta_path = dataset_dir / 'dataset.json'
-    meta = json.loads(meta_path.read_text())
+    try:
+        meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
 
     stats = meta.setdefault('stats', {})
     stats['sources'] = stats.get('sources', 0) + 1

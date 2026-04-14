@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3. Uses WebSearch for public figures and fictional characters."
 allowed-tools: Read Write Edit Bash WebSearch
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   author: acnlabs
 ---
 
@@ -243,10 +243,10 @@ mempalace wake-up --wing {slug}
 
 Then read existing wiki pages for structured knowledge using the `Read` tool:
 
-- `~/.openpersona/datasets/{slug}/wiki/identity.md`
-- `~/.openpersona/datasets/{slug}/wiki/voice.md`
-- `~/.openpersona/datasets/{slug}/wiki/values.md`
-- `~/.openpersona/datasets/{slug}/wiki/thinking.md`
+- `~/.openpersona/knowledge/{slug}/wiki/identity.md`
+- `~/.openpersona/knowledge/{slug}/wiki/voice.md`
+- `~/.openpersona/knowledge/{slug}/wiki/values.md`
+- `~/.openpersona/knowledge/{slug}/wiki/thinking.md`
 
 Use the wiki content as evidence-grounded starting points for each dimension. Fill gaps with semantic search: `mempalace search "decision making style" --wing {slug}`
 

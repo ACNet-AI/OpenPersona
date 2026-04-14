@@ -1688,7 +1688,7 @@ class TestProbesJsonGenerated(unittest.TestCase):
         )
 
         env = dict(__import__("os").environ)
-        env["OPENPERSONA_DATASETS"] = str(self.tmp)
+        env["OPENPERSONA_KNOWLEDGE"] = str(self.tmp)
 
         # __file__ → tests/test_scripts.py → parent = tests/ → parent = persona-model-trainer/ → parent = skills/
         skills_dir = Path(__file__).parent.parent.parent
@@ -1742,6 +1742,146 @@ class TestProbesJsonGenerated(unittest.TestCase):
             self.assertIn("weight",   probe)
             self.assertIsInstance(probe["keywords"], list)
             self.assertGreater(probe["weight"], 0)
+
+
+class TestGenerateModelCard(unittest.TestCase):
+    """Tests for version._generate_model_card() and _generate_dataset_card()."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.v_mod = load_module("version")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
+    def _make_summary(self, **overrides) -> dict:
+        base = {
+            "base_model":   "google/gemma-4-E4B-it",
+            "method":       "lora",
+            "epochs":       3,
+            "lora_rank":    16,
+            "lora_alpha":   32,
+            "train_samples": 250,
+            "trained_at":   "2026-04-11T10:00:00Z",
+            "evaluation": {
+                "perplexity":  8.42,
+                "probe_score": 0.78,
+            },
+        }
+        base.update(overrides)
+        return base
+
+    # ── Model Card ──────────────────────────────────────────────────────────
+
+    def test_model_card_yaml_frontmatter(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v2")
+        self.assertIn("tags:", card)
+        self.assertIn("openpersona", card)
+        self.assertIn("persona-model", card)
+        self.assertIn("lora-adapter", card)
+        self.assertIn("base_model: google/gemma-4-E4B-it", card)
+        self.assertIn("library_name: peft", card)
+
+    def test_model_card_training_details(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v2")
+        self.assertIn("google/gemma-4-E4B-it", card)
+        self.assertIn("16", card)   # lora_rank
+        self.assertIn("32", card)   # lora_alpha
+        self.assertIn("250", card)  # train turns
+        self.assertIn("v2", card)
+
+    def test_model_card_evaluation_metrics(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v2")
+        self.assertIn("8.42", card)
+        self.assertIn("0.78", card)
+
+    def test_model_card_no_evaluation(self):
+        summary = self._make_summary()
+        del summary["evaluation"]
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v1")
+        # Should not raise; eval table rows should be absent
+        self.assertNotIn("Perplexity", card)
+        self.assertNotIn("Probe score", card)
+
+    def test_model_card_profile_description(self):
+        profile = self.tmp / "profile.md"
+        profile.write_text("# Samantha\nA warm and curious digital companion.", encoding="utf-8")
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, profile, "samantha",
+                                               "alice/samantha-persona", "v1")
+        self.assertIn("warm and curious", card)
+
+    def test_model_card_missing_profile_uses_fallback(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v1")
+        # Fallback description references the slug
+        self.assertIn("samantha", card)
+
+    def test_model_card_install_command(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_model_card(summary, None, "samantha",
+                                               "alice/samantha-persona", "v1")
+        self.assertIn("npx skills add acnlabs/persona-model-trainer", card)
+        self.assertIn("alice/samantha-persona", card)
+
+    # ── Dataset Card ─────────────────────────────────────────────────────────
+
+    def test_dataset_card_yaml_frontmatter(self):
+        summary = self._make_summary(
+            data_samples=500,
+            dataset_version="v20260411-001",
+            dataset_export_hash="abcdef123456",
+        )
+        card = self.v_mod._generate_dataset_card(summary, "samantha",
+                                                  "alice/samantha-persona-dataset", "v1")
+        self.assertIn("tags:", card)
+        self.assertIn("openpersona", card)
+        self.assertIn("persona-dataset", card)
+
+    def test_dataset_card_details(self):
+        summary = self._make_summary(
+            data_samples=500,
+            dataset_version="v20260411-001",
+            dataset_export_hash="abcdef123456",
+        )
+        card = self.v_mod._generate_dataset_card(summary, "samantha",
+                                                  "alice/samantha-persona-dataset", "v1")
+        self.assertIn("samantha", card)
+        self.assertIn("500", card)
+        self.assertIn("v20260411-001", card)
+        self.assertIn("abcdef12", card)    # truncated hash prefix
+
+    def test_dataset_card_privacy_warning(self):
+        summary = self._make_summary()
+        card = self.v_mod._generate_dataset_card(summary, "samantha",
+                                                  "alice/samantha-persona-dataset", "v1")
+        self.assertIn("Privacy", card)
+        self.assertIn("consent", card)
+
+    def test_dataset_card_missing_optional_fields(self):
+        # No data_samples / dataset_version / export_hash — should not raise
+        summary = self._make_summary()
+        card = self.v_mod._generate_dataset_card(summary, "samantha",
+                                                  "alice/samantha-persona-dataset", "v1")
+        self.assertIn("samantha", card)
+
+    def test_dataset_card_empty_export_hash_shows_dash(self):
+        # export_hash absent → show "—" not a bare ellipsis
+        summary = self._make_summary()
+        card = self.v_mod._generate_dataset_card(summary, "samantha",
+                                                  "alice/samantha-persona-dataset", "v1")
+        self.assertNotIn("`…`", card)
+        # The "—" placeholder should be present in the export hash row
+        self.assertIn("| Export hash", card)
+        self.assertIn("—", card)
 
 
 if __name__ == "__main__":

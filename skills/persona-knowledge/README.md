@@ -56,7 +56,7 @@ iMessage / Signal
 ### 1. Initialize
 
 ```bash
-python scripts/init_dataset.py --slug sam --name "Samantha"
+python scripts/init_knowledge.py --slug sam --name "Samantha"
 ```
 
 ### 2. Ingest data
@@ -132,7 +132,7 @@ Three adapters cover all formats:
 ## Data storage
 
 ```
-~/.openpersona/datasets/{slug}/
+~/.openpersona/knowledge/{slug}/
   dataset.json                # metadata + stats
   .mempalace/                 # MemPalace local data
     palace/                   # ChromaDB + KG

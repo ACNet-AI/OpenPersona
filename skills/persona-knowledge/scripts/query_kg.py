@@ -18,9 +18,9 @@ import sys
 from collections import defaultdict, deque
 from pathlib import Path
 
-DATASETS_ROOT = Path(os.environ.get(
-    'OPENPERSONA_DATASETS',
-    Path.home() / '.openpersona' / 'datasets'
+KNOWLEDGE_ROOT = Path(os.environ.get(
+    'OPENPERSONA_KNOWLEDGE',
+    Path.home() / '.openpersona' / 'knowledge'
 ))
 
 
@@ -35,7 +35,7 @@ def main():
 
     args = parser.parse_args()
 
-    dataset_dir = DATASETS_ROOT / args.slug
+    dataset_dir = KNOWLEDGE_ROOT / args.slug
     if not dataset_dir.exists():
         print(f'Dataset not found: {dataset_dir}', file=sys.stderr)
         sys.exit(1)
