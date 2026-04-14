@@ -7,7 +7,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+, uv, and 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large). Optional: CUDA GPU + Unsloth or Apple Silicon + MLX."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  version: "0.3.2"
+  version: "0.3.3"
   author: acnlabs
   requires: "anyone-skill (training data), python >= 3.11, uv, 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large)"
   optional: "CUDA GPU + Unsloth (2-5x faster), Apple Silicon + MLX (Small/Medium tier), autoresearch skill"

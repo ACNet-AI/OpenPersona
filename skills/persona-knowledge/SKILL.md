@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+ and mempalace >= 3.1.0."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  version: "0.2.1"
+  version: "0.2.2"
   author: acnlabs
   requires: "python >= 3.11, mempalace >= 3.1.0 (pip install mempalace)"
   optional: "anyone-skill (distillation integration), persona-model-trainer (consumes training/ export)"

@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3. Uses WebSearch for public figures and fictional characters."
 allowed-tools: Read Write Edit Bash WebSearch
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   author: acnlabs
 ---
 
