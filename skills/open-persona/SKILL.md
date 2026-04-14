@@ -171,7 +171,7 @@ npx openpersona switch <slug>   # activate in the runner
 - `**runtime`** (REQUIRED) — minimum viable body: `framework` (agent runner, e.g. `openclaw`), `channels`, `credentials`, `resources`, `modalities` (optional — digital I/O capability declarations, e.g. `["voice"]`, `[{"type":"vision","provider":"claude-vision"}]`)
 - `**appearance`** (optional) — avatar, 3D model
 - `**physical`** (optional) — robots, IoT devices
-- `**interface**` (optional) — Signal Protocol + Pending Commands + State Sync (the persona's nervous system)
+- `**interface`** (optional) — Signal Protocol + Pending Commands + State Sync (the persona's nervous system)
 
 ### Faculty
 
@@ -182,8 +182,8 @@ Faculties are always-active persistent capabilities. Declared as an object array
 - `**voice`** (`expression`) — TTS voice synthesis; requires `provider` (e.g. `elevenlabs`) + `ELEVENLABS_API_KEY`. Auto-injected when `body.runtime.modalities` declares `voice`.
 - `**vision`** (`sense`) — Native model visual perception (images, screenshots, diagrams); no scripts required. Auto-injected when `body.runtime.modalities` declares `vision`.
 - `**emotion-sensing`** (`sense`) — Affective perception from text tone, phrasing, and declared context; empathy calibration; never clinical assessment. Must be declared explicitly — not auto-injected.
-- `**avatar**` (`expression`) — External avatar runtime bridge; graceful text-only fallback when unavailable. → When configuring avatar (provider, Live2D/VRM, fallback rules): read `references/AVATAR.md`
-- `**memory**` (`cognition`) — Cross-session recall via `memories.jsonl`; set top-level `memory.inheritance: "copy"` in `persona.json` to carry memories to child personas at fork. Connected to **Soul-Memory Bridge** (`openpersona state promote`).
+- `**avatar`** (`expression`) — External avatar runtime bridge; graceful text-only fallback when unavailable. → When configuring avatar (provider, Live2D/VRM, fallback rules): read `references/AVATAR.md`
+- `**memory`** (`cognition`) — Cross-session recall via `memories.jsonl`; set top-level `memory.inheritance: "copy"` in `persona.json` to carry memories to child personas at fork. Connected to **Soul-Memory Bridge** (`openpersona state promote`).
 
 **Soft references:** Faculties can declare `"install": "clawhub:..."` for capabilities not installed locally — the persona will be aware of the dormant capability and can request activation via the Signal Protocol.
 
@@ -501,11 +501,11 @@ For detailed reference material, see the `references/` directory:
 ## Companion Skills
 
 
-| Skill                                                           | Install                                  | Purpose                                                                                                                  |
-| --------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `[anyone-skill](https://github.com/acnlabs/anyone-skill)`       | `npx skills add acnlabs/anyone-skill`    | Distill any person or character (self, personal, public, historical, fictional, archetype) into a persona skill pack     |
-| `[persona-model-trainer](https://github.com/acnlabs/persona-model-trainer)` | `npx skills add acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops via Ollama/llama.cpp |
-| `[persona-dataset](https://github.com/acnlabs/persona-dataset)` | `npx skills add acnlabs/persona-dataset` | Persistent, searchable persona knowledge base — MemPalace storage + Knowledge Graph + Karpathy LLM Wiki + training/ export |
+| Skill                                                                       | Install                                        | Purpose                                                                                                                    |
+| --------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `[anyone-skill](https://github.com/acnlabs/anyone-skill)`                   | `npx skills add acnlabs/anyone-skill`          | Distill any person or character (self, personal, public, historical, fictional, archetype) into a persona skill pack       |
+| `[persona-model-trainer](https://github.com/acnlabs/persona-model-trainer)` | `npx skills add acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops via Ollama/llama.cpp. Use `--preset gemma4` for one-command optimised training (lora-rank=16, alpha=rank, lora-layers=16, warmup=0.1). |
+| `[persona-knowledge](https://github.com/acnlabs/persona-knowledge)`             | `npx skills add acnlabs/persona-knowledge`       | Persistent, searchable persona knowledge base — MemPalace storage + Knowledge Graph + Karpathy LLM Wiki + training/ export |
 
 
 ---
@@ -515,8 +515,8 @@ For detailed reference material, see the `references/` directory:
 - `**references/ARCHITECTURE.md`** — 4+5+3 model tables, full pack file structure, self-awareness injection details
 - `**references/PRESETS.md`** — Full preset catalog with descriptions, install commands, and contributor guide
 - `**references/EVOLUTION.md`** — Soul Evolution full reference: Boundaries, Sources, Influence Boundary, Event Log, State History, Self-Narrative, pack validation
-- `**references/FACULTIES.md**` — Faculty catalog, environment variables, and configuration details
-- `**references/AVATAR.md**` — Avatar Faculty integration boundary, provider model, and fallback contract
+- `**references/FACULTIES.md`** — Faculty catalog, environment variables, and configuration details
+- `**references/AVATAR.md`** — Avatar Faculty integration boundary, provider model, and fallback contract
 - `**references/HEARTBEAT.md**` — Proactive real-data check-in system
 - `**references/ECONOMY.md**` — Economy Aspect (Infrastructure), FHS tiers, Survival Policy, Vitality CLI, and AgentBooks schema
 - `**layers/body/SIGNAL-PROTOCOL.md**` (framework source) — Host-side Signal Protocol implementation guide: file schemas, signal types, OpenClaw plugin pattern, and co-evolution feedback loop

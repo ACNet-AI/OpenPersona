@@ -34,7 +34,7 @@
 #   --output-dir      Version management root dir (default: models/{slug})
 #                     export/ is derived automatically as BASE_DIR/export/
 #   --version         Version label for this run (default: auto-inferred as v{N+1})
-#   --formats         Export formats, comma-sep: gguf,ollama,vllm,onnx  (default: gguf,ollama)
+#   --formats         Export formats, comma-sep: gguf,ollama,vllm,mlx,onnx  (default: gguf,ollama)
 #   --quant           GGUF quantization: Q4_K_M | Q8_0 | Q6_K | ...  (default: Q4_K_M)
 #   --max-chars       Max chars per training sample (default: 2048)
 #   --probes          Path to probes.json (from persona-knowledge export); enables probe evaluation
@@ -188,9 +188,9 @@ METADATA="$SOURCE/metadata.json"
 if [[ -f "$METADATA" ]]; then
   DISTILLED=$(python3 -c "
 import json, sys
-d = json.load(open('$METADATA'))
+d = json.load(open(sys.argv[1], encoding='utf-8'))
 print(d.get('distilled_turns', 0))
-" 2>/dev/null || echo "?")
+" "$METADATA" 2>/dev/null || echo "?")
   info "metadata.json: distilled_turns = $DISTILLED"
 else
   warn "metadata.json not found — skipping turn count check"
@@ -315,18 +315,18 @@ if ! $SKIP_VOICE_TEST && ! $DRY_RUN; then
     VOICE_SCORE=$(python3 -c "
 import json, sys
 try:
-    d = json.load(open('$VOICE_OUT'))
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
     print(d.get('overall_score', '?'))
 except Exception:
     print('?')
-" 2>/dev/null || echo "?")
+" "$VOICE_OUT" 2>/dev/null || echo "?")
     ok "Voice fidelity: $VOICE_SCORE / 5.0 → $VOICE_OUT"
 
     # Warn if below threshold but don't block export
     if python3 -c "
-import json; d=json.load(open('$VOICE_OUT'))
+import json, sys; d=json.load(open(sys.argv[1], encoding='utf-8'))
 exit(0 if d.get('overall_score',0) >= 3.0 else 1)
-" 2>/dev/null; then
+" "$VOICE_OUT" 2>/dev/null; then
       true
     else
       warn "Score below 3.0 — consider re-training with more data or more epochs"
@@ -375,25 +375,25 @@ if ! $DRY_RUN; then
       # Inject probe_score into training_summary.json
       python3 -c "
 import json, sys; from pathlib import Path
-sp = Path('$EXPORT_DIR/training_summary.json')
-pp = Path('$PROBE_OUT')
+sp = Path(sys.argv[1]); pp = Path(sys.argv[2])
 if not sp.exists() or not pp.exists(): sys.exit(0)
-s = json.loads(sp.read_text()); p = json.loads(pp.read_text())
+s = json.loads(sp.read_text(encoding='utf-8'))
+p = json.loads(pp.read_text(encoding='utf-8'))
 probe_score = p.get('probe_score')
 if probe_score is None: sys.exit(0)
 ev = s.setdefault('evaluation', {})
 if 'probe_score' not in ev:
     ev['probe_score'] = probe_score
-    sp.write_text(json.dumps(s, indent=2))
-"
+    sp.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding='utf-8')
+" "$EXPORT_DIR/training_summary.json" "$PROBE_OUT"
       PROBE_SCORE=$(python3 -c "
 import json, sys
 try:
-    d = json.load(open('$PROBE_OUT'))
+    d = json.load(open(sys.argv[1], encoding='utf-8'))
     print(f\"{d.get('probe_score', 0):.0%}\")
 except Exception:
     print('?')
-" 2>/dev/null || echo "?")
+" "$PROBE_OUT" 2>/dev/null || echo "?")
       ok "Probe evaluation complete → $PROBE_OUT  (score: $PROBE_SCORE)"
     fi
   fi
@@ -404,11 +404,11 @@ except Exception:
 import json, sys
 from datetime import datetime
 from pathlib import Path
-p = Path('$EXPORT_DIR/training_summary.json')
+p = Path(sys.argv[1])
 if not p.exists(): sys.exit(0)
-s = json.loads(p.read_text())
+s = json.loads(p.read_text(encoding='utf-8'))
 changed = False
-for k, v in [('version', '$VERSION'), ('formats', '$FORMATS'), ('quant', '$QUANT')]:
+for k, v in [('version', sys.argv[2]), ('formats', sys.argv[4]), ('quant', sys.argv[3])]:
     if k not in s:
         s[k] = v
         changed = True
@@ -416,55 +416,57 @@ if 'trained_at' not in s:
     s['trained_at'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     changed = True
 if changed:
-    p.write_text(json.dumps(s, indent=2))
-"
+    p.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding='utf-8')
+" "$EXPORT_DIR/training_summary.json" "$VERSION" "$QUANT" "$FORMATS"
 
   # ── Inject data stats into export training_summary.json ─────────────────
   # Reads from PREPARED_DIR/stats.json (always present after Step 2).
   # No-op if fields already present or either file is missing.
   python3 -c "
 import json, sys; from pathlib import Path
-sp = Path('$EXPORT_DIR/training_summary.json')
-dp = Path('$PREPARED_DIR/stats.json')
+sp = Path(sys.argv[1]); dp = Path(sys.argv[2])
 if not sp.exists() or not dp.exists(): sys.exit(0)
-s = json.loads(sp.read_text()); d = json.loads(dp.read_text())
+s = json.loads(sp.read_text(encoding='utf-8'))
+d = json.loads(dp.read_text(encoding='utf-8'))
 changed = False
 for k, v in [('data_samples', d.get('train')), ('data_eval_samples', d.get('eval')), ('data_hash', d.get('data_hash'))]:
     if k not in s and v is not None:
         s[k] = v; changed = True
 if changed:
-    sp.write_text(json.dumps(s, indent=2))
-"
+    sp.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding='utf-8')
+" "$EXPORT_DIR/training_summary.json" "$PREPARED_DIR/stats.json"
 
   # ── Inject dataset version from source metadata.json ────────────────────
   # Reads export_version / export_hash from $SOURCE/metadata.json (persona-knowledge output).
   # No-op if $METADATA missing, fields already present, or either file is absent.
   python3 -c "
 import json, sys; from pathlib import Path
-sp = Path('$EXPORT_DIR/training_summary.json')
-mp = Path('$METADATA')
+sp = Path(sys.argv[1]); mp = Path(sys.argv[2])
 if not sp.exists() or not mp.exists(): sys.exit(0)
-s = json.loads(sp.read_text()); m = json.loads(mp.read_text())
+s = json.loads(sp.read_text(encoding='utf-8'))
+m = json.loads(mp.read_text(encoding='utf-8'))
 changed = False
 for k, v in [('dataset_version', m.get('export_version')),
              ('dataset_export_hash', m.get('export_hash'))]:
     if k not in s and v is not None:
         s[k] = v; changed = True
 if changed:
-    sp.write_text(json.dumps(s, indent=2))
-"
+    sp.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding='utf-8')
+" "$EXPORT_DIR/training_summary.json" "$METADATA"
 
   # ── Archive version ──────────────────────────────────────────────────────
   step "Archive  (version: $VERSION)"
   ARCHIVE="$BASE_DIR/adapters/$VERSION"
   mkdir -p "$ARCHIVE"
-  # No trailing slash: cp -r dir dst/ copies dir itself (→ dst/dir/), not its contents
+  # Adapter weights: remove existing first to avoid nesting on re-run of same version
+  rm -rf "$ARCHIVE/adapter_weights"
   cp -r "$EXPORT_DIR/adapter_weights"          "$ARCHIVE/"
   cp    "$EXPORT_DIR/training_summary.json"   "$ARCHIVE/" 2>/dev/null || true
   cp    "$EXPORT_DIR/voice_test_results.json" "$ARCHIVE/" 2>/dev/null || true
   cp    "$EXPORT_DIR/probe_results.json"      "$ARCHIVE/" 2>/dev/null || true
   # Archive prepared data snapshot (train/eval JSONL + stats.json)
-  # data fields already written to training_summary.json via inject step above
+  # Remove first to prevent nesting when the same version is re-archived
+  rm -rf "$ARCHIVE/data"
   cp -r "$PREPARED_DIR" "$ARCHIVE/data"
 
   python3 "$SCRIPT_DIR/version.py" update-manifest \
@@ -517,6 +519,12 @@ if ! $DRY_RUN; then
     echo -e "  ${BOLD}# Serve as OpenAI-compatible API:${RESET}"
     echo "  bash $OUTPUT_DIR/vllm/launch.sh"
     echo "  # → http://localhost:8000/v1/chat/completions"
+    echo ""
+  fi
+
+  if echo "$FORMATS" | grep -q "mlx"; then
+    echo -e "  ${BOLD}# Run on Apple Silicon (MLX):${RESET}"
+    echo "  python -m mlx_lm.generate --model $OUTPUT_DIR/mlx --prompt 'Hello'"
     echo ""
   fi
 

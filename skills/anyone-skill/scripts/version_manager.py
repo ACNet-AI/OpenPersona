@@ -77,7 +77,12 @@ def rollback(slug: str, version: str, base_dir: Path):
 
 def history(slug: str, base_dir: Path):
     versions_dir = _versions_dir(slug, base_dir)
-    snapshots = sorted(versions_dir.iterdir()) if versions_dir.exists() else []
+    def _ver_key(p):
+        try:
+            return tuple(int(x) for x in p.name.split("."))
+        except ValueError:
+            return (0,)
+    snapshots = sorted(versions_dir.iterdir(), key=_ver_key) if versions_dir.exists() else []
     if not snapshots:
         print("No version history found.")
         return

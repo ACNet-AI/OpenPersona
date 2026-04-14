@@ -7,7 +7,7 @@ license: MIT
 compatibility: "Designed for Claude Code, Cursor, or OpenClaw. Requires Python 3.11+, uv, and 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large). Optional: CUDA GPU + Unsloth or Apple Silicon + MLX."
 allowed-tools: Read Write Bash WebSearch
 metadata:
-  version: "0.2.0"
+  version: "0.3.2"
   author: acnlabs
   requires: "anyone-skill (training data), python >= 3.11, uv, 5 GB+ VRAM (Small tier) / 10 GB+ (Medium) / 24 GB+ (Large)"
   optional: "CUDA GPU + Unsloth (2-5x faster), Apple Silicon + MLX (Small/Medium tier), autoresearch skill"
@@ -263,8 +263,14 @@ python scripts/check_env.py
 | Layer       | Path                           | Content                                       | Role in training                       |
 | ----------- | ------------------------------ | --------------------------------------------- | -------------------------------------- |
 | Raw sources | `training/raw/`                | Original files (.jsonl / .json / .txt / .csv) | Authentic voice — teaches real wording |
-| Distilled   | `training/conversations.jsonl` | Structured turns from anyone-skill            | Coherent Q→A pairs                     |
+| Distilled   | `training/conversations.jsonl` | Flat `{role, content}` turns from anyone-skill | Coherent Q→A pairs                    |
 
+> **`conversations.jsonl` format** — one JSON object per line, each a flat turn:
+> ```json
+> {"role": "user", "content": "What do you enjoy most?"}
+> {"role": "assistant", "content": "Music and long conversations."}
+> ```
+> This is the output format of `anyone-skill` Step 6-D and `persona-knowledge export`. Do **not** use the `{"messages": [...]}` format here — that is the *output* of `prepare_data.py`, not its input.
 
 ```bash
 python scripts/prepare_data.py \
@@ -292,7 +298,7 @@ To use distilled only (original behavior): omit `--raw-dir` or leave `training/r
 **What this does:**
 
 1. Loads raw/ files → converts to `{role, content}` turns (authentic voice layer)
-2. Loads `conversations.jsonl` → appends as structured turns (distilled layer)
+2. Loads `conversations.jsonl` (flat `{role, content}` lines) → appends as structured turns (distilled layer)
 3. Structures all turns into `{"messages": [...]}` format with `profile.md` as a `system` message — `train.py` calls `tokenizer.apply_chat_template()` at training time, keeping the output model-agnostic (works for all models in the registry without re-running data prep)
 4. Scans for PII patterns (SSN, credit card, email, passwords)
 5. Splits train (90%) / eval (10%) preserving temporal order

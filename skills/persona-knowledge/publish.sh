@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # Publish persona-knowledge to ClawHub.
-# Usage: ./publish.sh [--version 0.2.0] [--changelog "..."] [--dry-run]
+# Usage: ./publish.sh --changelog "..." [--version 0.3.0] [--dry-run]
 set -euo pipefail
 
 SLUG="persona-knowledge"
-VERSION="0.2.0"
-CHANGELOG="Export versioning, export hash, probes.json generation, --list/--wiki-only flags, 27 unit tests."
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Read version from SKILL.md (metadata.version field) as default
+_skill_version() {
+  awk -F'"' '/version:/{print $2; exit}' "${SKILL_DIR}/SKILL.md"
+}
+
+VERSION="$(_skill_version)"
+CHANGELOG=""
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
@@ -17,8 +24,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
-DIST_DIR="$(mktemp -d)/persona-knowledge"
+if [[ -z "${CHANGELOG}" ]]; then
+  echo "Error: --changelog is required" >&2
+  echo "Usage: ./publish.sh --changelog \"What changed in this release\"" >&2
+  exit 1
+fi
+
+DIST_DIR="$(mktemp -d)/${SLUG}"
 
 echo "→ Packaging ${SLUG} v${VERSION} …"
 rsync -a \

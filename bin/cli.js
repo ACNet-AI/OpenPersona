@@ -438,12 +438,13 @@ program
   .command('curate <owner/repo>')
   .description('Curator-only: actively collect a popular persona pack from the market into the OpenPersona directory (requires OPENPERSONA_CURATOR_TOKEN)')
   .option('--type <type>', 'Pack type: single (default), multi, or tool', 'single')
+  .option('--role <role>', 'Override role for non-OpenPersona packs (companion/assistant/mentor/character/tool/...). Defaults to value in persona.json, or "companion" if absent.')
   .option('--token <token>', 'Curator authentication token (falls back to OPENPERSONA_CURATOR_TOKEN env)')
   .option('--tags <tags>', 'Comma-separated tag list for discovery (e.g. "companion,wellness"). See CURATION-STANDARDS.md for the full tag taxonomy.')
   .option('--min-stars <n>', 'Minimum GitHub star count (default: 500). Override for exceptional cases.', '500')
   .action(async (ownerRepo, options) => {
     try {
-      await curate(ownerRepo, { packType: options.type, token: options.token, tags: options.tags, minStars: parseInt(options.minStars, 10) });
+      await curate(ownerRepo, { packType: options.type, role: options.role, token: options.token, tags: options.tags, minStars: parseInt(options.minStars, 10) });
     } catch (e) {
       printError(e.message);
       process.exit(1);

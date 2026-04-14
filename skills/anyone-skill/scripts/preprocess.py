@@ -108,7 +108,7 @@ def extract_wechat(path: Path, target: Optional[str]) -> list:
                 try:
                     cols = {r[1].lower() for r in con.execute(f"PRAGMA table_info({tbl})").fetchall()}
                     if {"content"} & cols and len(cols & {"sender", "nickname", "from", "user"}) > 0:
-                        queries.append(f"SELECT * FROM {tbl} LIMIT 1")
+                        queries.append(f"SELECT * FROM {tbl}")
                 except Exception:
                     pass
 
@@ -205,7 +205,8 @@ def sample(messages: list, max_count: int, keywords: list = None) -> list:
     kw = [k.lower() for k in (keywords or [])]
     if kw:
         important = [m for m in messages if any(k in m.get("content", "").lower() for k in kw)]
-        rest = [m for m in messages if m not in important]
+        important_ids = {id(m) for m in important}
+        rest = [m for m in messages if id(m) not in important_ids]
         priority_quota = min(len(important), max_count * 3 // 10)
         fill_quota = max_count - priority_quota
     else:

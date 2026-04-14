@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # Publish anyone-skill to ClawHub.
-# Usage: ./publish.sh [--version 1.1.0] [--changelog "..."] [--dry-run]
+# Usage: ./publish.sh --changelog "..." [--version 1.2.0] [--dry-run]
 set -euo pipefail
 
 SLUG="anyone-skill"
-VERSION="1.1.0"
-CHANGELOG="Evaluation pipeline integration, datetime deprecation fixes, 39 unit tests."
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Read version from SKILL.md (metadata.version field) as default
+_skill_version() {
+  awk -F'"' '/version:/{print $2; exit}' "${SKILL_DIR}/SKILL.md"
+}
+
+VERSION="$(_skill_version)"
+CHANGELOG=""
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
@@ -17,8 +24,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
-DIST_DIR="$(mktemp -d)/anyone-skill"
+if [[ -z "${CHANGELOG}" ]]; then
+  echo "Error: --changelog is required" >&2
+  echo "Usage: ./publish.sh --changelog \"What changed in this release\"" >&2
+  exit 1
+fi
+
+DIST_DIR="$(mktemp -d)/${SLUG}"
 
 echo "→ Packaging ${SLUG} v${VERSION} …"
 rsync -a \

@@ -50,6 +50,7 @@ lib/
     registrar.js        ← ACN registration logic (acn-register CLI command)
     downloader.js       ← Preset/package downloading from ClawHub
     searcher.js         ← Persona search on ClawHub
+    curator.js          ← Pack Curator (openpersona curate CLI command; privileged, requires OPENPERSONA_CURATOR_TOKEN)
   report/               ← Reporting and visualization
     vitality.js         ← Vitality score calculation (AgentBooks wrapper)
     vitality-report.js  ← HTML vitality report rendering

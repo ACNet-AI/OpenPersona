@@ -92,7 +92,7 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
         if not Path(src).exists():
             continue
         dst = mlx_data_dir / dst_name
-        with open(src) as fin, open(dst, "w") as fout:
+        with open(src, encoding="utf-8") as fin, open(dst, "w", encoding="utf-8") as fout:
             for line in fin:
                 sample = json.loads(line)
                 msgs = sample.get("messages", [])
@@ -145,6 +145,7 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
         "base_model": args.model,
         "method": "mlx",
         "lora_rank": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
         "lora_layers": args.lora_layers,
         "epochs": args.epochs,
         "train_samples": train_count,
@@ -158,7 +159,9 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
             "eval_loss":  round(eval_loss, 4),
             "perplexity": round(math.exp(eval_loss), 2),
         }
-    (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
+    (output_dir / "training_summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"\n✅ MLX adapter saved → {adapter_path}")
 
 
@@ -171,7 +174,7 @@ def train_unsloth(args, output_dir, train_path, eval_path, train_count: int = 0,
         from transformers import TrainingArguments
     except ImportError as e:
         print(f"❌ Unsloth or dependency not installed: {e}")
-        print("   Run: uv pip install 'unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git'")
+        print("   Run: uv pip install 'unsloth[colab-new]'")
         sys.exit(1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -255,6 +258,7 @@ def train_unsloth(args, output_dir, train_path, eval_path, train_count: int = 0,
         "base_model": args.model,
         "method": "unsloth",
         "lora_rank": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
         "epochs": args.epochs,
         "train_samples": train_count,
         "eval_samples": eval_count,
@@ -267,7 +271,9 @@ def train_unsloth(args, output_dir, train_path, eval_path, train_count: int = 0,
             "eval_loss":  round(eval_loss, 4),
             "perplexity": round(math.exp(eval_loss), 2),
         }
-    (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
+    (output_dir / "training_summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"\n✅ Unsloth adapter saved → {adapter_path}")
 
 
@@ -318,8 +324,8 @@ def main():
         print("   Run scripts/prepare_data.py first.")
         sys.exit(1)
 
-    train_count = sum(1 for _ in open(train_path))
-    eval_count = sum(1 for _ in open(eval_path)) if eval_path.exists() else 0
+    train_count = sum(1 for _ in open(train_path, encoding="utf-8"))
+    eval_count = sum(1 for _ in open(eval_path, encoding="utf-8")) if eval_path.exists() else 0
     print(f"Training data: {train_count} samples | Eval: {eval_count} samples")
     print(f"Method: {args.method}")
     print(f"Hyperparameters: lora_rank={args.lora_rank} lora_alpha={args.lora_alpha} "
@@ -478,6 +484,7 @@ def main():
         "base_model": args.model,
         "method": args.method,
         "lora_rank": args.lora_rank,
+        "lora_alpha": args.lora_alpha,
         "epochs": args.epochs,
         "train_samples": train_count,
         "eval_samples": eval_count,
@@ -490,7 +497,9 @@ def main():
             "eval_loss":  round(eval_loss, 4),
             "perplexity": round(math.exp(eval_loss), 2),
         }
-    (output_dir / "training_summary.json").write_text(json.dumps(summary, indent=2))
+    (output_dir / "training_summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"   Training summary → {output_dir}/training_summary.json")
     print("\nNext: run scripts/voice_test.py to validate, then scripts/export.py")
 
