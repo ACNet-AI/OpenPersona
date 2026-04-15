@@ -279,7 +279,7 @@ program
 
 program
   .command('install <target>')
-  .description('Install persona (slug or owner/repo)')
+  .description('Install persona (slug, owner/repo, or owner/repo#subpath)')
   .option('--registry <name>', 'Registry (acnlabs, skillssh)', 'acnlabs')
   .action(async (target, options) => {
     try {

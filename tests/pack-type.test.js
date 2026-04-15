@@ -20,6 +20,12 @@
  *  16. installer: SKILL.md-only pack with multiline description
  *  17. installer: SKILL.md-only pack not rejected as invalid
  *  18. downloader: isValidPackRoot references SKILL.md
+ *  19. installer/downloader: supports skill/SKILL.md fallback path
+ *  20. curator: version resolution order is SKILL.md first, then package.json
+ *  21. curator: emits warning on package.json version fallback
+ *  22. installer: emits warning on package.json version fallback
+ *  23. downloader: supports owner/repo#subpath selector for multi-skill repos
+ *  24. curator: supports multi-skill discovery payload (skills[])
  */
 
 const test = require('node:test');
@@ -401,5 +407,113 @@ test('downloader: error message updated from "persona.json not found" to "neithe
   assert.ok(
     downloaderSrc.includes('isValidPackRoot'),
     'downloader should use isValidPackRoot helper'
+  );
+});
+
+test('installer/downloader: supports SKILL.md fallback in skill/ or SKILL/ directory', () => {
+  const installerSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'lifecycle', 'installer.js'),
+    'utf-8'
+  );
+  const downloaderSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'downloader.js'),
+    'utf-8'
+  );
+
+  assert.ok(
+    installerSrc.includes("path.join(skillDir, 'skill', 'SKILL.md')"),
+    'installer should check skill/SKILL.md as fallback'
+  );
+  assert.ok(
+    installerSrc.includes("path.join(skillDir, 'SKILL', 'SKILL.md')"),
+    'installer should check SKILL/SKILL.md as fallback'
+  );
+  assert.ok(
+    downloaderSrc.includes("path.join(dir, 'skill', 'SKILL.md')"),
+    'downloader should treat skill/SKILL.md as valid pack root'
+  );
+  assert.ok(
+    downloaderSrc.includes("path.join(dir, 'SKILL', 'SKILL.md')"),
+    'downloader should treat SKILL/SKILL.md as valid pack root'
+  );
+});
+
+test('curator: version resolution checks SKILL.md before package.json', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  const fromSkillVersion = curatorSrc.indexOf('if (skillFrontmatter.version)');
+  const fromMetaVersion = curatorSrc.indexOf("if (skillFrontmatter['metadata.version'])");
+  const fromPackageJson = curatorSrc.indexOf('package.json');
+
+  assert.ok(fromSkillVersion !== -1, 'curator must read SKILL.md version first');
+  assert.ok(fromMetaVersion !== -1, 'curator should support metadata.version in frontmatter');
+  assert.ok(fromPackageJson !== -1, 'curator should fallback to package.json version');
+  assert.ok(fromSkillVersion < fromPackageJson, 'SKILL.md version should have higher priority than package.json');
+  assert.ok(fromMetaVersion < fromPackageJson, 'metadata.version should have higher priority than package.json');
+});
+
+test('curator: contains explicit warning for package.json fallback', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  assert.ok(
+    curatorSrc.includes('Version fallback: SKILL.md has no version field, using package.json version instead.'),
+    'curator should warn when version falls back to package.json'
+  );
+  assert.ok(
+    curatorSrc.includes('Version missing: neither SKILL.md version nor package.json version was found.'),
+    'curator should warn when no version source is available'
+  );
+});
+
+test('installer: contains explicit warning for package.json fallback', () => {
+  const installerSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'lifecycle', 'installer.js'),
+    'utf-8'
+  );
+  assert.ok(
+    installerSrc.includes('Version fallback: SKILL.md has no version field, using package.json version instead.'),
+    'installer should warn when version falls back to package.json'
+  );
+  assert.ok(
+    installerSrc.includes('Version missing: neither SKILL.md version nor package.json version was found.'),
+    'installer should warn when no version source is available'
+  );
+});
+
+test('downloader: supports owner/repo#subpath selector and multi-pack guidance', () => {
+  const downloaderSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'downloader.js'),
+    'utf-8'
+  );
+  assert.ok(
+    downloaderSrc.includes("target.split('#', 2)"),
+    'downloader should parse #subpath selector from install target'
+  );
+  assert.ok(
+    downloaderSrc.includes('Multiple skill packs detected in'),
+    'downloader should guide user to pick a subpath when multiple skill packs exist'
+  );
+});
+
+test('curator: supports multi-skill discovery payload (skills[])', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  assert.ok(
+    curatorSrc.includes('async function discoverSkillMdEntries'),
+    'curator should discover multiple SKILL.md entries in a repo'
+  );
+  assert.ok(
+    curatorSrc.includes('skills: Array.isArray(skills) ? skills : undefined'),
+    'curator payload should include skills[] for multi-skill repos'
+  );
+  assert.ok(
+    curatorSrc.includes('const result = await validateMultiSkillRepo(ownerRepo, token);'),
+    'curator should validate non-native multi repos via multi-skill discovery'
   );
 });
