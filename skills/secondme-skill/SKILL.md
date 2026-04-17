@@ -1,7 +1,7 @@
 ---
 name: secondme-skill
 version: "0.1.0"
-description: "Orchestrate anyone-skill, persona-knowledge, and persona-model-trainer into a local-first personal AI double workflow."
+description: "A complete pipeline to build your AI Second Me: distill your identity from personal data, grow a private knowledge base, train a local model, and govern what gets shared."
 license: MIT
 compatibility: "OpenPersona/OpenClaw/Cursor, local-first with optional network interoperability."
 allowed-tools: Read Write Edit Bash WebSearch
@@ -10,6 +10,8 @@ metadata:
 ---
 
 # secondme-skill
+
+secondme-skill is a complete pipeline for building your AI Second Me — distill your identity from owned data, grow a private knowledge base, train a local model that speaks like you, and govern what gets shared. Local-first, privacy-first, fully yours.
 
 This is an orchestration skill package. It does not replace lower-level capabilities.
 
