@@ -144,18 +144,39 @@ def score_response(question: str, response: str, category: str, profile: str) ->
 def _generate_mlx(adapter_path: Path, base_model: str, prompt: str,
                    system_prompt: str = "", max_tokens: int = 200,
                    temperature: float = 1.0) -> str:
-    """Generate a response via mlx_lm subprocess (Apple Silicon, avoids direct import).
+    """Generate a response via mlx_lm subprocess (Apple Silicon, avoids direct MLX import).
 
-    mlx_lm.generate expects a plain-text prompt, not a JSON message list.
-    We apply a minimal chat template manually using the standard ChatML / Qwen2
-    format; models with different templates will still get a reasonable prompt.
+    Uses AutoTokenizer.apply_chat_template() for correct prompt formatting across
+    any instruction-tuned model (Qwen2, Gemma, Llama, Phi, Mistral, etc.).
+    AutoTokenizer does not require torch — only the transformers package.
     """
-    parts = []
-    if system_prompt:
-        parts.append(f"<|im_start|>system\n{system_prompt}<|im_end|>")
-    parts.append(f"<|im_start|>user\n{prompt}<|im_end|>")
-    parts.append("<|im_start|>assistant\n")
-    formatted_prompt = "\n".join(parts)
+    try:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(base_model)
+        messages: list = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        # Qwen3 added enable_thinking; suppress it so we get a clean response
+        extra: dict = {}
+        try:
+            tokenizer.apply_chat_template(messages, tokenize=False,
+                                          add_generation_prompt=True,
+                                          enable_thinking=False)
+            extra["enable_thinking"] = False
+        except TypeError:
+            pass
+        formatted_prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True, **extra
+        )
+    except Exception:
+        # Fallback: ChatML (Qwen2/standard compatible)
+        parts = []
+        if system_prompt:
+            parts.append(f"<|im_start|>system\n{system_prompt}<|im_end|>")
+        parts.append(f"<|im_start|>user\n{prompt}<|im_end|>")
+        parts.append("<|im_start|>assistant\n")
+        formatted_prompt = "\n".join(parts)
 
     cmd = [
         sys.executable, "-m", "mlx_lm", "generate",
