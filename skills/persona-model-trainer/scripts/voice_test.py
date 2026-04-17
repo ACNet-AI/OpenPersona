@@ -144,18 +144,24 @@ def score_response(question: str, response: str, category: str, profile: str) ->
 def _generate_mlx(adapter_path: Path, base_model: str, prompt: str,
                    system_prompt: str = "", max_tokens: int = 200,
                    temperature: float = 1.0) -> str:
-    """Generate a response via mlx_lm subprocess (Apple Silicon, avoids direct import)."""
-    messages = []
+    """Generate a response via mlx_lm subprocess (Apple Silicon, avoids direct import).
+
+    mlx_lm.generate expects a plain-text prompt, not a JSON message list.
+    We apply a minimal chat template manually using the standard ChatML / Qwen2
+    format; models with different templates will still get a reasonable prompt.
+    """
+    parts = []
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
-    prompt_json = json.dumps(messages)
+        parts.append(f"<|im_start|>system\n{system_prompt}<|im_end|>")
+    parts.append(f"<|im_start|>user\n{prompt}<|im_end|>")
+    parts.append("<|im_start|>assistant\n")
+    formatted_prompt = "\n".join(parts)
 
     cmd = [
         sys.executable, "-m", "mlx_lm", "generate",
         "--model", base_model,
         "--adapter-path", str(adapter_path),
-        "--prompt", prompt_json,
+        "--prompt", formatted_prompt,
         "--max-tokens", str(max_tokens),
         "--temp", str(temperature),
     ]

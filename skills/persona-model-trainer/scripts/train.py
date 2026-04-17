@@ -114,7 +114,7 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
         "--data", str(mlx_data_dir),
         "--save-every", "100",
         "--adapter-path", str(adapter_path),
-        "--iters", str(args.epochs * 500),  # approx epoch → iters
+        "--iters", str(max(1, math.ceil(train_count / args.batch_size)) * args.epochs),
         "--num-layers", str(args.lora_layers),
         "--learning-rate", str(args.learning_rate),
         "--batch-size", str(args.batch_size),
