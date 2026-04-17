@@ -1,11 +1,11 @@
 ---
 name: secondme-skill
+version: "0.1.0"
 description: "Orchestrate anyone-skill, persona-knowledge, and persona-model-trainer into a local-first personal AI double workflow."
 license: MIT
 compatibility: "OpenPersona/OpenClaw/Cursor, local-first with optional network interoperability."
 allowed-tools: Read Write Edit Bash WebSearch
 metadata:
-  version: "0.1.0"
   author: acnlabs
 ---
 
