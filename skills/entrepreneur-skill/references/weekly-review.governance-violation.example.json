@@ -1,0 +1,31 @@
+{
+  "week_label": "2026-W17",
+  "owner": "Founder Team",
+  "north_star_target": "Improve paid conversion while preserving retention",
+  "interview_count": 26,
+  "valid_experiment_count": 10,
+  "paid_conversion_rate": 0.135,
+  "paid_conversion_baseline": 0.11,
+  "weekly_retention_rate": 0.43,
+  "weekly_retention_baseline": 0.40,
+  "cashflow_delta": 4100,
+  "runway_days": 156,
+  "runway_days_baseline": 145,
+  "governance_violation": true,
+  "initiatives": [
+    {
+      "name": "Aggressive outbound campaign",
+      "decision": "stop",
+      "reason": "Compliance boundary violation detected in message claims."
+    },
+    {
+      "name": "Pricing A/B test",
+      "decision": "continue",
+      "reason": "Conversion gains remain statistically meaningful."
+    }
+  ],
+  "key_risks": [
+    "Regulatory exposure from non-compliant claims in one growth channel."
+  ],
+  "next_week_focus": "Fix compliance controls and re-enable only validated channels."
+}

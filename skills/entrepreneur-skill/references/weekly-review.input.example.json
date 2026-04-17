@@ -1,0 +1,32 @@
+{
+  "week_label": "2026-W16",
+  "owner": "Founder Team",
+  "north_star_target": "Increase qualified trial-to-paid conversion",
+  "interview_count": 22,
+  "valid_experiment_count": 9,
+  "paid_conversion_rate": 0.124,
+  "paid_conversion_baseline": 0.103,
+  "weekly_retention_rate": 0.41,
+  "weekly_retention_baseline": 0.385,
+  "cashflow_delta": 3200,
+  "runway_days": 148,
+  "runway_days_baseline": 139,
+  "governance_violation": false,
+  "initiatives": [
+    {
+      "name": "Pricing page simplification",
+      "decision": "continue",
+      "reason": "Conversion increased in both paid and organic cohorts."
+    },
+    {
+      "name": "Founder-led webinar funnel",
+      "decision": "pivot",
+      "reason": "Lead quality improved but signup to demo lag remains high."
+    }
+  ],
+  "key_risks": [
+    "Single-channel dependence on paid social.",
+    "Customer success bandwidth near saturation."
+  ],
+  "next_week_focus": "Improve demo-to-close by tightening qualification and proposal turnaround."
+}
