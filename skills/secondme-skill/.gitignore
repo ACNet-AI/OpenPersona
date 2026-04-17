@@ -1,6 +1,7 @@
 # Local training artifacts (builder-side, reproducible, do not commit by default)
 models/
 training-hf-test/
+tests/*/models/
 
 # Generated runtime pack (rebuild with scripts/regenerate-pack.sh)
 # Uncomment to exclude from commits; keep commented to include in Commit B

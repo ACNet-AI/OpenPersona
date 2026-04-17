@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -140,10 +141,44 @@ def score_response(question: str, response: str, category: str, profile: str) ->
     return {"score": score, "notes": "; ".join(notes) if notes else "ok"}
 
 
+def _generate_mlx(adapter_path: Path, base_model: str, prompt: str,
+                   system_prompt: str = "", max_tokens: int = 200,
+                   temperature: float = 1.0) -> str:
+    """Generate a response via mlx_lm subprocess (Apple Silicon, avoids direct import)."""
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+    prompt_json = json.dumps(messages)
+
+    cmd = [
+        sys.executable, "-m", "mlx_lm", "generate",
+        "--model", base_model,
+        "--adapter-path", str(adapter_path),
+        "--prompt", prompt_json,
+        "--max-tokens", str(max_tokens),
+        "--temp", str(temperature),
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        output = result.stdout.strip()
+        # mlx_lm.generate prints the prompt then the response; strip prompt echo
+        if "==========\n" in output:
+            output = output.split("==========\n", 1)[-1].strip()
+        return output or "(no response)"
+    except subprocess.TimeoutExpired:
+        return "(timeout)"
+    except Exception as e:
+        return f"(error: {e})"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Path to adapter_weights/")
     parser.add_argument("--base-model", required=True, help="HuggingFace model ID used as base (e.g. google/gemma-4-E4B-it)")
+    parser.add_argument("--method", choices=["mlx", "hf"], default=None,
+                        help="Inference backend: mlx (Apple Silicon, no torch needed) or hf (torch+peft). "
+                             "Default: auto-detect mlx if torch unavailable.")
     parser.add_argument("--profile", default="training/profile.md")
     parser.add_argument("--questions", type=int, default=10,
                         help=f"Number of voice probe questions (1–{len(DEFAULT_PROBES)}, default: %(default)s)",
@@ -164,31 +199,41 @@ def main():
     model_path = Path(args.model)
     profile_path = Path(args.profile)
 
-    try:
-        import torch
-        from transformers import AutoTokenizer, AutoModelForCausalLM
-        from peft import PeftModel
-    except ImportError as e:
-        print(f"❌ Missing dependency: {e}")
-        sys.exit(1)
+    # Auto-detect method: prefer mlx if torch unavailable
+    method = args.method
+    if method is None:
+        try:
+            import torch  # noqa: F401
+            method = "hf"
+        except ImportError:
+            method = "mlx"
+    print(f"Method: {method}")
 
-    print(f"Loading model from {model_path}…")
-    tokenizer = AutoTokenizer.from_pretrained(args.base_model)
-    tokenizer.pad_token = tokenizer.eos_token
+    model = tokenizer = chat_template_extra = None
+    if method == "hf":
+        try:
+            import torch
+            from transformers import AutoTokenizer, AutoModelForCausalLM
+            from peft import PeftModel
+        except ImportError as e:
+            print(f"❌ Missing dependency for hf method: {e}")
+            print("   Try --method mlx for Apple Silicon inference without torch.")
+            sys.exit(1)
 
-    base = AutoModelForCausalLM.from_pretrained(
-        args.base_model,
-        torch_dtype="auto",
-        device_map="auto",
-        trust_remote_code=True,
-    )
-    model = PeftModel.from_pretrained(base, str(model_path))
-    model.eval()
-
-    # Probe tokenizer once — passed into generate_response() per call (not re-probed)
-    chat_template_extra = probe_chat_template_kwargs(tokenizer)
-    if chat_template_extra:
-        print(f"   enable_thinking=False: active (Gemma 4 / Qwen 3 mode)")
+        print(f"Loading model from {model_path}…")
+        tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+        tokenizer.pad_token = tokenizer.eos_token
+        base = AutoModelForCausalLM.from_pretrained(
+            args.base_model, torch_dtype="auto", device_map="auto", trust_remote_code=True,
+        )
+        model = PeftModel.from_pretrained(base, str(model_path))
+        model.eval()
+        chat_template_extra = probe_chat_template_kwargs(tokenizer)
+        if chat_template_extra:
+            print("   enable_thinking=False: active (Gemma 4 / Qwen 3 mode)")
+    else:
+        print(f"Loading base model via mlx_lm: {args.base_model}")
+        print(f"Adapter: {model_path}")
 
     profile = load_profile_traits(profile_path)
     probes = DEFAULT_PROBES[: args.questions]
@@ -199,11 +244,17 @@ def main():
     print(f"\nRunning {len(probes)} voice probes…\n")
     for i, (question, category) in enumerate(probes, 1):
         print(f"[{i}/{len(probes)}] {category}: {question[:60]}…")
-        response = generate_response(
-            model, tokenizer, question, system_prompt=profile,
-            temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
-            chat_template_extra=chat_template_extra,
-        )
+        if method == "mlx":
+            response = _generate_mlx(
+                model_path, args.base_model, question,
+                system_prompt=profile, temperature=args.temperature,
+            )
+        else:
+            response = generate_response(
+                model, tokenizer, question, system_prompt=profile,
+                temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
+                chat_template_extra=chat_template_extra,
+            )
         scoring = score_response(question, response, category, profile)
         total_score += scoring["score"]
 
