@@ -280,7 +280,6 @@
           "description": { "type": "string" },
           "trigger": { "type": "string" },
           "install": { "type": "string", "pattern": "^(clawhub|skillssh|openpersona):.+$", "description": "External install source: 'clawhub:<slug>', 'skillssh:<owner/repo>', or 'openpersona:<slug>'" },
-          "trust": { "type": "string", "enum": ["verified", "community", "unverified"], "description": "Trust level of this skill: 'verified' (signed by skills.sh registry), 'community' (peer-reviewed, unsigned), 'unverified' (arbitrary source). Checked against evolution.skill.minTrustLevel at runtime." },
           "trust": {
             "type": "string",
             "enum": ["verified", "community", "unverified"],
