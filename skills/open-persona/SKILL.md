@@ -13,7 +13,7 @@ compatibility: Generated skill packs work with any SKILL.md-compatible agent. CL
 allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
 metadata:
   author: openpersona
-  repository: [https://github.com/acnlabs/OpenPersona](https://github.com/acnlabs/OpenPersona)
+  repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw"
 
 # Marketplace / automated review: explicit non-behavior (reduces false "suspicious" flags)

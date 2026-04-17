@@ -21,6 +21,8 @@ coverage/
 
 .pnpm-store/
 *.code-workspace
+.hf-cache/
+.venv*/
 
 # Design files
 UI/

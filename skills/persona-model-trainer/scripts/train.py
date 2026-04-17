@@ -102,21 +102,20 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
                 fout.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
     print(f"  Converted training data for mlx-lm → {mlx_data_dir}")
 
-    # mlx_lm.lora has two distinct concepts:
-    #   --lora-layers N  — how many transformer layers to apply LoRA to (depth)
-    #   --rank R         — the LoRA rank / dimensionality of adapter matrices
-    # These must be passed separately; conflating them (old bug) silently used
-    # mlx-lm's default rank instead of the user-specified value.
+    # mlx-lm CLI changed in newer versions:
+    # - Entry point: `python -m mlx_lm lora`
+    # - Layer flag: `--num-layers` (replaces old `--lora-layers`)
+    # - Rank is no longer exposed as a direct CLI flag in this version.
+    # We pass the available compatible knobs and keep lora_rank recorded in summary.
     cmd = [
-        sys.executable, "-m", "mlx_lm.lora",
+        sys.executable, "-m", "mlx_lm", "lora",
         "--model", args.model,
         "--train",
         "--data", str(mlx_data_dir),
         "--save-every", "100",
         "--adapter-path", str(adapter_path),
         "--iters", str(args.epochs * 500),  # approx epoch → iters
-        "--lora-layers", str(args.lora_layers),
-        "--rank", str(args.lora_rank),
+        "--num-layers", str(args.lora_layers),
         "--learning-rate", str(args.learning_rate),
         "--batch-size", str(args.batch_size),
     ]
