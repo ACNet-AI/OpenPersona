@@ -1,0 +1,13 @@
+{
+  "total_turns": 32,
+  "raw_turns": 12,
+  "distilled_turns": 20,
+  "assistant_turns": 16,
+  "samples": 16,
+  "train": 14,
+  "eval": 2,
+  "model": "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+  "max_chars_per_sample": 8192,
+  "pii_flags": [],
+  "data_hash": "sha256:bb30ea2c3f5ccf9e"
+}

@@ -1,16 +1,19 @@
 {
   "slug": "secondme-skill",
-  "current_stage": "init",
-  "last_success_stage": "none",
-  "dataset_version": "v0",
-  "model_version": "v0",
+  "current_stage": "report",
+  "last_success_stage": "integrate",
+  "dataset_version": "v1",
+  "model_version": "v-local-500",
+  "test_subject": "iris",
+  "test_fixture": "skills/secondme-skill/tests/iris/training",
   "quality_metrics": {
-    "voice_score": 0,
-    "probe_score": 0,
-    "perplexity": 0
+    "voice_score": 3.8,
+    "probe_score": 0.0,
+    "perplexity": 1.68
   },
-  "error_code": "",
-  "last_error": "",
+  "eval_notes": "probe_score=0.0: adapter trained on HF test dataset, not Iris fixture — tests failure-routing path. voice_score=3.8 from pack_integrate (PASS). perplexity=1.68 from training_summary (PASS).",
+  "error_code": "PROBE_FAIL",
+  "last_error": "probe_score 0.0 < threshold 0.8 — retrain with Iris-specific data to pass",
   "retry_count": 0,
-  "updated_at": ""
+  "updated_at": "2026-04-17T11:00:00Z"
 }

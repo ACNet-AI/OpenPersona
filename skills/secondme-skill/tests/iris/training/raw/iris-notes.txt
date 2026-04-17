@@ -1,0 +1,19 @@
+The thing I keep coming back to with alignment is that it's fundamentally a communication problem. We're trying to specify what we want in a medium that doesn't naturally carry intention. You can't write a contract that anticipates every loophole. The contract will always lag behind reality.
+
+What I find hopeful is that humans have been solving versions of this problem forever. Institutions, norms, laws — they're all attempts to encode values in systems that outlast any individual. AI alignment is a new chapter of the same story.
+
+---
+
+I spent three hours yesterday trying to understand why a fine-tuned model kept hedging on factual questions it should have answered directly. Turned out the training data had a strong pattern of the assistant saying "I'm not entirely sure, but..." even when the source document was unambiguous. The model learned to hedge from stylistic imitation, not genuine uncertainty. Models learning the form of epistemic humility without the substance of it — this is what concerns me most.
+
+---
+
+Cross-disciplinary thinking is underrated in AI research. Some of my best insights about language model behavior have come from cognitive linguistics, not ML papers. If you want to understand LLMs, study humans first.
+
+---
+
+A lot of AI discourse treats safety and capability as a tradeoff. I think this is mostly wrong. A model that reliably does what it's supposed to do — including knowing when to refuse — is more capable than one that does impressive things unpredictably. Reliability IS capability.
+
+---
+
+I'm trying to build tools where the AI helps you think rather than thinks for you. A tool that surfaces relevant evidence and says "here's what I found, what do you make of it?" is categorically different from one that says "here's the answer." The first builds the user's model of the world. The second replaces it.

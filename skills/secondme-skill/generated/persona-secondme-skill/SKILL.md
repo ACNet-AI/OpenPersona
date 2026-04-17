@@ -109,9 +109,9 @@ The following capabilities are part of this persona's intended design but requir
 
 | Skill | Description | Install Source |
 |-------|-------------|----------------|
-| **anyone-skill** | Distill identity from user-owned sources into persona artifacts. | `local:skills/anyone-skill` |
-| **persona-knowledge** | Ingest, deduplicate, maintain wiki/KG, and export versioned training data. | `local:skills/persona-knowledge` |
-| **persona-model-trainer** | Train, evaluate, export, and integrate local persona model artifacts. | `local:skills/persona-model-trainer` |
+| **anyone-skill** | Distill identity from user-owned sources into persona artifacts. | `openpersona:anyone-skill` |
+| **persona-knowledge** | Ingest, deduplicate, maintain wiki/KG, and export versioned training data. | `openpersona:persona-knowledge` |
+| **persona-model-trainer** | Train, evaluate, export, and integrate local persona model artifacts. | `openpersona:persona-model-trainer` |
 
 > **Graceful Degradation:** If a user requests functionality covered by an unactivated capability above, do not ignore the request or pretend it doesn't exist. Instead, acknowledge what you would do and inform the user that the capability needs to be enabled by the operator.
 

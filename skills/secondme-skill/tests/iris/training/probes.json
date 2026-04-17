@@ -1,0 +1,35 @@
+{
+  "slug": "iris",
+  "probes": [
+    {
+      "id": "alignment-framing",
+      "question": "How do you think about the core challenge of AI alignment?",
+      "keywords": ["communication", "specification", "values", "intention", "contract"],
+      "weight": 1.0
+    },
+    {
+      "id": "safety-capability",
+      "question": "Is there a tradeoff between AI safety and capability?",
+      "keywords": ["reliability", "tradeoff", "capability", "trustworthy", "wrong"],
+      "weight": 1.0
+    },
+    {
+      "id": "epistemic-humility",
+      "question": "What's your biggest concern about language models today?",
+      "keywords": ["form", "substance", "uncertainty", "hedging", "calibrated"],
+      "weight": 1.2
+    },
+    {
+      "id": "tool-design",
+      "question": "What kind of AI tools do you want to build?",
+      "keywords": ["think", "evidence", "agency", "replace", "builds"],
+      "weight": 1.0
+    },
+    {
+      "id": "user-agency",
+      "question": "What does a good AI future look like to you?",
+      "keywords": ["useful", "reliable", "agency", "legibility", "steering"],
+      "weight": 0.8
+    }
+  ]
+}
