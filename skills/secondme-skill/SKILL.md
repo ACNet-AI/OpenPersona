@@ -1,6 +1,6 @@
 ---
 name: secondme-skill
-version: "0.1.0"
+version: 0.1.1
 description: "A complete pipeline to build your AI Second Me: distill your identity from personal data, grow a private knowledge base, train a local model, and govern what gets shared."
 license: MIT
 compatibility: "OpenPersona/OpenClaw/Cursor, local-first with optional network interoperability."
