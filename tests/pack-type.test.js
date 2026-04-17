@@ -517,3 +517,33 @@ test('curator: supports multi-skill discovery payload (skills[])', () => {
     'curator should validate non-native multi repos via multi-skill discovery'
   );
 });
+
+test('curator: treats SKILL/SKILL.md and skill/SKILL.md as root skill paths', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  assert.ok(
+    curatorSrc.includes("return filePath === 'SKILL.md' || filePath === 'SKILL/SKILL.md' || filePath === 'skill/SKILL.md';"),
+    'curator should classify SKILL/SKILL.md and skill/SKILL.md as root skills'
+  );
+  assert.ok(
+    curatorSrc.includes('if (isRootSkillMdPath(entry.filePath)) continue;'),
+    'curator should exclude root skill paths from nested skills[]'
+  );
+});
+
+test('curator: enforces multi threshold after excluding root SKILL.md', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  assert.ok(
+    curatorSrc.includes('if (skills.length < 2) {'),
+    'curator should enforce child-skill threshold after filtering root skills'
+  );
+  assert.ok(
+    curatorSrc.includes('Expected at least 2 child skills (excluding root SKILL.md).'),
+    'curator should report post-filter multi threshold failure clearly'
+  );
+});

@@ -10,7 +10,8 @@
     "test": "node scripts/run-tests.js",
     "test:canvas": "node --test tests/living-canvas.smoke.test.js",
     "test:all": "npm test && npm run test:canvas",
-    "acceptance": "bash demo/acceptance.sh"
+    "acceptance": "bash demo/acceptance.sh",
+    "curation:dedupe-report": "node scripts/curation-dedupe-report.js"
   },
   "keywords": [
     "openclaw",
