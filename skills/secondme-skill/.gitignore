@@ -1,0 +1,16 @@
+# Local training artifacts (builder-side, reproducible, do not commit by default)
+models/
+training-hf-test/
+
+# Generated runtime pack (rebuild with scripts/regenerate-pack.sh)
+# Uncomment to exclude from commits; keep commented to include in Commit B
+# generated/
+
+# Generated acceptance reports
+reports/data/*.md
+reports/model/*.md
+reports/deploy/*.md
+reports/secondme_overview_*.md
+
+# Local cache placed under this module (if used)
+.hf-cache/

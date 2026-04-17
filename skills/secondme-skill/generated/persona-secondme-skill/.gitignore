@@ -1,0 +1,5 @@
+# OpenPersona runtime files — do not commit to version control
+acn-registration.json
+state.json
+handoff.json
+soul/self-narrative.md

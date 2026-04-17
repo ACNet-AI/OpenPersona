@@ -1,0 +1,36 @@
+{
+  "name": "secondme-skill",
+  "description": "A local-first personal AI double framework that helps users build, govern, and evolve their own digital self with clear data ownership and human approval gates.",
+  "version": "0.20.0",
+  "url": "<RUNTIME_ENDPOINT>",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "skills": [
+    {
+      "id": "persona:memory",
+      "name": "Memory",
+      "description": "Cross-session memory — store, retrieve, and search memories with provider-pluggable backend (local JSON lines default, Mem0/Zep optional)",
+      "tags": [
+        "persona",
+        "cognition"
+      ],
+      "inputModes": [
+        "text/plain"
+      ],
+      "outputModes": [
+        "text/plain"
+      ]
+    }
+  ]
+}

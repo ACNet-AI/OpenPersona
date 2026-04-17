@@ -1,0 +1,16 @@
+{
+  "slug": "secondme-skill",
+  "current_stage": "init",
+  "last_success_stage": "none",
+  "dataset_version": "v0",
+  "model_version": "v0",
+  "quality_metrics": {
+    "voice_score": 0,
+    "probe_score": 0,
+    "perplexity": 0
+  },
+  "error_code": "",
+  "last_error": "",
+  "retry_count": 0,
+  "updated_at": ""
+}

@@ -1,0 +1,21 @@
+{
+  "acn_gateway": "https://acn-production.up.railway.app",
+  "owner": "<RUNTIME_OWNER>",
+  "name": "secondme-skill",
+  "endpoint": "<RUNTIME_ENDPOINT>",
+  "skills": [
+    "persona:memory"
+  ],
+  "agent_card": "./agent-card.json",
+  "subnet_ids": [
+    "public"
+  ],
+  "wallet_address": "0x26fa2b0e274c1ba14ef8cfd99bcf634b967f79d5",
+  "onchain": {
+    "erc8004": {
+      "chain": "base",
+      "identity_contract": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+      "registration_script": "npx @agentplanet/acn register-onchain"
+    }
+  }
+}

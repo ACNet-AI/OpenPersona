@@ -1,0 +1,21 @@
+{
+  "base_model": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+  "method": "mlx",
+  "lora_rank": 8,
+  "lora_alpha": 8,
+  "lora_layers": 8,
+  "epochs": 1,
+  "train_samples": 500,
+  "eval_samples": 100,
+  "device": "apple-silicon",
+  "adapter_path": "skills/secondme-skill/models/secondme-skill/export/adapter_weights",
+  "version": "v-local-500",
+  "trained_at": "2026-04-17T05:12:22Z",
+  "profile_path": null,
+  "formats": "gguf,ollama",
+  "quant": "Q4_K_M",
+  "evaluation": {
+    "eval_loss": 0.517,
+    "perplexity": 1.68
+  }
+}
