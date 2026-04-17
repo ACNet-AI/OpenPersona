@@ -8,7 +8,7 @@ SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_ROOT="$(cd "${SKILL_DIR}/../.." && pwd)"
 
 _skill_version() {
-  awk -F'"' '/version:/{print $2; exit}' "${SKILL_DIR}/SKILL.md"
+  grep '^version:' "${SKILL_DIR}/SKILL.md" | head -1 | sed 's/version:[[:space:]]*//' | tr -d '"'
 }
 
 VERSION="$(_skill_version)"
@@ -50,6 +50,8 @@ rsync -a \
   --exclude='.hf-cache/' \
   --exclude='notebooks/' \
   --exclude='tests/' \
+  --exclude='state/' \
+  --exclude='package.json' \
   --exclude='CHANGELOG.md' \
   --exclude='publish.sh' \
   --exclude='.git' \

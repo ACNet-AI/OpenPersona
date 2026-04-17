@@ -1,6 +1,6 @@
 ---
 name: entrepreneur-skill
-version: 0.1.1
+version: 0.1.2
 description: "Your AI Founder Partner for building and scaling startups — diagnose your stage, run hypothesis experiments, make pricing decisions, design growth loops, and ship weekly execution reviews."
 license: MIT
 compatibility: "Designed for OpenPersona/OpenClaw/Cursor. Works standalone with references workflows. Optional external integrations: slavingia/skills and persona-knowledge."

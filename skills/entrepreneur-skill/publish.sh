@@ -7,7 +7,7 @@ SLUG="entrepreneur-skill"
 SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 _skill_version() {
-  awk -F'"' '/version:/{print $2; exit}' "${SKILL_DIR}/SKILL.md"
+  grep '^version:' "${SKILL_DIR}/SKILL.md" | head -1 | sed 's/version:[[:space:]]*//' | tr -d '"'
 }
 
 VERSION="$(_skill_version)"
@@ -40,6 +40,7 @@ rsync -a \
   --exclude='publish.sh' \
   --exclude='.git' \
   --exclude='.gitignore' \
+  --exclude='package.json' \
   --exclude='.pytest_cache/' \
   --exclude='__pycache__/' \
   --exclude='*.pyc' \
@@ -61,7 +62,7 @@ if [[ "${DRY_RUN}" == true ]]; then
 fi
 
 echo "-> Publishing to ClawHub ..."
-clawdhub publish "${DIST_DIR}" \
+npx clawhub@latest publish "${DIST_DIR}" \
   --slug  "${SLUG}" \
   --name  "entrepreneur-skill" \
   --version "${VERSION}" \
