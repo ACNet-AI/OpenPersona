@@ -161,6 +161,21 @@ def train_mlx(args, output_dir, train_path, eval_path, train_count: int = 0, eva
     (output_dir / "training_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+
+    # Patch adapter_config.json: add base_model_name_or_path so eval_probe.py
+    # and voice_test.py can discover the base model without --base-model flag.
+    adapter_cfg_path = adapter_path / "adapter_config.json"
+    if adapter_cfg_path.exists():
+        try:
+            adapter_cfg = json.loads(adapter_cfg_path.read_text(encoding="utf-8"))
+            if "base_model_name_or_path" not in adapter_cfg:
+                adapter_cfg["base_model_name_or_path"] = args.model
+                adapter_cfg_path.write_text(
+                    json.dumps(adapter_cfg, indent=4, ensure_ascii=False), encoding="utf-8"
+                )
+        except Exception:
+            pass  # non-fatal: eval tools can still use --base-model flag
+
     print(f"\n✅ MLX adapter saved → {adapter_path}")
 
 
