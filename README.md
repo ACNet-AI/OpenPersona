@@ -27,6 +27,7 @@ _Open the same HTML files locally from `demo/` if you prefer (no network). See [
 - [Generated Output](#generated-output)
 - [Faculty Reference](#faculty-reference)
 - [Heartbeat](#heartbeat--proactive-real-data-check-ins)
+- [Dataset Directory](#dataset-directory)
 - [Persona Harvest](#persona-harvest--community-contribution)
 - [A2A Agent Card & ACN Integration](#a2a-agent-card--acn-integration)
 - [Custom Persona Creation](#custom-persona-creation)
@@ -80,7 +81,7 @@ See [`skills/persona-model-trainer/references/pipeline-guide.md`](skills/persona
 # Start from a blank-slate meta-persona (recommended)
 npx openpersona create --preset base --install
 
-# Or install a pre-built character (browse at https://openpersona-frontend.vercel.app)
+# Or install a pre-built character (browse at https://openpersona.co/skills)
 npx openpersona install samantha
 ```
 
@@ -180,7 +181,8 @@ This unlocks relationship progression, mood tracking, trait emergence, and speak
 - **🌾 Persona Harvest** — Community-driven persona improvement via structured contribution
 - **⚡ Lifecycle Protocol** — `body.interface` nervous system: Signal Protocol (persona→host requests), Pending Commands queue (host→persona async instructions), and State Sync (cross-conversation persistence via `openpersona state` CLI + `scripts/state-sync.js`)
 - **💓 Heartbeat** — Proactive real-data check-ins, never fabricated experiences
-- **📦 One-Command Install** — `npx openpersona install samantha` and you're live — browse all personas at [openpersona-frontend.vercel.app](https://openpersona-frontend.vercel.app)
+- **📦 One-Command Install** — `npx openpersona install samantha` and you're live — browse all personas at [openpersona.co/skills](https://openpersona.co/skills)
+- **🗄️ Dataset Directory** — discover and publish Hugging Face persona datasets at [openpersona.co/datasets](https://openpersona.co/datasets); `openpersona dataset install <repo>` and `openpersona dataset publish <repo>` mirror the persona workflow
 
 ## Four-Layer Architecture
 
@@ -425,6 +427,20 @@ npx openpersona switch life-assistant  # → gateway switches to "rational" hear
 
 If the target persona has no heartbeat config, the gateway heartbeat is explicitly disabled to prevent leaking the previous persona's settings.
 
+## Dataset Directory
+
+[openpersona.co/datasets](https://openpersona.co/datasets) is a companion directory for Hugging Face datasets relevant to persona work — training data, roleplay corpora, synthetic dialogue sets, and more.
+
+The directory auto-discovers datasets tagged `openpersona` on Hugging Face and tracks install counts alongside HF likes and downloads. Sorting, search, and trending views mirror the [Skills directory](https://openpersona.co/skills).
+
+```bash
+# Record an install event (increments counter on openpersona.co/datasets)
+openpersona dataset install proj-persona/PersonaHub
+
+# Publish your own HF dataset to the directory
+openpersona dataset publish <owner/repo>
+```
+
 ## Persona Harvest — Community Contribution
 
 Every user's interaction with their persona can produce valuable improvements across all four layers. Persona Harvest lets you contribute these discoveries back to the community.
@@ -627,7 +643,9 @@ openpersona state          Read/write persona state and emit signals (Lifecycle 
 openpersona state promote  Soul-Memory Bridge — promote recurring eventLog patterns to evolvedTraits
 openpersona vitality score Print machine-readable Vitality score (used by Survival Policy)
 openpersona vitality report Render human-readable HTML Vitality report
-openpersona canvas         Generate a Living Canvas persona profile page
+openpersona canvas              Generate a Living Canvas persona profile page
+openpersona dataset install     Record a HF dataset install (increments counter)
+openpersona dataset publish     Publish a HF dataset to openpersona.co/datasets
 ```
 
 ### Persona Fork

@@ -788,7 +788,7 @@ All existing presets use the old flat format — the shim ensures zero migration
 
 This is the **skill pack as static snapshot** problem. AutoSkill's experience-driven lifelong learning model demonstrates that skill artifacts should evolve through real usage — accumulating experience, refining patterns, and publishing improved versions that benefit all future users. AutoSkill already provides this for general skills; OpenPersona's contribution is governance: Trust Gradient compliance, persona-specific constraints, and publisher integration.
 
-**Distribution model:** OpenPersona personas are distributed the same way as [skills.sh](https://skills.sh/) skills — the unit of distribution is a **GitHub repo**; `openpersona install <owner/repo>` installs directly from it. The OpenPersona directory (`openpersona-frontend.vercel.app`) indexes repos one-time via `openpersona publish`. Publishing a refined version therefore means **committing and pushing** the updated files to the same repo — no re-registration needed. Anyone who installs after the push automatically gets the improved version.
+**Distribution model:** OpenPersona personas are distributed the same way as [skills.sh](https://skills.sh/) skills — the unit of distribution is a **GitHub repo**; `openpersona install <owner/repo>` installs directly from it. The OpenPersona directory (`openpersona.co/skills`) indexes repos one-time via `openpersona publish`. Publishing a refined version therefore means **committing and pushing** the updated files to the same repo — no re-registration needed. Anyone who installs after the push automatically gets the improved version.
 
 **Root cause:** OpenPersona's `evolution` aspect models instance-level growth (one persona's personal history). P23 introduced the `evolution.pack` schema as a declaration, but there is no *implementation* of **pack-level evolution** — no CLI mechanism to refine the skill pack as a distributable product that gets better across many deployments.
 
@@ -932,7 +932,7 @@ When `evolution.pack.aggregation: "opt-in"`, anonymized `eventLog` entries are c
 
 OpenPersona's distribution model mirrors [skills.sh](https://skills.sh/): the unit of distribution is a GitHub repo. There are two distinct operations:
 
-- `**openpersona publish <owner/repo>`** — one-time, **author-initiated** registration: validates the repo contains a valid persona pack, registers it with the OpenPersona directory (`openpersona-frontend.vercel.app`) so it appears immediately. This is an intentional author action, not automated.
+- `**openpersona publish <owner/repo>`** — one-time, **author-initiated** registration: validates the repo contains a valid persona pack, registers it with the OpenPersona directory (`openpersona.co/skills`) so it appears immediately. This is an intentional author action, not automated.
 - **Version updates** — after the one-time registration, pushing new content to the same repo is sufficient; `openpersona install <owner/repo>` always fetches the latest commit, so no re-registration is needed.
 
 `evolution.pack.autoPublish: true` controls only the **version update** step: when `--apply` succeeds, automatically run `git add soul/behavior-guide.md persona.json agent-card.json SKILL.md && git commit -m "refine: v<revision>" && git push` inside the persona pack's repo directory. This field name is intentionally distinguished from `openpersona publish` (the registration command) — it is auto-**push**, not auto-register.

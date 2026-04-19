@@ -44,7 +44,7 @@ Marcus Aurelius as a digital twin. Applies Stoic philosophy to modern challenges
 ## Browsing Presets Online
 
 Full preset catalog with install counts and community ratings:
-[https://openpersona-frontend.vercel.app/](https://openpersona-frontend.vercel.app/)
+[https://openpersona.co/skills](https://openpersona.co/skills)
 
 ## Adding a New Preset (for framework contributors)
 

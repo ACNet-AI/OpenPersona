@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | curate | reset | evolve-report | contribute | export | import | acn-register | state
+ * Commands: create | install | search | uninstall | update | list | switch | publish | curate | reset | evolve-report | contribute | export | import | acn-register | state | dataset
  */
 const path = require('path');
 const os   = require('os');
@@ -15,6 +15,7 @@ const { download } = require('../lib/remote/downloader');
 const { search } = require('../lib/remote/searcher');
 const { uninstall } = require('../lib/lifecycle/uninstaller');
 const publishAdapter = require('../lib/publisher');
+const datasetPublisher = require('../lib/dataset/publisher');
 const { curate } = require('../lib/remote/curator');
 const { contribute } = require('../lib/lifecycle/contributor');
 const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
@@ -795,6 +796,47 @@ program
         : process.platform === 'win32' ? 'start'
         : 'xdg-open';
       try { execSync(`${cmd} "${outFile}"`); } catch { /* ignore */ }
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// dataset — HF dataset directory integration
+// ---------------------------------------------------------------------------
+
+const datasetCmd = program
+  .command('dataset')
+  .description('Hugging Face dataset directory — install and publish persona datasets');
+
+datasetCmd
+  .command('install <repo>')
+  .description('Record an install event for a HF dataset (increments counter on openpersona.co/datasets)')
+  .addHelpText('after', '\nExample:\n  openpersona dataset install proj-persona/PersonaHub')
+  .action(async (repo) => {
+    try {
+      await datasetPublisher.install(repo);
+    } catch (err) {
+      printError(`dataset install: ${err.message}`);
+      process.exit(1);
+    }
+  });
+
+datasetCmd
+  .command('publish <repo>')
+  .description('Publish a HF dataset to the OpenPersona dataset directory (openpersona.co/datasets)')
+  .addHelpText('after', [
+    '',
+    'Example:',
+    '  openpersona dataset publish proj-persona/PersonaHub',
+    '',
+    'Note: CLI publish is anonymous (no curated badge).',
+    'To get a curated badge, publish via the web UI while logged in with HF.',
+  ].join('\n'))
+  .action(async (repo) => {
+    try {
+      await datasetPublisher.publish(repo);
+    } catch (err) {
+      printError(`dataset publish: ${err.message}`);
+      process.exit(1);
     }
   });
 

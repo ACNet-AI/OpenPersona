@@ -105,6 +105,12 @@ schemas/                ← Production specs — organized by 4+5 architecture (
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
 tests/                  ← Node.js native test runner (node:test)
 skills/open-persona/    ← Meta-skill for AI agents using the framework
+frontend/               ← Next.js web directory (openpersona.co)
+  app/skills/           ← /skills persona leaderboard page
+  app/datasets/         ← /datasets HF dataset directory page (+ detail pages)
+  app/api/datasets/     ← Dataset API routes (publish, sync-metrics, sync-discovery, readme)
+  lib/kv-datasets.ts    ← Upstash Redis helpers for dataset metadata
+  components/dataset-leaderboard.tsx ← Dataset list UI (mirrors skill leaderboard)
 ```
 
 ## Architecture Rules

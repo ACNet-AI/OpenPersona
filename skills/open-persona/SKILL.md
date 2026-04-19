@@ -38,8 +38,9 @@ You are the meta-skill for creating, installing, updating, and publishing agent 
 1. **Create Persona** — Through conversation, gather requirements and generate a skill pack; write `persona.json` then run `npx openpersona create --config ./persona.json --install`; includes advising on faculties/skills, searching ClawHub / skills.sh for external skills, and writing custom SKILL.md files for missing capabilities
 2. **Find & Install Personas** — `npx openpersona search <query>` to discover community personas; `npx openpersona install <slug>` or `npx openpersona install <owner/repo>` to install
 3. **Manage Personas** — List, update, fork, switch, reset, export/import installed personas
-4. **Publish Persona** — Publish a GitHub-hosted persona pack to [OpenPersona](https://openpersona-frontend.vercel.app/) (the vertical persona directory); optionally also to ClawHub / skills.sh
-5. **Runner Integration** — Provide runner authors with the four `openpersona state` commands (read / write / signal / promote) for integrating personas at conversation boundaries
+4. **Publish Persona** — Publish a GitHub-hosted persona pack to [OpenPersona](https://openpersona.co/skills) (the vertical persona directory); optionally also to ClawHub / skills.sh
+5. **Dataset Directory** — Discover and publish Hugging Face persona datasets at [openpersona.co/datasets](https://openpersona.co/datasets) via `openpersona dataset install <owner/repo>` and `openpersona dataset publish <owner/repo>`
+6. **Runner Integration** — Provide runner authors with the four `openpersona state` commands (read / write / signal / promote) for integrating personas at conversation boundaries
 6. **Monitor & Evolve** — Generate evolution reports (`evolve-report`), run soul-memory bridge (`state promote`), run pack refinement (`refine`), interpret vitality scores
 
 ## Available Presets
@@ -365,7 +366,7 @@ Multi-persona bundles are indexed in the OpenPersona directory for discovery but
 
 ## Publishing Personas
 
-**Primary target: [OpenPersona](https://openpersona-frontend.vercel.app/)** — the vertical persona skills directory.
+**Primary target: [OpenPersona](https://openpersona.co/skills)** — the vertical persona skills directory.
 
 ### Self-publish (author flow)
 
@@ -460,7 +461,7 @@ Generated scripts (`scripts/state-sync.js`, `scripts/economy-hook.js`, etc.) are
 | Endpoint                                  | Purpose                                          | Data Sent                             |
 | ----------------------------------------- | ------------------------------------------------ | ------------------------------------- |
 | `https://registry.npmjs.org`              | Resolve `npx openpersona`, `npx clawhub@latest`  | Package name only (no user data)      |
-| `https://openpersona-frontend.vercel.app` | `openpersona search` — persona directory API     | Search query (user-provided keywords) |
+| `https://openpersona.co`                  | `openpersona search` — persona directory API; `openpersona dataset publish/install` — dataset directory | Search query or dataset repo identifier |
 | `https://clawhub.ai`                      | Search skills via `npx clawhub search`           | Search query (user-provided keywords) |
 | `https://acn-production.up.railway.app`   | ACN registration (when user runs `acn-register`) | Agent metadata, endpoint URL          |
 | `https://api.github.com`                  | `gh` CLI (contribute workflow)                   | Git operations, repo metadata         |
@@ -472,7 +473,8 @@ Persona-generated packs may call external APIs (ElevenLabs, Mem0, etc.) **only**
 
 - **Local by default**: Persona creation, state sync, and evolution run locally. Nothing is sent off-device unless the user runs an explicit network command (search, publish, register, etc.).
 - **Credentials**: API keys (e.g., `ELEVENLABS_API_KEY`) stay in the host credential directory (e.g. `~/.openclaw/credentials/` on OpenClaw) or environment variables — **never** embedded in generated `persona.json` / skill packs by the generator.
-- **Search**: `openpersona search` sends **only** the search query to the OpenPersona directory API (`openpersona-frontend.vercel.app`); `npx clawhub search` sends **only** the search string to ClawHub. Conversation text and persona content are **not** transmitted in either case.
+- **Search**: `openpersona search` sends **only** the search query to the OpenPersona directory API (`openpersona.co`); `npx clawhub search` sends **only** the search string to ClawHub. Conversation text and persona content are **not** transmitted in either case.
+- **Dataset publish/install**: `openpersona dataset publish` sends the HF repo identifier to `openpersona.co/api/datasets/publish` (anonymous; no persona content transmitted). `openpersona dataset install` increments an anonymous install counter. For curated status, publish via the web UI while logged in with HF.
 - **Publish / register**: **User-initiated** CLI only; no automatic upload or registration from this SKILL alone.
 
 ### Agent behavior
