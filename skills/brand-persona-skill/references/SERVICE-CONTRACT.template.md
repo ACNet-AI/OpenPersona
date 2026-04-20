@@ -129,10 +129,25 @@ When a customer agent requests a service that this brand agent cannot execute di
 | {{routedService_1}} | {{thirdParty_1_params}} | `{{thirdParty_1_capability}}` | `acn://{{thirdParty_1_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_1_fallback}} |
 | {{routedService_2}} | {{thirdParty_2_params}} | `{{thirdParty_2_capability}}` | `acn://{{thirdParty_2_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_2_fallback}} |
 
-> Add rows for every service this agent delegates to a third party. Examples:
-> | Queue / waitlist | BUPT store: shop_id `4211342`; Wudaokou: `1756895741` | `meituan-queue` | `acn://meituan-queue-agent` | tbd | https://meituan.com |
-> | Food delivery | merchant_id `jinguyuan` | `meituan-waimai` | `acn://meituan-waimai-agent` | tbd | Search brand on Meituan app |
-> | Payment | — | `wechatpay` | `acn://wechatpay-agent` | tbd | WeChat Pay mini-program |
+> Add rows for every service this agent delegates to a third party. Examples by industry:
+>
+> **F&B (restaurant)**
+> | Queue / waitlist | shop_id `4211342` (downtown branch) | `meituan-queue` | `acn://meituan-queue-agent` | tbd | https://meituan.com/restaurant/4211342 |
+> | Food delivery | merchant_id `brandslug` | `meituan-waimai` | `acn://meituan-waimai-agent` | tbd | Search brand on Meituan app |
+>
+> **Hotel / hospitality**
+> | Room booking | hotel_id `bj-sanlitun-001` | `ctrip-booking` | `acn://ctrip-booking-agent` | tbd | https://ctrip.com/hotels/bj-sanlitun-001 |
+> | Airport transfer | — | `didi-ride` | `acn://didi-agent` | tbd | Didi app |
+>
+> **Healthcare / clinic**
+> | Appointment booking | clinic_id `88`, doctor_id `204` | `wechat-health-booking` | `acn://wechat-health-agent` | tbd | Hospital registration portal |
+> | Prescription refill | patient_id required | — | `acn://pharmacy-agent` | tbd | Pharmacy app |
+>
+> **Fitness / wellness**
+> | Class sign-up | studio_id `fit-haidian`, class_id from schedule | `mindbody-booking` | `acn://mindbody-agent` | tbd | https://mindbodyonline.com/studio-link |
+>
+> **Retail / e-commerce**
+> | After-sales / return | order_id required | `jd-aftersales` | `acn://jd-aftersales-agent` | tbd | JD.com after-sales portal |
 
 **Three-tier execution model for customer agents**:
 

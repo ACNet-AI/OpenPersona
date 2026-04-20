@@ -140,7 +140,7 @@ For each service declared above, the implementation method is **transparent to t
 | A2A protocol       | Agent-to-agent collaboration                                                 | Cross-system business flows                                                            |
 | Webhook / API      | Has existing ERP / CRM / payment system                                      | Order management, customer data                                                        |
 | Human handoff      | High-risk or complex situations                                              | Complaints, contracts, disputes                                                        |
-| **A2A delegate**   | **Operation belongs to a third-party platform that has its own brand agent** | **Queue via Meituan agent, payment via WeChat Pay agent, delivery via platform agent** |
+| **A2A delegate**   | **Operation belongs to a third-party platform that has its own brand agent** | **F&B: queue via Meituan agent; Hotel: booking via Ctrip agent; Fitness: class sign-up via booking platform agent** |
 | Mixed              | Most real businesses                                                         | Auto-answer queries + escalate transactions                                            |
 
 
@@ -149,8 +149,8 @@ Record the implementation method in the skill's `description` field.
 **A2A delegate** requires collecting three extra fields:
 
 1. **Third-party agent address** — Ask: "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, record as `tbd`."
-2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, or location code on their platform." Record these parameters (e.g. `shop_id: 4211342` for the BUPT location) — they will be written into the trigger mapping table in Step 4c.
-3. **Client-side capability** — Ask: "Is there a skill the customer's agent could install to handle this operation directly using the parameters above? For example, `meituan-queue` for Meituan queue operations." This enables a three-tier execution model written into the service contract:
+2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, property code, or doctor ID on their platform." Record these parameters (e.g. `shop_id: 4211342` for a restaurant branch; `hotel_id: bj-sanlitun-001` for a hotel property; `clinic_id: 88` + `doctor_id: 204` for a clinic) — they will be written into the trigger mapping table in Step 4c.
+3. **Client-side capability** — Ask: "Is there a skill the customer's agent could install to handle this operation directly using the parameters above? For example, `meituan-queue` for Meituan queue operations, `ctrip-booking` for Ctrip hotel reservations, `wechat-health-booking` for healthcare appointments." This enables a three-tier execution model written into the service contract:
    - **Tier 1** (preferred): customer agent has `capability_needed` skill installed → execute directly using the routing parameters provided by this brand agent
    - **Tier 2** (when available): third-party brand agent is on ACN → A2A delegate
    - **Tier 3** (fallback): neither available → human handoff or platform link
@@ -268,10 +268,23 @@ From the Phase 2 `skills[]` list, write a trigger mapping table and append it to
 Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column. For A2A delegate skills, write all three execution tiers collected in Phase 2:
 
 ```
+# F&B example
 queue-waitlist —
-  Tier 1: install meituan-queue skill → use shop_id BUPT `4211342` / Wudaokou `1756895741`
+  Tier 1: install meituan-queue skill → use shop_id `4211342`
   Tier 2: A2A delegate → acn://meituan-queue-agent (tbd)
-  Tier 3: fallback → https://meituan.com
+  Tier 3: fallback → https://meituan.com/restaurant/4211342
+
+# Hotel example
+room-booking —
+  Tier 1: install ctrip-booking skill → use hotel_id `bj-sanlitun-001`
+  Tier 2: A2A delegate → acn://ctrip-booking-agent (tbd)
+  Tier 3: fallback → https://ctrip.com/hotels/bj-sanlitun-001
+
+# Healthcare example
+appointment-booking —
+  Tier 1: install wechat-health-booking skill → use clinic_id `88`, doctor_id `204`
+  Tier 2: A2A delegate → acn://wechat-health-agent (tbd)
+  Tier 3: fallback → Hospital registration portal link
 ```
 
 This allows the customer agent to choose the best available execution path at runtime.

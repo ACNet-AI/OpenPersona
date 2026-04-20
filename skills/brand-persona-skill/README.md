@@ -191,7 +191,7 @@ The `--endpoint` flag is the only value you supply. Everything else is already i
 | Queue / waitlist                            | **A2A delegate → Meituan brand agent** (`acn://meituan-queue-agent`) |
 
 
-**Third-party routing**: Queue operations require the customer's own Meituan account. The brand agent routes the request to the Meituan brand agent; the customer authenticates directly with Meituan. No credentials pass through the restaurant's agent.
+**Third-party routing**: Queue operations require the customer's own Meituan account. The brand agent routes the request to the Meituan brand agent; the customer authenticates directly with Meituan. No credentials pass through the restaurant's agent. The same pattern applies universally — hotels delegate room bookings to Ctrip, clinics delegate appointments to WeChat Health, fitness studios delegate class sign-ups to booking platforms.
 
 **Result**: `jinguyuan-dumplings-skill/` — a brand agent that answers questions about the restaurant and routes queue requests to the appropriate platform agent. Customer agents discover it via ACN and interact without installing any restaurant-specific skill.
 
