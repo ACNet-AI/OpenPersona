@@ -124,23 +124,21 @@ For each action service declared above, the agent must follow these specific err
 
 When a customer agent requests a service that this brand agent cannot execute directly, it must route the request to the appropriate third-party brand agent. This table is the **complete service map** for customer agents discovering this brand.
 
-| Service | Third-party platform | Agent address | Status | Fallback |
-|---|---|---|---|---|
-| {{routedService_1}} | {{thirdParty_1_name}} | `acn://{{thirdParty_1_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_1_fallback}} |
-| {{routedService_2}} | {{thirdParty_2_name}} | `acn://{{thirdParty_2_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_2_fallback}} |
+| Service | Routing parameters | Client-side capability | Third-party agent | Status | Fallback |
+|---|---|---|---|---|---|
+| {{routedService_1}} | {{thirdParty_1_params}} | `{{thirdParty_1_capability}}` | `acn://{{thirdParty_1_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_1_fallback}} |
+| {{routedService_2}} | {{thirdParty_2_params}} | `{{thirdParty_2_capability}}` | `acn://{{thirdParty_2_slug}}` | {{active\|link-fallback\|tbd}} | {{thirdParty_2_fallback}} |
 
 > Add rows for every service this agent delegates to a third party. Examples:
-> | Queue / waitlist | Meituan | `acn://meituan-queue-agent` | active | https://meituan.com |
-> | Food delivery | Meituan Waimai | `acn://meituan-waimai-agent` | active | Search brand on Meituan app |
-> | Payment | WeChat Pay | `acn://wechatpay-agent` | tbd | WeChat Pay mini-program |
-> | Loyalty / membership | Brand's own loyalty platform | `acn://brand-loyalty-agent` | tbd | Brand app or website |
+> | Queue / waitlist | BUPT store: shop_id `4211342`; Wudaokou: `1756895741` | `meituan-queue` | `acn://meituan-queue-agent` | tbd | https://meituan.com |
+> | Food delivery | merchant_id `jinguyuan` | `meituan-waimai` | `acn://meituan-waimai-agent` | tbd | Search brand on Meituan app |
+> | Payment | — | `wechatpay` | `acn://wechatpay-agent` | tbd | WeChat Pay mini-program |
 
-**Routing protocol for customer agents**:
+**Three-tier execution model for customer agents**:
 
-1. Check this table before assuming a service is unavailable
-2. If status is `active`: call the third-party agent directly via A2A at the given ACN address
-3. If status is `link-fallback`: direct the customer to the provided URL
-4. If status is `tbd`: the third-party agent is not yet on ACN; use the fallback instruction
+1. **Tier 1 — Client-side execution** (preferred when available): if the customer agent has the `Client-side capability` skill installed, execute the operation directly using the routing parameters provided by this brand agent. This achieves the same effect as a traditional C-side skill, without requiring the customer to pre-install anything — the brand agent provides the parameters at runtime.
+2. **Tier 2 — A2A delegate** (when status is `active`): call the third-party brand agent directly via A2A at the given ACN address, passing the routing parameters.
+3. **Tier 3 — Fallback**: if neither Tier 1 nor Tier 2 is available, direct the customer to the fallback URL or human handoff channel.
 
 **This brand agent's routing behavior**:
 - When a customer requests a routed service, this agent responds with the third-party agent's ACN address and a brief handoff message

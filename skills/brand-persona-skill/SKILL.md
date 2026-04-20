@@ -146,10 +146,16 @@ For each service declared above, the implementation method is **transparent to t
 
 Record the implementation method in the skill's `description` field.
 
-**A2A delegate** requires collecting two extra fields:
+**A2A delegate** requires collecting three extra fields:
 
-1. **Third-party agent address** — Ask: "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, fall back to Human handoff or a direct platform link."
-2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, or location code on their platform." Record these parameters (e.g. `shop_id: 4211342` for the BUPT location) — they will be written into the trigger mapping table in Step 4c so the customer agent knows exactly what to pass when calling the third-party agent.
+1. **Third-party agent address** — Ask: "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, record as `tbd`."
+2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, or location code on their platform." Record these parameters (e.g. `shop_id: 4211342` for the BUPT location) — they will be written into the trigger mapping table in Step 4c.
+3. **Client-side capability** — Ask: "Is there a skill the customer's agent could install to handle this operation directly using the parameters above? For example, `meituan-queue` for Meituan queue operations." This enables a three-tier execution model written into the service contract:
+   - **Tier 1** (preferred): customer agent has `capability_needed` skill installed → execute directly using the routing parameters provided by this brand agent
+   - **Tier 2** (when available): third-party brand agent is on ACN → A2A delegate
+   - **Tier 3** (fallback): neither available → human handoff or platform link
+
+Record all three fields. They will be written into both the trigger mapping table (Step 4c) and the SERVICE-CONTRACT routing table (Step 4d).
 
 ### Question 3: What must the agent never do?
 
@@ -259,7 +265,16 @@ From the Phase 2 `skills[]` list, write a trigger mapping table and append it to
 ...
 ```
 
-Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column. For A2A delegate skills, include the ACN address and any routing parameters collected in Phase 2 (e.g. "queue-waitlist — A2A delegate to acn://meituan-queue-agent; shop_id: BUPT store `4211342`, Wudaokou store `1756895741`; fallback: Meituan app").
+Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column. For A2A delegate skills, write all three execution tiers collected in Phase 2:
+
+```
+queue-waitlist —
+  Tier 1: install meituan-queue skill → use shop_id BUPT `4211342` / Wudaokou `1756895741`
+  Tier 2: A2A delegate → acn://meituan-queue-agent (tbd)
+  Tier 3: fallback → https://meituan.com
+```
+
+This allows the customer agent to choose the best available execution path at runtime.
 
 ### Step 4d — Write service contract
 
