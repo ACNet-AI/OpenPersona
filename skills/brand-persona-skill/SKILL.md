@@ -146,9 +146,10 @@ For each service declared above, the implementation method is **transparent to t
 
 Record the implementation method in the skill's `description` field.
 
-**A2A delegate** requires collecting one extra field: the third-party agent's ACN address or `agent-card.json` URL. Ask the user:
+**A2A delegate** requires collecting two extra fields:
 
-> "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, fall back to Human handoff or a direct platform link."
+1. **Third-party agent address** — Ask: "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, fall back to Human handoff or a direct platform link."
+2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, or location code on their platform." Record these parameters (e.g. `shop_id: 4211342` for the BUPT location) — they will be written into the trigger mapping table in Step 4c so the customer agent knows exactly what to pass when calling the third-party agent.
 
 ### Question 3: What must the agent never do?
 
@@ -258,7 +259,7 @@ From the Phase 2 `skills[]` list, write a trigger mapping table and append it to
 ...
 ```
 
-Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column (e.g. "Business hours inquiry — knowledge response", "Book a visit — Webhook POST /appointments").
+Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column. For A2A delegate skills, include the ACN address and any routing parameters collected in Phase 2 (e.g. "queue-waitlist — A2A delegate to acn://meituan-queue-agent; shop_id: BUPT store `4211342`, Wudaokou store `1756895741`; fallback: Meituan app").
 
 ### Step 4d — Write service contract
 
