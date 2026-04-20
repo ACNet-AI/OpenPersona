@@ -132,16 +132,16 @@ List every service the agent can handle without human involvement. Think in two 
 For each service declared above, the implementation method is **transparent to this skill** — the brand chooses based on what they have:
 
 
-| Implementation     | When to use                                                                  | Example                                                                                |
-| ------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Knowledge response | Information queries, no system integration                                   | Business hours, product descriptions, policies                                         |
-| Local script       | Specific business operations                                                 | Queue number generation, appointment booking                                           |
-| MCP tool           | Has own service endpoint                                                     | Order lookup, inventory check                                                          |
-| A2A protocol       | Agent-to-agent collaboration                                                 | Cross-system business flows                                                            |
-| Webhook / API      | Has existing ERP / CRM / payment system                                      | Order management, customer data                                                        |
-| Human handoff      | High-risk or complex situations                                              | Complaints, contracts, disputes                                                        |
+| Implementation     | When to use                                                                  | Example                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Knowledge response | Information queries, no system integration                                   | Business hours, product descriptions, policies                                                                      |
+| Local script       | Specific business operations                                                 | Queue number generation, appointment booking                                                                        |
+| MCP tool           | Has own service endpoint                                                     | Order lookup, inventory check                                                                                       |
+| A2A protocol       | Agent-to-agent collaboration                                                 | Cross-system business flows                                                                                         |
+| Webhook / API      | Has existing ERP / CRM / payment system                                      | Order management, customer data                                                                                     |
+| Human handoff      | High-risk or complex situations                                              | Complaints, contracts, disputes                                                                                     |
 | **A2A delegate**   | **Operation belongs to a third-party platform that has its own brand agent** | **F&B: queue via Meituan agent; Hotel: booking via Ctrip agent; Fitness: class sign-up via booking platform agent** |
-| Mixed              | Most real businesses                                                         | Auto-answer queries + escalate transactions                                            |
+| Mixed              | Most real businesses                                                         | Auto-answer queries + escalate transactions                                                                         |
 
 
 Record the implementation method in the skill's `description` field.
@@ -151,9 +151,9 @@ Record the implementation method in the skill's `description` field.
 1. **Third-party agent address** — Ask: "Does [third-party platform] have a brand agent on ACN? If yes, provide its ACN slug or agent-card URL. If not, record as `tbd`."
 2. **Routing parameters** — Ask: "Does [third-party platform] need any identifiers to locate your specific business? For example, a store ID, merchant ID, property code, or doctor ID on their platform." Record these parameters (e.g. `shop_id: 4211342` for a restaurant branch; `hotel_id: bj-sanlitun-001` for a hotel property; `clinic_id: 88` + `doctor_id: 204` for a clinic) — they will be written into the trigger mapping table in Step 4c.
 3. **Client-side capability** — Ask: "Is there a skill the customer's agent could install to handle this operation directly using the parameters above? For example, `meituan-queue` for Meituan queue operations, `ctrip-booking` for Ctrip hotel reservations, `wechat-health-booking` for healthcare appointments." This enables a three-tier execution model written into the service contract:
-   - **Tier 1** (preferred): customer agent has `capability_needed` skill installed → execute directly using the routing parameters provided by this brand agent
-   - **Tier 2** (when available): third-party brand agent is on ACN → A2A delegate
-   - **Tier 3** (fallback): neither available → human handoff or platform link
+  - **Tier 1** (preferred): customer agent has `capability_needed` skill installed → execute directly using the routing parameters provided by this brand agent
+  - **Tier 2** (when available): third-party brand agent is on ACN → A2A delegate
+  - **Tier 3** (fallback): neither available → human handoff or platform link
 
 Record all three fields. They will be written into both the trigger mapping table (Step 4c) and the SERVICE-CONTRACT routing table (Step 4d).
 
@@ -169,9 +169,11 @@ List hard limits and escalation triggers:
 
 Summarise all A2A delegate entries collected above into a routing table for confirmation before proceeding. For each delegated service, verify the three fields collected in Question 2 are complete:
 
-| Service | Routing parameters | Client-side capability | Third-party agent ACN | Fallback |
-|---|---|---|---|---|
-| {service collected in Q2} | {params collected in Q2} | {capability collected in Q2} | {ACN slug or "tbd"} | {platform link or human channel} |
+
+| Service                   | Routing parameters       | Client-side capability       | Third-party agent ACN | Fallback                         |
+| ------------------------- | ------------------------ | ---------------------------- | --------------------- | -------------------------------- |
+| {service collected in Q2} | {params collected in Q2} | {capability collected in Q2} | {ACN slug or "tbd"}   | {platform link or human channel} |
+
 
 Ask the user to confirm or correct any row. Once confirmed, this table is written verbatim into `SERVICE-CONTRACT.md` in Phase 4.
 
