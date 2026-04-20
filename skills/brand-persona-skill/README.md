@@ -63,10 +63,10 @@ Optional:
 ### Step 1 — Install this tool
 
 ```bash
-# Via OpenPersona (official)
-npx openpersona install acnlabs/brand-persona-skill
+# Via npx skills (recommended — same as all OpenPersona companion skills)
+npx skills add acnlabs/brand-persona-skill
 
-# Manual — copy from GitHub
+# Manual — git clone
 git clone https://github.com/acnlabs/brand-persona-skill.git .cursor/skills/brand-persona-skill   # Cursor
 git clone https://github.com/acnlabs/brand-persona-skill.git .claude/skills/brand-persona-skill   # Claude Code
 git clone https://github.com/acnlabs/brand-persona-skill.git .agents/skills/brand-persona-skill   # Universal
