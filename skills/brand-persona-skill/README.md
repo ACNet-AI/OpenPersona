@@ -46,8 +46,8 @@ The output is a self-contained `{slug}-skill/` directory. Install it on the merc
 
 ## Prerequisites
 
-- `skills/anyone-skill/SKILL.md` must be present
-- `skills/open-persona/SKILL.md` must be present
+- `skills/anyone-skill/SKILL.md` must be present *(required for Path A — distillation from existing content; not needed for Path B)*
+- `skills/open-persona/SKILL.md` must be present *(required for both paths)*
 - `npx openpersona` must be available (`npm install -g openpersona` or use `npx`)
 
 Optional:

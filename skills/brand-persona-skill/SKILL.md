@@ -67,7 +67,7 @@ If the user selects **[B]**, proceed to **Phase 1B**.
 
 Load `skills/anyone-skill/SKILL.md` and follow its instructions.
 
-When anyone-skill asks "Who do you want to distill?", select `**[6] Archetype`** — composite persona with no single real-world subject. This is the correct type for a brand persona.
+When anyone-skill asks "Who do you want to distill?", select **[6] Archetype** — composite persona with no single real-world subject. This is the correct type for a brand persona.
 
 **Brand content → anyone-skill data type mapping** (use this to guide the user on what to provide):
 

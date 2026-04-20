@@ -97,8 +97,9 @@ The following are outside this agent's declared service scope. When asked, the a
 - {{outOfScope_2}} → {{outOfScope_2_redirect}}
 
 > Examples:
-> "Menu pricing details" → "Check our latest menu on Meituan or visit the store"
+> "Real-time stock / pricing details" → "Check our latest listings on the platform or visit us in person"
 > "Partnership or wholesale inquiries" → "Email [business@example.com](mailto:business@example.com)"
+> "Complaints or disputes" → "Call our customer service line or visit the store"
 
 ---
 
