@@ -4,6 +4,8 @@ Version License OpenPersona
 
 Turn any commercial entity into a personalized brand agent — with authentic voice, declared service capabilities, a trigger map, a behavior guide, and a standard service contract for external agent interaction.
 
+**Every commercial entity has a brand: a name, a style, a way of showing up in the world.** A street-food stall, a family clinic, a boutique law firm, and a global hotel chain all have one — and all deserve an agent that speaks in their voice and serves their customers on equal footing.
+
 **This is not a tool for creating an agent *about* a brand. It generates the brand itself *as* an agent.**
 
 ---

@@ -2,7 +2,7 @@
 
 ## name: brand-persona-skill
 
-description: "Distill any commercial entity into a personalized brand agent — a living brand persona with authentic voice, declared service capabilities, and a standard service contract. Supports both distillation from existing brand content and declaration from scratch. Use when a business, brand, studio, or institution wants to create their own AI agent to serve customers."
+description: "Distill any commercial entity into a personalized brand agent — a living brand persona with authentic voice, declared service capabilities, and a standard service contract. Every commercial entity has a brand: a name, a style, a way of showing up in the world. This skill exists so that a street vendor, a family clinic, and a global chain can all have their own agent on equal footing. Supports both distillation from existing brand content and declaration from scratch."
 license: MIT
 compatibility: "OpenPersona/OpenClaw/Cursor. Requires anyone-skill + open-persona in the same skills directory."
 allowed-tools: Read Write Bash WebSearch
