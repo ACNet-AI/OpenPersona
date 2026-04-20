@@ -63,14 +63,13 @@ Optional:
 ### Step 1 — Install this tool
 
 ```bash
-# Recommended — ClawHub (official OpenPersona registry)
-clawdhub install brand-persona-skill
+# Via OpenPersona (official)
+npx openpersona install acnlabs/brand-persona-skill
 
-# Manual — copy from the OpenPersona monorepo
-git clone https://github.com/acnlabs/OpenPersona.git /tmp/openpersona
-cp -r /tmp/openpersona/skills/brand-persona-skill .cursor/skills/   # Cursor
-cp -r /tmp/openpersona/skills/brand-persona-skill .claude/skills/   # Claude Code
-cp -r /tmp/openpersona/skills/brand-persona-skill .agents/skills/   # Universal
+# Manual — copy from GitHub
+git clone https://github.com/acnlabs/brand-persona-skill.git .cursor/skills/brand-persona-skill   # Cursor
+git clone https://github.com/acnlabs/brand-persona-skill.git .claude/skills/brand-persona-skill   # Claude Code
+git clone https://github.com/acnlabs/brand-persona-skill.git .agents/skills/brand-persona-skill   # Universal
 ```
 
 ### Step 2 — Generate your brand agent
