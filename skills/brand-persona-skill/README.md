@@ -61,14 +61,18 @@ Optional:
 Clone or copy this directory to your skills folder:
 
 ```bash
-# Cursor
-git clone https://github.com/openpersona/brand-persona-skill .cursor/skills/brand-persona-skill
+# Via npx skills (recommended)
+npx skills add acnlabs/brand-persona-skill
+
+# Cursor — clone from monorepo
+git clone --filter=blob:none --sparse https://github.com/acnlabs/OpenPersona.git .cursor/skills/brand-persona-skill
+cd .cursor/skills/brand-persona-skill && git sparse-checkout set skills/brand-persona-skill && mv skills/brand-persona-skill/* . && rm -rf skills .git
 
 # Claude Code
-git clone https://github.com/openpersona/brand-persona-skill .claude/skills/brand-persona-skill
+npx skills add acnlabs/brand-persona-skill --dir .claude/skills
 
 # Universal
-git clone https://github.com/openpersona/brand-persona-skill .agents/skills/brand-persona-skill
+npx skills add acnlabs/brand-persona-skill --dir .agents/skills
 ```
 
 Or tell your AI agent directly:
