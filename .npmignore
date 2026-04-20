@@ -1,0 +1,21 @@
+# Model weights and generated persona packs — too large for npm
+skills/secondme-skill/generated
+**/generated/**
+**/*.safetensors
+
+# Jupyter / Colab notebooks
+**/*.ipynb
+**/notebooks/**
+
+# Test fixtures
+**/tests/**
+
+# Dev / CI tooling
+.github
+.cursor
+.claude
+.agents
+
+# Misc
+.DS_Store
+**/*.log
