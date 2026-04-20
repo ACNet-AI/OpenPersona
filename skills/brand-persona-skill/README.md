@@ -58,26 +58,25 @@ Optional:
 
 ## Installation
 
-Clone or copy this directory to your skills folder:
+**Recommended — ClawHub (official OpenPersona registry):**
 
 ```bash
-# Via npx skills (recommended)
-npx skills add acnlabs/brand-persona-skill
+clawdhub install brand-persona-skill
+```
 
-# Cursor — clone from monorepo
-git clone --filter=blob:none --sparse https://github.com/acnlabs/OpenPersona.git .cursor/skills/brand-persona-skill
-cd .cursor/skills/brand-persona-skill && git sparse-checkout set skills/brand-persona-skill && mv skills/brand-persona-skill/* . && rm -rf skills .git
+**Manual — copy from the OpenPersona monorepo:**
 
-# Claude Code
-npx skills add acnlabs/brand-persona-skill --dir .claude/skills
-
-# Universal
-npx skills add acnlabs/brand-persona-skill --dir .agents/skills
+```bash
+# Clone the repo and copy the skill into your skills folder
+git clone https://github.com/acnlabs/OpenPersona.git /tmp/openpersona
+cp -r /tmp/openpersona/skills/brand-persona-skill .cursor/skills/   # Cursor
+cp -r /tmp/openpersona/skills/brand-persona-skill .claude/skills/   # Claude Code
+cp -r /tmp/openpersona/skills/brand-persona-skill .agents/skills/   # Universal
 ```
 
 Or tell your AI agent directly:
 
-> Help me install brand-persona-skill from the OpenPersona repository.
+> Install brand-persona-skill from ClawHub.
 
 ---
 
