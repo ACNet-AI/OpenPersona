@@ -18,8 +18,8 @@ metadata:
 
 **Dependency chain**:
 
-- `brand-persona-skill` → `skills/anyone-skill` (Phase 1A — brand soul distillation)
-- `brand-persona-skill` → `skills/open-persona` (Phase 4 — persona pack generation)
+- `brand-persona-skill` → `skills/anyone-skill` (Phase 1A only — required when distilling from existing content; not needed for Path B declaration)
+- `brand-persona-skill` → `skills/open-persona` (Phase 4 — persona pack generation, both paths)
 - `persona-knowledge` is transparently integrated via `anyone-skill` when installed — no extra work needed
 
 **Generated output**: a self-contained `{slug}-skill/` persona pack with brand soul, declared service skills, agent-card for A2A discovery, and a service contract for external agents.
@@ -165,15 +165,15 @@ List hard limits and escalation triggers:
 - Operations that require explicit user confirmation before execution
 - Situations that must be handed off to a human
 
-### Question 4: Which services belong to third-party agents? *(only if A2A delegate was selected in Question 2)*
+### Question 4: Confirm A2A delegate routing table *(only if A2A delegate was selected in Question 2)*
 
-List every service that this brand agent **cannot execute directly** but **can route** to a known third-party brand agent. For each:
+Summarise all A2A delegate entries collected above into a routing table for confirmation before proceeding. For each delegated service, verify the three fields collected in Question 2 are complete:
 
-- Service description (what the customer wants to do)
-- Third-party platform name
-- Third-party agent ACN address or agent-card URL (if known; otherwise record as "TBD — provide platform link as fallback")
+| Service | Routing parameters | Client-side capability | Third-party agent ACN | Fallback |
+|---|---|---|---|---|
+| {service collected in Q2} | {params collected in Q2} | {capability collected in Q2} | {ACN slug or "tbd"} | {platform link or human channel} |
 
-This produces the **Third-Party Agent Routing table** written into `SERVICE-CONTRACT.md` in Phase 4.
+Ask the user to confirm or correct any row. Once confirmed, this table is written verbatim into `SERVICE-CONTRACT.md` in Phase 4.
 
 **Output mapping**:
 
@@ -265,29 +265,23 @@ From the Phase 2 `skills[]` list, write a trigger mapping table and append it to
 ...
 ```
 
-Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column. For A2A delegate skills, write all three execution tiers collected in Phase 2:
+Use natural customer language in the left column (questions a real customer would type, not technical names). Use the skill `name` + implementation method in the right column.
 
-```
-# F&B example
-queue-waitlist —
-  Tier 1: install meituan-queue skill → use shop_id `4211342`
-  Tier 2: A2A delegate → acn://meituan-queue-agent (tbd)
-  Tier 3: fallback → https://meituan.com/restaurant/4211342
+For A2A delegate skills, expand the right column to show all three execution tiers on separate lines. The table row format for an A2A delegate entry looks like this:
 
-# Hotel example
-room-booking —
-  Tier 1: install ctrip-booking skill → use hotel_id `bj-sanlitun-001`
-  Tier 2: A2A delegate → acn://ctrip-booking-agent (tbd)
-  Tier 3: fallback → https://ctrip.com/hotels/bj-sanlitun-001
-
-# Healthcare example
-appointment-booking —
-  Tier 1: install wechat-health-booking skill → use clinic_id `88`, doctor_id `204`
-  Tier 2: A2A delegate → acn://wechat-health-agent (tbd)
-  Tier 3: fallback → Hospital registration portal link
+```markdown
+| "How long is the wait? Can you add me to the queue?" | **queue-waitlist** (A2A delegate)<br>Tier 1: install `meituan-queue` → params: shop_id `4211342`<br>Tier 2: A2A → `acn://meituan-queue-agent` (tbd)<br>Tier 3: fallback → https://meituan.com/restaurant/4211342 |
 ```
 
-This allows the customer agent to choose the best available execution path at runtime.
+More examples by industry (same table row format):
+
+```markdown
+| "I'd like to book a room for two nights" | **room-booking** (A2A delegate)<br>Tier 1: install `ctrip-booking` → params: hotel_id `bj-sanlitun-001`<br>Tier 2: A2A → `acn://ctrip-booking-agent` (tbd)<br>Tier 3: fallback → https://ctrip.com/hotels/bj-sanlitun-001 |
+
+| "Can I book an appointment with Dr. Li?" | **appointment-booking** (A2A delegate)<br>Tier 1: install `wechat-health-booking` → params: clinic_id `88`, doctor_id `204`<br>Tier 2: A2A → `acn://wechat-health-agent` (tbd)<br>Tier 3: fallback → hospital registration portal |
+```
+
+The customer agent reads the three tiers and chooses the best available execution path at runtime.
 
 ### Step 4d — Write service contract
 

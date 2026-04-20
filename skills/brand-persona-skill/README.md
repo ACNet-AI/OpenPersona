@@ -32,7 +32,7 @@ The output is a self-contained `{slug}-skill/` directory. Install it on the merc
 | ------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
 | `anyone-skill`            | Any person or character           | Personal persona pack                                                    |
 | `secondme-skill`          | Yourself (+ local model training) | Personal persona pack + trained model                                    |
-| `**brand-persona-skill`** | **Any commercial entity**         | **Brand persona pack + behavior guide + trigger map + service contract** |
+| **`brand-persona-skill`** | **Any commercial entity**         | **Brand persona pack + behavior guide + trigger map + service contract** |
 
 
 `brand-persona-skill` depends on:
