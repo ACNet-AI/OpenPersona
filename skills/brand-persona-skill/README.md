@@ -58,25 +58,34 @@ Optional:
 
 ## Installation
 
-**Recommended — ClawHub (official OpenPersona registry):**
+`brand-persona-skill` is an **orchestration tool** (a meta-skill). It goes into your agent's skills folder so you can use it to generate a brand agent. The brand agent it generates is a persona pack, installed separately via `npx openpersona install`.
+
+### Step 1 — Install this tool
 
 ```bash
+# Recommended — ClawHub (official OpenPersona registry)
 clawdhub install brand-persona-skill
-```
 
-**Manual — copy from the OpenPersona monorepo:**
-
-```bash
-# Clone the repo and copy the skill into your skills folder
+# Manual — copy from the OpenPersona monorepo
 git clone https://github.com/acnlabs/OpenPersona.git /tmp/openpersona
 cp -r /tmp/openpersona/skills/brand-persona-skill .cursor/skills/   # Cursor
 cp -r /tmp/openpersona/skills/brand-persona-skill .claude/skills/   # Claude Code
 cp -r /tmp/openpersona/skills/brand-persona-skill .agents/skills/   # Universal
 ```
 
-Or tell your AI agent directly:
+### Step 2 — Generate your brand agent
 
-> Install brand-persona-skill from ClawHub.
+Trigger the skill (see [Usage](#usage) below). It will generate a `{slug}-skill/` persona pack.
+
+### Step 3 — Install and register the generated brand agent
+
+```bash
+# Install the brand agent into the OpenPersona runtime
+npx openpersona install ./{slug}-skill
+
+# Register on ACN so customer agents can discover it
+npx openpersona acn-register {slug} --endpoint https://your-agent-endpoint.example.com
+```
 
 ---
 
