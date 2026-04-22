@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * OpenPersona CLI - Full persona package manager
- * Commands: create | install | search | uninstall | update | list | switch | publish | curate | reset | evolve-report | contribute | export | import | acn-register | state | dataset
+ * Commands: create | install | search | uninstall | update | list | switch | publish | curate |
+ *           reset | evolve-report | contribute | export | import | acn-register | state |
+ *           dataset | skill | persona | model
  */
 const path = require('path');
 const os   = require('os');
@@ -16,6 +18,11 @@ const { search } = require('../lib/remote/searcher');
 const { uninstall } = require('../lib/lifecycle/uninstaller');
 const publishAdapter = require('../lib/publisher');
 const datasetPublisher = require('../lib/dataset/publisher');
+const skillInstaller = require('../lib/skill/installer');
+const skillUninstaller = require('../lib/skill/uninstaller');
+const skillUpdater = require('../lib/skill/updater');
+const skillPublisher = require('../lib/skill/publisher');
+const skillSearcher = require('../lib/skill/searcher');
 const { curate } = require('../lib/remote/curator');
 const { contribute } = require('../lib/lifecycle/contributor');
 const { switchPersona, listPersonas } = require('../lib/lifecycle/switcher');
@@ -280,15 +287,58 @@ program
 
 program
   .command('install <target>')
-  .description('Install persona (slug, owner/repo, or owner/repo#subpath)')
+  .description('Install persona or skill pack (smart router — auto-detects type). In v1.0 this will also handle datasets and models.')
   .option('--registry <name>', 'Registry (acnlabs, skillssh)', 'acnlabs')
+  .option('--runtime <name>', 'For skill packs: target runtime (claude|cursor|openclaw|hermes|openpersona)')
+  .option('--global', 'For skill packs: install to ~/.agents/skills/ (user-global)')
+  .option('--all', 'For skill packs: install to all detected runtime dirs in CWD')
+  .addHelpText('after', [
+    '',
+    'Examples:',
+    '  openpersona install acnlabs/anyone-skill        (auto-routes: persona or skill)',
+    '  openpersona install owner/repo --runtime=claude (force skill → .claude/skills/)',
+    '  openpersona install owner/repo --global         (force skill → ~/.agents/skills/)',
+    '',
+    'Use `openpersona persona install` for persona-only guaranteed routing.',
+    'Use `openpersona skill install` for skill-only guaranteed routing.',
+  ].join('\n'))
   .action(async (target, options) => {
     try {
       const result = await download(target, options.registry);
-      if (result.skipCopy) {
-        await install(result.dir, { skipCopy: true, source: target });
+      const dir = result.dir;
+
+      // Detect pack type and route accordingly
+      const hasPersonaJson = fs.existsSync(path.join(dir, 'persona.json')) ||
+        fs.existsSync(path.join(dir, 'soul', 'persona.json'));
+      const skillMdCandidates = [
+        path.join(dir, 'SKILL.md'),
+        path.join(dir, 'SKILL', 'SKILL.md'),
+        path.join(dir, 'skill', 'SKILL.md'),
+      ];
+      const skillMdPath = skillMdCandidates.find((p) => fs.existsSync(p));
+
+      if (hasPersonaJson) {
+        if (options.runtime || options.all) {
+          printWarning('--runtime / --all ignored for persona packs (use `openpersona skill install` for skill packs)');
+        }
+        printInfo('Detected: persona pack → installing to ~/.openpersona/');
+        if (result.skipCopy) {
+          await install(dir, { skipCopy: true, source: target });
+        } else {
+          await install(dir, { source: target });
+        }
+      } else if (skillMdPath) {
+        printInfo('Detected: skill pack → installing to .agents/skills/');
+        await skillInstaller.installSkill(dir, skillMdPath, {
+          runtime: options.runtime,
+          global: options.global,
+          all: options.all,
+          source: target,
+        });
       } else {
-        await install(result.dir, { source: target });
+        printError('Not a valid pack: no persona.json or SKILL.md found in the downloaded repository.');
+        printInfo('Make sure the repo contains a SKILL.md (skill pack) or persona.json (persona pack).');
+        process.exit(1);
       }
     } catch (e) {
       printError(e.message);
@@ -298,7 +348,7 @@ program
 
 program
   .command('search <query>')
-  .description('Search personas in the OpenPersona directory')
+  .description('Search personas in the OpenPersona directory. Note: in v1.0 this will aggregate all resources. Use `openpersona persona search` for persona-only stable behavior.')
   .option('--type <type>', 'Filter by pack type: single or multi')
   .action(async (query, options) => {
     try {
@@ -396,7 +446,7 @@ program
 
 program
   .command('list')
-  .description('List installed personas')
+  .description('List installed personas. Note: in v1.0 this will aggregate all resources. Use `openpersona persona list` for persona-only stable behavior.')
   .action(async () => {
     const personas = await listPersonas();
     if (personas.length === 0) {
@@ -839,5 +889,485 @@ datasetCmd
       process.exit(1);
     }
   });
+
+// ---------------------------------------------------------------------------
+// skill — Agent skill pack lifecycle
+// ---------------------------------------------------------------------------
+
+const skillCmd = program
+  .command('skill')
+  .description('Agent skill registry — install, update, publish, and manage skill packs');
+
+skillCmd
+  .command('install <target>')
+  .description('Install a skill pack (owner/repo, owner/repo#subpath, local dir, or local zip)')
+  .option('--runtime <name>', `Target runtime: ${skillInstaller.VALID_RUNTIMES.join(' | ')}`)
+  .option('--global', 'Install to ~/.agents/skills/ (user-global AGENTS.md convention)')
+  .option('--all', 'Install to all detected runtime dirs in CWD (.cursor/, .claude/, .agents/)')
+  .addHelpText('after', [
+    '',
+    'Examples:',
+    '  openpersona skill install acnlabs/anyone-skill',
+    '  openpersona skill install owner/repo --global',
+    '  openpersona skill install owner/repo --runtime=claude',
+    '  openpersona skill install owner/repo --runtime=cursor',
+    '  openpersona skill install owner/repo --all',
+    '  openpersona skill install ./local-skill-dir',
+    '',
+    'Default target: .agents/skills/<slug>/  (discoverable by Cursor, Claude Code, OpenClaw)',
+  ].join('\n'))
+  .action(async (target, options) => {
+    try {
+      const result = await download(target, 'acnlabs');
+      const dir = result.dir;
+      const skillMdCandidates = [
+        path.join(dir, 'SKILL.md'),
+        path.join(dir, 'SKILL', 'SKILL.md'),
+        path.join(dir, 'skill', 'SKILL.md'),
+      ];
+      const skillMdPath = skillMdCandidates.find((p) => fs.existsSync(p));
+      if (!skillMdPath) {
+        printError('No SKILL.md found — not a valid skill pack.');
+        printInfo('Make sure the repo contains a SKILL.md in the root or SKILL/ directory.');
+        process.exit(1);
+      }
+      // Strong typing: persona packs should use `persona install`
+      const hasPersonaJson = fs.existsSync(path.join(dir, 'persona.json')) ||
+        fs.existsSync(path.join(dir, 'soul', 'persona.json'));
+      if (hasPersonaJson) {
+        printError('This is a persona pack (has persona.json), not a skill-only pack.');
+        printInfo(`Use: openpersona persona install ${target}`);
+        process.exit(1);
+      }
+      await skillInstaller.installSkill(dir, skillMdPath, {
+        runtime: options.runtime,
+        global: options.global,
+        all: options.all,
+        source: target,
+      });
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('update <slug>')
+  .description('Re-download and overwrite an installed skill from its recorded source URL')
+  .addHelpText('after', '\nExample:\n  openpersona skill update anyone-skill')
+  .action(async (slug) => {
+    try {
+      await skillUpdater.updateSkill(slug);
+    } catch (e) {
+      if (!e._handled) printError(e.message);
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('uninstall <slug>')
+  .description('Uninstall a skill pack (looks up installTarget from registry)')
+  .addHelpText('after', '\nExample:\n  openpersona skill uninstall anyone-skill')
+  .action(async (slug) => {
+    try {
+      await skillUninstaller.uninstallSkill(slug);
+    } catch (e) {
+      if (!e._handled) printError(e.message);
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('list')
+  .description('List installed skills (registry + filesystem scan of .agents/skills/)')
+  .action(() => {
+    const { registered, unregistered } = skillInstaller.listSkills();
+    if (registered.length === 0 && unregistered.length === 0) {
+      printInfo('No skills installed.');
+      printInfo('Install one: openpersona skill install owner/repo');
+      return;
+    }
+    console.log('');
+    if (registered.length > 0) {
+      console.log('  Registered skills:');
+      for (const s of registered) {
+        const target = s.installTarget || s.path || '(unknown path)';
+        console.log(`    ${s.personaName || s.slug}  (${s.slug})`);
+        console.log(`      Location: ${target}`);
+        if (s.source) console.log(`      Source  : ${s.source}`);
+      }
+    }
+    if (unregistered.length > 0) {
+      console.log('');
+      console.log('  Unregistered skills (found on filesystem):');
+      for (const s of unregistered) {
+        console.log(`    ${s.slug}`);
+        console.log(`      Location: ${s.path}`);
+        console.log(`      (install via openpersona to register)`);
+      }
+    }
+    console.log('');
+  });
+
+skillCmd
+  .command('search <query>')
+  .description('Search the OpenPersona skill directory')
+  .addHelpText('after', '\nExample:\n  openpersona skill search persona')
+  .action(async (query) => {
+    try {
+      await skillSearcher.search(query);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('publish <owner/repo>')
+  .description('Publish a skill pack to the OpenPersona skill directory (openpersona.co/skills)')
+  .addHelpText('after', [
+    '',
+    'Example:',
+    '  openpersona skill publish owner/my-skill',
+    '',
+    'Your repo must have a valid SKILL.md with name, description, and version in frontmatter.',
+  ].join('\n'))
+  .action(async (ownerRepo) => {
+    try {
+      await skillPublisher.publish(ownerRepo);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+skillCmd
+  .command('info <slug>')
+  .description('Show local info for an installed skill (registry entry + SKILL.md frontmatter)')
+  .action((slug) => {
+    const { loadRegistry } = require('../lib/registry');
+    const reg = loadRegistry();
+    const entry = reg.personas?.[slug];
+    if (!entry) {
+      printError(`Skill not found in registry: "${slug}"`);
+      printInfo('Run `openpersona skill list` to see installed skills.');
+      process.exit(1);
+    }
+    const target = entry.installTarget || entry.path;
+    console.log('');
+    console.log(`  Skill: ${entry.personaName || slug}`);
+    console.log(`  Slug : ${slug}`);
+    if (entry.source)    console.log(`  Source  : ${entry.source}`);
+    if (target)          console.log(`  Location: ${target}`);
+    if (entry.installedAt) console.log(`  Installed: ${entry.installedAt}`);
+    if (entry.updatedAt)   console.log(`  Updated  : ${entry.updatedAt}`);
+
+    // Read SKILL.md frontmatter
+    if (target) {
+      const skillMdCandidates = [
+        path.join(target, 'SKILL.md'),
+        path.join(target, 'SKILL', 'SKILL.md'),
+      ];
+      const skillMdPath = skillMdCandidates.find((p) => fs.existsSync(p));
+      if (skillMdPath) {
+        const fm = skillInstaller.parseFrontmatter(fs.readFileSync(skillMdPath, 'utf-8'));
+        if (fm.version)     console.log(`  Version : ${fm.version}`);
+        if (fm.description) console.log(`  Desc    : ${fm.description}`);
+      }
+    }
+    console.log('');
+  });
+
+// ---------------------------------------------------------------------------
+// persona — Namespace aliases for all persona commands (mirrors root commands)
+// Lets users use `openpersona persona install`, `openpersona persona list`, etc.
+// Root commands remain fully functional — no deprecation warnings in v0.21.0.
+// ---------------------------------------------------------------------------
+
+const personaCmd = program
+  .command('persona')
+  .description('Persona agents — create, install, fork, refine, publish, and more (namespace alias for root commands)');
+
+// Re-export action handlers from existing root command registrations is not
+// directly supported by Commander — we register thin wrappers that delegate to
+// the same underlying library calls used by root commands.
+
+personaCmd
+  .command('create')
+  .description('Create a new persona skill pack (interactive wizard)')
+  .option('--preset <name>', 'Use preset (base, samantha, ai-girlfriend, life-assistant, health-butler, stoic-mentor)')
+  .option('--config <path>', 'Load external persona.json')
+  .option('--output <dir>', 'Output directory', process.cwd())
+  .option('--install', 'Install to ~/.openpersona after generation')
+  .option('--dry-run', 'Preview only, do not write files')
+  .action(async (options) => {
+    // Delegate to root `create` by re-invoking via process (simplest approach for aliases)
+    const args = ['create'];
+    if (options.preset)  args.push('--preset', options.preset);
+    if (options.config)  args.push('--config', options.config);
+    if (options.output)  args.push('--output', options.output);
+    if (options.install) args.push('--install');
+    if (options.dryRun)  args.push('--dry-run');
+    process.argv = [process.argv[0], process.argv[1], ...args];
+    // Re-parse — Commander will pick up the root `create` command
+    program.parseAsync(['', '', ...args]).catch((e) => { printError(e.message); process.exit(1); });
+  });
+
+personaCmd
+  .command('install <target>')
+  .description('Install a persona pack (strong-typed: errors on SKILL.md-only packs)')
+  .option('--registry <name>', 'Registry (acnlabs, skillssh)', 'acnlabs')
+  .addHelpText('after', '\nFor skill packs use: openpersona skill install <target>')
+  .action(async (target, options) => {
+    try {
+      const result = await download(target, options.registry);
+      const dir = result.dir;
+      const hasPersonaJson = fs.existsSync(path.join(dir, 'persona.json')) ||
+        fs.existsSync(path.join(dir, 'soul', 'persona.json'));
+      if (!hasPersonaJson) {
+        printError('This is a SKILL.md-only pack, not a persona pack.');
+        printInfo(`Try: openpersona skill install ${target}`);
+        process.exit(1);
+      }
+      if (result.skipCopy) {
+        await install(dir, { skipCopy: true, source: target });
+      } else {
+        await install(dir, { source: target });
+      }
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+personaCmd
+  .command('fork <parent-slug>')
+  .description('Fork an installed persona into a specialized child')
+  .requiredOption('--as <new-slug>', 'Slug for the child persona')
+  .option('--name <name>', 'Child persona name')
+  .option('--bio <bio>', 'Override bio')
+  .option('--personality <keywords>', 'Override personality (comma-separated)')
+  .option('--reason <text>', 'Fork reason', 'specialization')
+  .option('--output <dir>', 'Output directory', process.cwd())
+  .option('--install', 'Install to ~/.openpersona after generation')
+  .action(async (parentSlug, options) => {
+    try {
+      const { skillDir, lineage } = await forkPersona(parentSlug, {
+        as: options.as, name: options.name, bio: options.bio,
+        personality: options.personality, reason: options.reason,
+        output: options.output, install: options.install,
+      });
+      printSuccess(`Forked: ${skillDir}`);
+      printInfo(`  Parent: persona-${parentSlug}  →  Child: persona-${options.as} (generation ${lineage.generation})`);
+      if (!options.install) printInfo(`To install: npx openpersona install ${skillDir}`);
+    } catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('uninstall <slug>')
+  .description('Uninstall persona')
+  .action(async (slug) => {
+    try { await uninstall(slug); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('update <slug>')
+  .description('Update installed persona')
+  .action(async (slug) => {
+    const skillDir = resolvePersonaDir(slug);
+    if (!skillDir) { printError(`Persona not found: "${slug}"`); process.exit(1); }
+    const personaPath = resolveSoulFile(skillDir, 'persona.json');
+    if (!fs.existsSync(personaPath)) { printError('persona.json not found'); process.exit(1); }
+    const persona = JSON.parse(fs.readFileSync(personaPath, 'utf-8'));
+    const tmpDir = path.join(os.tmpdir(), 'openpersona-update-' + Date.now());
+    await fs.ensureDir(tmpDir);
+    const { skillDir: newDir } = await generate(persona, tmpDir);
+    const runtimeArtifacts = ['state.json', 'soul/self-narrative.md', 'soul/lineage.json'];
+    for (const rel of runtimeArtifacts) {
+      const src = path.join(skillDir, rel);
+      if (fs.existsSync(src)) await fs.copy(src, path.join(newDir, rel));
+    }
+    await fs.remove(skillDir);
+    await fs.move(newDir, skillDir);
+    await fs.remove(tmpDir);
+    await install(skillDir, { skipCopy: true });
+    printSuccess('Updated persona-' + slug);
+  });
+
+personaCmd
+  .command('list')
+  .description('List installed personas')
+  .action(async () => {
+    const personas = await listPersonas();
+    if (personas.length === 0) { printInfo('No personas installed.'); return; }
+    for (const p of personas) {
+      const marker = p.active ? chalk.green(' ← active') : '';
+      const status = p.enabled ? '' : chalk.dim(' (disabled)');
+      const typeTag = p.packType && p.packType !== 'single' ? chalk.cyan(` [${p.packType}]`) : '';
+      console.log(`  ${p.personaName} (persona-${p.slug})${typeTag}${marker}${status}`);
+    }
+  });
+
+personaCmd
+  .command('search <query>')
+  .description('Search personas in the OpenPersona directory')
+  .option('--type <type>', 'Filter by pack type: single or multi')
+  .action(async (query, options) => {
+    try { await search(query, { type: options.type }); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('switch <slug>')
+  .description('Switch active persona')
+  .action(async (slug) => {
+    try { await switchPersona(slug); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('publish <owner/repo>')
+  .description('Validate a GitHub repo as a persona pack and register it with the OpenPersona directory')
+  .action(async (ownerRepo) => {
+    try { await publishAdapter.publish(ownerRepo); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('export <slug>')
+  .description('Export persona pack (with soul state) as a zip archive')
+  .option('--output <file>', 'Output zip file path')
+  .action(async (slug, options) => {
+    try { await exportPersona(slug, options); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('import <file>')
+  .description('Import persona pack from a zip archive and install')
+  .option('--as <slug>', 'Override slug on import')
+  .action(async (file, options) => {
+    try { await importPersona(file, options); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('contribute [slug]')
+  .description('Persona Harvest — submit persona improvements as a PR to the community')
+  .option('--slug <slug>', 'Target persona slug')
+  .action(async (slug, options) => {
+    try { await contribute(slug || options.slug); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('acn-register [slug]')
+  .description('Register a persona with ACN (Agent Communication Network)')
+  .option('--slug <slug>', 'Persona slug')
+  .action(async (slug, options) => {
+    try { await registerWithAcn(slug || options.slug); }
+    catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('reset <slug>')
+  .description('★Experimental: Reset soul evolution state')
+  .action(async (slug) => {
+    const skillDir = resolvePersonaDir(slug);
+    if (!skillDir) { printError(`Persona not found: "${slug}"`); process.exit(1); }
+    const statePath = path.join(skillDir, 'state.json');
+    if (fs.existsSync(statePath)) { await fs.remove(statePath); printSuccess(`Reset state.json for persona-${slug}`); }
+    else printInfo(`No state.json found for persona-${slug} — already clean.`);
+  });
+
+personaCmd
+  .command('evolve-report <slug>')
+  .description('★Experimental: Show evolution report for a persona')
+  .action(async (slug) => {
+    try {
+      const { generateEvolveReport } = require('../lib/state/evolution');
+      const skillDir = resolvePersonaDir(slug);
+      if (!skillDir) { printError(`Persona not found: "${slug}"`); process.exit(1); }
+      const report = await generateEvolveReport(skillDir, slug);
+      console.log(report);
+    } catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('refine <slug>')
+  .description('Refine persona skill pack from accumulated experience (pack-level evolution)')
+  .option('--threshold <n>', 'Min events before refinement triggers', '5')
+  .option('--dry-run', 'Preview changes without writing')
+  .action(async (slug, options) => {
+    try {
+      const { refine } = require('../lib/lifecycle/refine');
+      await refine(slug, { threshold: parseInt(options.threshold, 10), dryRun: options.dryRun });
+    } catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('canvas <slug>')
+  .description('Generate a Living Canvas persona profile page')
+  .option('--output <file>', 'Write HTML to <file>')
+  .option('--open', 'Open in default browser after writing')
+  .action((slug, options) => {
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) { printError(`Persona not found: "${slug}"`); process.exit(1); }
+    const { renderCanvasHtml } = require('../lib/report/canvas');
+    try {
+      const html = renderCanvasHtml(personaDir, slug);
+      const outFile = options.output || `canvas-${slug}.html`;
+      fs.writeFileSync(outFile, html, 'utf-8');
+      printSuccess(`Living Canvas written to ${outFile}`);
+      if (options.open) {
+        const { execSync } = require('child_process');
+        const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+        try { execSync(`${cmd} "${outFile}"`); } catch { /* ignore */ }
+      }
+    } catch (e) { printError(e.message); process.exit(1); }
+  });
+
+personaCmd
+  .command('curate <owner/repo>')
+  .description('Curator-only: actively collect a popular persona pack (requires OPENPERSONA_CURATOR_TOKEN)')
+  .option('--type <type>', 'Pack type: single (default), multi, or tool', 'single')
+  .option('--role <role>', 'Override role')
+  .option('--token <token>', 'Curator authentication token')
+  .option('--tags <tags>', 'Comma-separated tag list')
+  .option('--min-stars <n>', 'Minimum GitHub star count', '500')
+  .action(async (ownerRepo, options) => {
+    try {
+      await curate(ownerRepo, { packType: options.type, role: options.role, token: options.token, tags: options.tags, minStars: parseInt(options.minStars, 10) });
+    } catch (e) { printError(e.message); process.exit(1); }
+  });
+
+// ---------------------------------------------------------------------------
+// model — Persona model lifecycle (stub — coming in v1.0)
+// ---------------------------------------------------------------------------
+
+const modelCmd = program
+  .command('model')
+  .description('Persona models — install and publish fine-tuned persona models (coming in v1.0)');
+
+const _modelStub = (cmdName) => () => {
+  printWarning(`openpersona model ${cmdName} is not yet implemented.`);
+  printInfo('For now, use the persona-model-trainer skill directly:');
+  printInfo('  openpersona skill install acnlabs/persona-model-trainer');
+  printInfo('Full model registry integration is planned for v1.0.');
+  process.exit(0);
+};
+
+modelCmd
+  .command('install <repo>')
+  .description('Install a fine-tuned persona model from HuggingFace (coming in v1.0)')
+  .action(_modelStub('install'));
+
+modelCmd
+  .command('publish <repo>')
+  .description('Publish a fine-tuned persona model to the OpenPersona model registry (coming in v1.0)')
+  .action(_modelStub('publish'));
+
+// ---------------------------------------------------------------------------
 
 program.parse();
