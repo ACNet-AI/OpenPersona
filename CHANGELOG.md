@@ -10,6 +10,7 @@ All notable changes to OpenPersona are documented here.
 
 **Critical**
 - `openpersona skill update` was 100% broken. `lib/skill/updater.js` mis-used the downloader return value (`{ dir, skipCopy }`), treating the whole object as a path. Every `skill update` failed with a phantom "No SKILL.md found" error. Fixed to destructure `result.dir` correctly.
+- `openpersona skill update` now prunes stale files. `fs.copy({ overwrite: true })` only replaces same-named entries — it did not remove files deleted in the new version. Now `fs.emptyDir(target)` runs before each copy so updates truly mirror the source.
 - `openpersona skill install` no longer marks the skill as the active persona. Previously `registrySetActive(slug)` was called unconditionally, so installing any skill would overwrite the current active-persona marker, polluting `openpersona status`, `openpersona persona list`, and handoff generation. Skills are tools/instructions — not personas — and now stay out of the active-persona state entirely.
 
 **High**
@@ -33,18 +34,19 @@ Older entries without `installTargets` are still understood by `uninstallSkill` 
 
 ### New tests
 
-`tests/skill/skill-v0.21.1-fixes.test.js` adds 7 regression tests:
+`tests/skill/skill-v0.21.1-fixes.test.js` adds 8 regression tests:
 1. Installing a skill does not overwrite the current active persona.
 2. `installSkill` records `installTargets[]` as an array (with a singleton `--runtime` case).
 3. `resolveTargets({ all: true })` always includes `.agents/skills/<slug>/` and every entry is unique.
 4. `uninstallSkill` removes every directory in `installTargets[]`, not just the primary.
 5. `listPersonas()` excludes `resourceType === 'skill'` entries.
 6. `updateSkill` honors the `{ dir }` downloader contract and overwrites every `installTargets[]` directory with fresh content.
-7. `updateSkill` exits 1 when the downloader returns no directory.
+7. `updateSkill` prunes files deleted between versions (no stale residue in the target).
+8. `updateSkill` exits 1 when the downloader returns no directory.
 
 ### Test runner
 
-`npm test` now runs **687 tests** across 116 suites (was 651 / 102 in 0.21.0 — the skill tests were previously orphaned from the main flow).
+`npm test` now runs **688 tests** across 116 suites (was 651 / 102 in 0.21.0 — the skill tests were previously orphaned from the main flow).
 
 ---
 

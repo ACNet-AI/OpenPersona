@@ -282,6 +282,43 @@ describe('updateSkill (regression: downloader return-value bug)', () => {
     try { await fs.remove(freshSrc); } catch { /* ignore */ }
   });
 
+  test('update prunes files removed in the new version (no stale residue)', async () => {
+    const regPath = makeRegistry();
+    const target = fs.mkdtempSync(path.join(os.tmpdir(), 'op-fix-prune-'));
+    // Simulate v1.0 install: SKILL.md + scripts/old-helper.js
+    fs.writeFileSync(path.join(target, 'SKILL.md'), '---\nname: p-skill\nversion: 1.0.0\n---\n');
+    fs.mkdirSync(path.join(target, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(target, 'scripts', 'old-helper.js'), '// v1 helper\n');
+
+    registryAdd(
+      'p-skill',
+      { personaName: 'p-skill', role: 'assistant', packType: 'single' },
+      target,
+      regPath,
+      { installTargets: [target], source: 'owner/p-skill', resourceType: 'skill' }
+    );
+
+    // Mock v2.0 source: SKILL.md only — old-helper.js is gone.
+    const freshSrc = makeSrcSkill('p-skill', '2.0.0');
+    const mockDownloader = { download: async () => ({ dir: freshSrc, skipCopy: false }) };
+
+    await updateSkill('p-skill', { regPath, downloader: mockDownloader });
+
+    assert.ok(fs.existsSync(path.join(target, 'SKILL.md')), 'new SKILL.md must exist');
+    assert.ok(
+      !fs.existsSync(path.join(target, 'scripts', 'old-helper.js')),
+      'stale file from v1.0 must be pruned'
+    );
+    assert.ok(
+      !fs.existsSync(path.join(target, 'scripts')) ||
+        fs.readdirSync(path.join(target, 'scripts')).length === 0,
+      'empty orphan dir acceptable but must not contain old files'
+    );
+
+    await fs.remove(target);
+    try { await fs.remove(freshSrc); } catch { /* ignore */ }
+  });
+
   test('exits 1 when downloader returns no dir', async () => {
     const regPath = makeRegistry();
     const t = fs.mkdtempSync(path.join(os.tmpdir(), 'op-fix-u-missing-'));
