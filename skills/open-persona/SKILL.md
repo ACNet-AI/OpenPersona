@@ -1,7 +1,7 @@
 ---
 
 name: open-persona
-version: "0.21.0"
+version: "0.21.1"
 description: >
   Meta-skill for building and managing agent persona skill packs (instruction-only;
   no bundled installer or auto-downloaded binaries). Credentials are never written

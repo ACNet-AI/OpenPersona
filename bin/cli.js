@@ -303,9 +303,12 @@ program
     'Use `openpersona skill install` for skill-only guaranteed routing.',
   ].join('\n'))
   .action(async (target, options) => {
+    let dir;
+    let skipCopy = false;
     try {
       const result = await download(target, options.registry);
-      const dir = result.dir;
+      dir = result.dir;
+      skipCopy = !!result.skipCopy;
 
       // Detect pack type and route accordingly
       const hasPersonaJson = fs.existsSync(path.join(dir, 'persona.json')) ||
@@ -322,11 +325,7 @@ program
           printWarning('--runtime / --all ignored for persona packs (use `openpersona skill install` for skill packs)');
         }
         printInfo('Detected: persona pack → installing to ~/.openpersona/');
-        if (result.skipCopy) {
-          await install(dir, { skipCopy: true, source: target });
-        } else {
-          await install(dir, { source: target });
-        }
+        await install(dir, skipCopy ? { skipCopy: true, source: target } : { source: target });
       } else if (skillMdPath) {
         printInfo('Detected: skill pack → installing to .agents/skills/');
         await skillInstaller.installSkill(dir, skillMdPath, {
@@ -343,6 +342,10 @@ program
     } catch (e) {
       printError(e.message);
       process.exit(1);
+    } finally {
+      if (dir && !skipCopy) {
+        try { await fs.remove(dir); } catch { /* ignore */ }
+      }
     }
   });
 
@@ -917,9 +920,12 @@ skillCmd
     'Default target: .agents/skills/<slug>/  (discoverable by Cursor, Claude Code, OpenClaw)',
   ].join('\n'))
   .action(async (target, options) => {
+    let dir;
+    let skipCopy = false;
     try {
       const result = await download(target, 'acnlabs');
-      const dir = result.dir;
+      dir = result.dir;
+      skipCopy = !!result.skipCopy;
       const skillMdCandidates = [
         path.join(dir, 'SKILL.md'),
         path.join(dir, 'SKILL', 'SKILL.md'),
@@ -948,6 +954,10 @@ skillCmd
     } catch (e) {
       printError(e.message);
       process.exit(1);
+    } finally {
+      if (dir && !skipCopy) {
+        try { await fs.remove(dir); } catch { /* ignore */ }
+      }
     }
   });
 
@@ -1119,9 +1129,12 @@ personaCmd
   .option('--registry <name>', 'Registry (acnlabs, skillssh)', 'acnlabs')
   .addHelpText('after', '\nFor skill packs use: openpersona skill install <target>')
   .action(async (target, options) => {
+    let dir;
+    let skipCopy = false;
     try {
       const result = await download(target, options.registry);
-      const dir = result.dir;
+      dir = result.dir;
+      skipCopy = !!result.skipCopy;
       const hasPersonaJson = fs.existsSync(path.join(dir, 'persona.json')) ||
         fs.existsSync(path.join(dir, 'soul', 'persona.json'));
       if (!hasPersonaJson) {
@@ -1129,14 +1142,14 @@ personaCmd
         printInfo(`Try: openpersona skill install ${target}`);
         process.exit(1);
       }
-      if (result.skipCopy) {
-        await install(dir, { skipCopy: true, source: target });
-      } else {
-        await install(dir, { source: target });
-      }
+      await install(dir, skipCopy ? { skipCopy: true, source: target } : { source: target });
     } catch (e) {
       printError(e.message);
       process.exit(1);
+    } finally {
+      if (dir && !skipCopy) {
+        try { await fs.remove(dir); } catch { /* ignore */ }
+      }
     }
   });
 

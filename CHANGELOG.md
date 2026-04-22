@@ -4,6 +4,50 @@ All notable changes to OpenPersona are documented here.
 
 ---
 
+## [0.21.1] — 2026-04-19
+
+### Fixed — post-v0.21.0 audit remediation
+
+**Critical**
+- `openpersona skill update` was 100% broken. `lib/skill/updater.js` mis-used the downloader return value (`{ dir, skipCopy }`), treating the whole object as a path. Every `skill update` failed with a phantom "No SKILL.md found" error. Fixed to destructure `result.dir` correctly.
+- `openpersona skill install` no longer marks the skill as the active persona. Previously `registrySetActive(slug)` was called unconditionally, so installing any skill would overwrite the current active-persona marker, polluting `openpersona status`, `openpersona persona list`, and handoff generation. Skills are tools/instructions — not personas — and now stay out of the active-persona state entirely.
+
+**High**
+- `openpersona list` and `openpersona persona list` now filter out `resourceType === 'skill'` entries. Skill packs and persona packs share `persona-registry.json` but are distinct resources; the persona listing no longer leaks skill entries.
+- `openpersona skill install --all` now records every target directory in a new `installTargets[]` registry field. `openpersona skill uninstall` iterates over the full list and removes every location, eliminating orphaned files from multi-target installs.
+- `lib/skill/uninstaller.js` legacy-fallback paths are now resolved at call time instead of module load time. Fixes incorrect cleanup when cwd changes between CLI invocation and uninstall.
+- `openpersona install` / `persona install` / `skill install` now clean up the temporary download directory on every exit path (success, validation failure, installer error) — no more tmp residue under `$TMPDIR/openpersona-dl/`.
+
+**Low / housekeeping**
+- Cross-platform path segment checks: `installer.js` now normalizes `path.sep` before substring matching on `.agents/skills`, `.claude/skills`, `.cursor/skills`, `.hermes/skills` (prep for Windows support).
+- Removed unused `bio` local in `installSkill`.
+- `scripts/run-tests.js` now recurses into subdirectories so `tests/skill/*.test.js` is picked up by `npm test`. Previously the 29 v0.21.0 skill-lifecycle tests and the new v0.21.1 regression tests were silently skipped from the main test flow.
+
+### Registry schema additions
+
+`persona-registry.json` entries now carry:
+- `installTargets: string[]` — every directory the resource was written to (new in 0.21.1)
+- `installTarget: string` — primary / first install target (kept for backward compatibility; equals `installTargets[0]`)
+
+Older entries without `installTargets` are still understood by `uninstallSkill` and `updateSkill` via a `[installTarget || path]` fallback.
+
+### New tests
+
+`tests/skill/skill-v0.21.1-fixes.test.js` adds 7 regression tests:
+1. Installing a skill does not overwrite the current active persona.
+2. `installSkill` records `installTargets[]` as an array (with a singleton `--runtime` case).
+3. `resolveTargets({ all: true })` always includes `.agents/skills/<slug>/` and every entry is unique.
+4. `uninstallSkill` removes every directory in `installTargets[]`, not just the primary.
+5. `listPersonas()` excludes `resourceType === 'skill'` entries.
+6. `updateSkill` honors the `{ dir }` downloader contract and overwrites every `installTargets[]` directory with fresh content.
+7. `updateSkill` exits 1 when the downloader returns no directory.
+
+### Test runner
+
+`npm test` now runs **687 tests** across 116 suites (was 651 / 102 in 0.21.0 — the skill tests were previously orphaned from the main flow).
+
+---
+
 ## [0.21.0] — 2026-04-19
 
 ### New: Unified CLI Architecture
