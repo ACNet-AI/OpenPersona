@@ -427,6 +427,65 @@ npx openpersona switch life-assistant  # → gateway switches to "rational" hear
 
 If the target persona has no heartbeat config, the gateway heartbeat is explicitly disabled to prevent leaking the previous persona's settings.
 
+## Unified Command Surface (v0.21.0+)
+
+OpenPersona uses a resource-namespaced CLI (`kubectl`-style) so all persona-ecosystem resources live under one entry point.
+
+```
+openpersona <resource> <action>
+```
+
+### Command tree
+
+| Resource | Commands | Description |
+|----------|----------|-------------|
+| *(root)* | `install`, `search`, `list` | Smart router — auto-detects type (persona or skill). v1.0 will aggregate all resources. |
+| `persona` | `install`, `create`, `fork`, `refine`, `update`, `uninstall`, `list`, `search`, `switch`, `publish`, `export`, `import`, `canvas`, `evolve-report`, `reset`, `contribute`, `acn-register`, `curate` | Persona pack lifecycle (namespace alias for root commands) |
+| `skill` | `install`, `update`, `uninstall`, `list`, `search`, `publish`, `info` | Agent skill pack lifecycle |
+| `dataset` | `install`, `publish` | HuggingFace persona dataset directory |
+| `model` | `install`, `publish` | Fine-tuned persona models *(stub — coming in v1.0)* |
+
+### Installing a skill pack
+
+```bash
+# Default: .agents/skills/<slug>/  (AGENTS.md universal — Cursor, Claude Code, OpenClaw auto-discover)
+openpersona skill install acnlabs/anyone-skill
+
+# User-global: ~/.agents/skills/<slug>/
+openpersona skill install acnlabs/anyone-skill --global
+
+# Runtime-specific targets
+openpersona skill install acnlabs/anyone-skill --runtime=claude    # → .claude/skills/
+openpersona skill install acnlabs/anyone-skill --runtime=cursor    # → .cursor/skills/
+openpersona skill install acnlabs/anyone-skill --runtime=hermes    # → ~/.hermes/skills/
+
+# Mirror to all detected runtimes in CWD
+openpersona skill install acnlabs/anyone-skill --all
+```
+
+### Smart root install (auto-router)
+
+The root `install` command auto-detects pack type and routes accordingly:
+
+```bash
+openpersona install acnlabs/anyone-skill
+# → has persona.json → installs to ~/.openpersona/
+# → SKILL.md only  → installs to .agents/skills/
+```
+
+Use `openpersona persona install` or `openpersona skill install` for guaranteed strong-typed routing.
+
+### Migration from `npx skills add`
+
+| Old command | New command |
+|-------------|-------------|
+| `npx skills add acnlabs/anyone-skill` | `openpersona skill install acnlabs/anyone-skill` |
+| `npx skills add acnlabs/brand-persona-skill` | `openpersona skill install acnlabs/brand-persona-skill` |
+
+`npx skills add` remains functional for one release cycle.
+
+---
+
 ## Dataset Directory
 
 [openpersona.co/datasets](https://openpersona.co/datasets) is a companion directory for Hugging Face datasets relevant to persona work — training data, roleplay corpora, synthetic dialogue sets, and more.

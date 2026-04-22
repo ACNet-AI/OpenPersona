@@ -32,7 +32,7 @@ The output is a self-contained `{slug}-skill/` directory. Install it on the merc
 | ------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
 | `anyone-skill`            | Any person or character           | Personal persona pack                                                    |
 | `secondme-skill`          | Yourself (+ local model training) | Personal persona pack + trained model                                    |
-| **`brand-persona-skill`** | **Any commercial entity**         | **Brand persona pack + behavior guide + trigger map + service contract** |
+| `**brand-persona-skill`** | **Any commercial entity**         | **Brand persona pack + behavior guide + trigger map + service contract** |
 
 
 `brand-persona-skill` depends on:
@@ -63,12 +63,18 @@ Optional:
 ### Step 1 — Install this tool
 
 ```bash
-# Via npx skills (recommended — same as all OpenPersona companion skills)
+# Via openpersona (recommended — installs to .agents/skills/, discoverable by all AGENTS.md agents)
+openpersona skill install acnlabs/brand-persona-skill
+
+# Legacy alias (still works for one release cycle)
 npx skills add acnlabs/brand-persona-skill
 
+# Runtime-specific targets
+openpersona skill install acnlabs/brand-persona-skill --runtime=claude   # → .claude/skills/
+openpersona skill install acnlabs/brand-persona-skill --runtime=cursor   # → .cursor/skills/
+openpersona skill install acnlabs/brand-persona-skill --all              # → all detected runtimes
+
 # Manual — git clone
-git clone https://github.com/acnlabs/brand-persona-skill.git .cursor/skills/brand-persona-skill   # Cursor
-git clone https://github.com/acnlabs/brand-persona-skill.git .claude/skills/brand-persona-skill   # Claude Code
 git clone https://github.com/acnlabs/brand-persona-skill.git .agents/skills/brand-persona-skill   # Universal
 ```
 
