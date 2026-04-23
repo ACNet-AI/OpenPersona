@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "openpersona/social/contacts",
+  "title": "OpenPersona Social Contacts",
+  "description": "Runtime contact book for a persona — local relationship metadata plus cached ACN fields. ACN is the SoT for endpoint/skills/agent_card; contacts.json caches those and adds trust_level, tags, notes, source, and interaction history. Updated by 'openpersona social' CLI commands.",
+  "type": "object",
+  "required": ["schemaVersion", "personaSlug", "contacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Schema version for lazy migration. Current: '1.0.0'.",
+      "examples": ["1.0.0"]
+    },
+    "personaSlug": {
+      "type": "string",
+      "description": "Slug of the owning persona"
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Ordered list of known agents",
+      "items": { "$ref": "#/definitions/contact" }
+    }
+  },
+  "definitions": {
+    "contact": {
+      "type": "object",
+      "required": ["acn_agent_id", "name", "trust_level", "source", "first_seen"],
+      "additionalProperties": false,
+      "properties": {
+        "acn_agent_id": {
+          "type": "string",
+          "description": "ACN-assigned UUID (stable identifier)"
+        },
+        "slug": {
+          "type": "string",
+          "description": "OpenPersona slug if known"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "A2A endpoint URL (cached from ACN; refreshed by sync)"
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skill IDs (cached from ACN)"
+        },
+        "subnet_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subnets the agent belongs to (cached from ACN)"
+        },
+        "wallet_address": {
+          "type": "string",
+          "description": "EVM wallet address (cached from ACN)"
+        },
+        "agent_card_url": {
+          "type": "string",
+          "description": "URL to the agent's A2A Agent Card on ACN"
+        },
+        "trust_level": {
+          "type": "string",
+          "enum": ["verified", "community", "unverified"],
+          "description": "Trust level. verified=on-chain verified or manually reviewed; community=has ACN history; unverified=unknown/first-seen"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "User-defined labels for filtering"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form notes about the relationship"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "acn-sync", "auto-discover", "inbox"],
+          "description": "How this contact was added: manual (CLI add --manual), acn-sync (social sync), auto-discover (acn-register hook), inbox (from incoming a2a_inbox)"
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp when this contact was first added"
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp of last known interaction"
+        },
+        "last_synced": {
+          "type": ["string", "null"],
+          "description": "ISO-8601 timestamp of last successful ACN sync. null = sync failed or never attempted"
+        },
+        "interaction_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Total number of A2A messages sent to this contact"
+        }
+      }
+    }
+  }
+}

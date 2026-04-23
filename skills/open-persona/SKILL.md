@@ -281,6 +281,37 @@ npx openpersona acn-register <slug> --endpoint https://your-agent.example.com
 
 After registration, `acn-registration.json` is written with `agent_id`, `api_key`, and connection URLs. The `acn_gateway` URL is sourced from `social.acn.gateway` in `persona.json`; all presets default to `https://acn-production.up.railway.app`.
 
+> **Security**: `acn-registration.json` contains your API key. It is in the pack's `.gitignore` and is automatically excluded from `openpersona export` — it is never bundled into distributable zips.
+
+#### Contact Book (`social.contacts`)
+
+Enable to give the persona a runtime address book of other agents on ACN:
+
+```json
+{
+  "social": {
+    "contacts": {
+      "enabled": true,
+      "auto_discover": false,
+      "trust_default": "unverified",
+      "max_contacts": 500
+    }
+  }
+}
+```
+
+Once enabled, `social/contacts.json` is generated as the seed. Manage at runtime:
+
+```bash
+npx openpersona social list <slug>                           # List contacts
+npx openpersona social add <slug> --from-acn <agent-id>     # Add from ACN
+npx openpersona social search <slug> --skills <skill>        # Search ACN network
+npx openpersona social sync <slug>                           # Refresh from ACN
+npx openpersona social remove <slug> <agent-id>              # Remove
+```
+
+Trust levels: `verified` | `community` | `unverified`. Use `--filter trust=<level>` with `social list`.
+
 The **Living Canvas** (`npx openpersona canvas <slug>`) is the Social concept's HTML expression layer — the persona's public-facing profile and interaction interface.
 
 No additional config needed — A2A discoverability is a baseline capability of every persona.

@@ -1382,5 +1382,246 @@ modelCmd
   .action(_modelStub('publish'));
 
 // ---------------------------------------------------------------------------
+// social — ACN contact book management
+// ---------------------------------------------------------------------------
+
+const {
+  addContact,
+  removeContact,
+  lookupContact,
+  listContacts,
+} = require('../lib/social/contacts');
+const { fetchAgent, searchAgents, syncContacts } = require('../lib/social/acn-client');
+
+const socialCmd = program
+  .command('social')
+  .description('Manage the social contact book for an installed persona (ACN-backed)');
+
+/**
+ * Parse a --filter string like "trust=community" or "tag=music" into an object.
+ */
+function parseFilter(raw) {
+  if (!raw) return {};
+  const [key, value] = raw.split('=');
+  if (!key || !value) return {};
+  const k = key.trim().toLowerCase();
+  const v = value.trim();
+  if (k === 'trust') return { trust: v };
+  if (k === 'tag') return { tag: v };
+  if (k === 'skill') return { skill: v };
+  printWarning(`Unknown filter key "${k}". Supported: trust, tag, skill.`);
+  return {};
+}
+
+/**
+ * Read ACN gateway from installed pack's acn-config.json, or use a default.
+ */
+function resolveGateway(packDir) {
+  try {
+    const p = path.join(packDir, 'acn-config.json');
+    if (fs.existsSync(p)) {
+      const cfg = JSON.parse(fs.readFileSync(p, 'utf-8'));
+      if (cfg.acn_gateway && !cfg.acn_gateway.startsWith('<')) return cfg.acn_gateway;
+    }
+  } catch { /* ignore */ }
+  return 'https://acn-production.up.railway.app';
+}
+
+socialCmd
+  .command('list <slug>')
+  .description('List contacts in the persona\'s contact book')
+  .option('--filter <expr>', 'Filter: trust=<level>, tag=<value>, skill=<value>')
+  .option('--json', 'Output raw JSON')
+  .action((slug, options) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    if (!resolvePersonaDir(slug)) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const filter = parseFilter(options.filter);
+    const contacts = listContacts(slug, filter);
+    if (options.json) {
+      console.log(JSON.stringify(contacts, null, 2));
+    } else if (contacts.length === 0) {
+      printInfo('No contacts found.');
+    } else {
+      contacts.forEach((c) => {
+        const skills = (c.skills || []).slice(0, 3).join(', ') || '—';
+        console.log(`${chalk.bold(c.name)} [${c.trust_level}] ${c.acn_agent_id}`);
+        console.log(`  Skills: ${skills}  Tags: ${(c.tags || []).join(', ') || '—'}  Interactions: ${c.interaction_count || 0}`);
+      });
+      printInfo(`Total: ${contacts.length} contact(s)`);
+    }
+  });
+
+socialCmd
+  .command('add <slug>')
+  .description('Add a contact by ACN agent-id or manual JSON file')
+  .option('--from-acn <agent-id>', 'Look up agent from ACN and add to contacts')
+  .option('--manual', 'Add manually from a JSON file')
+  .option('--file <path>', 'Path to contact JSON file (required with --manual)')
+  .option('--trust <level>', 'Override trust level (verified, community, unverified)', 'unverified')
+  .action(async (slug, options) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const packDir = resolvePersonaDir(slug);
+    if (!packDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+
+    if (options.fromAcn) {
+      printInfo(`Looking up agent ${options.fromAcn} from ACN...`);
+      const gateway = resolveGateway(packDir);
+      let agent;
+      try {
+        agent = await fetchAgent(gateway, options.fromAcn);
+      } catch (e) {
+        printError(`Failed to fetch agent from ACN: ${e.message}`);
+        process.exit(1);
+      }
+      if (!agent) {
+        printError(`Agent "${options.fromAcn}" not found on ACN.`);
+        process.exit(1);
+      }
+      const contact = {
+        acn_agent_id: options.fromAcn,
+        name: agent.name || options.fromAcn,
+        endpoint: agent.endpoint,
+        skills: agent.skills || [],
+        subnet_ids: agent.subnet_ids || [],
+        agent_card_url: gateway + `/api/v1/agents/${options.fromAcn}/card`,
+        trust_level: options.trust,
+        last_synced: new Date().toISOString(),
+      };
+      const entry = addContact(slug, contact, { source: 'acn-sync' });
+      printSuccess(`Added contact: ${entry.name} (${entry.acn_agent_id}) [${entry.trust_level}]`);
+    } else if (options.manual) {
+      if (!options.file) {
+        printError('--file <path> is required with --manual');
+        process.exit(1);
+      }
+      let contactData;
+      try {
+        contactData = JSON.parse(require('fs-extra').readFileSync(options.file, 'utf-8'));
+      } catch (e) {
+        printError(`Failed to read contact file: ${e.message}`);
+        process.exit(1);
+      }
+      if (options.trust) contactData.trust_level = options.trust;
+      const entry = addContact(slug, contactData, { source: 'manual' });
+      printSuccess(`Added contact: ${entry.name} (${entry.acn_agent_id}) [${entry.trust_level}]`);
+    } else {
+      printError('Specify --from-acn <agent-id> or --manual --file <path>');
+      process.exit(1);
+    }
+  });
+
+socialCmd
+  .command('lookup <slug> <query>')
+  .description('Search local contacts by agent-id, slug, name, skill, or tag')
+  .option('--json', 'Output raw JSON')
+  .action((slug, query, options) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    if (!resolvePersonaDir(slug)) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const results = lookupContact(slug, query);
+    if (options.json) {
+      console.log(JSON.stringify(results, null, 2));
+    } else if (results.length === 0) {
+      printInfo(`No contacts matching "${query}".`);
+    } else {
+      results.forEach((c) => {
+        console.log(`${chalk.bold(c.name)} [${c.trust_level}] ${c.acn_agent_id}`);
+        console.log(`  Skills: ${(c.skills || []).join(', ') || '—'}`);
+      });
+    }
+  });
+
+socialCmd
+  .command('search <slug>')
+  .description('Search for agents on ACN (remote search)')
+  .option('--skills <csv>', 'Comma-separated skill IDs to filter by')
+  .option('--subnet <id>', 'Subnet ID to search in')
+  .option('--json', 'Output raw JSON')
+  .action(async (slug, options) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const packDir = resolvePersonaDir(slug);
+    if (!packDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const gateway = resolveGateway(packDir);
+    printInfo(`Searching ACN at ${gateway}...`);
+    let agents;
+    try {
+      agents = await searchAgents(gateway, { skills: options.skills, subnet: options.subnet });
+    } catch (e) {
+      printError(`ACN search failed: ${e.message}`);
+      process.exit(1);
+    }
+    if (options.json) {
+      console.log(JSON.stringify(agents, null, 2));
+    } else if (agents.length === 0) {
+      printInfo('No agents found matching search criteria.');
+    } else {
+      agents.forEach((a) => {
+        const skills = (a.skills || []).slice(0, 3).join(', ') || '—';
+        console.log(`${chalk.bold(a.name || a.agent_id)} [${a.agent_id}]`);
+        console.log(`  Skills: ${skills}  Endpoint: ${a.endpoint || '—'}`);
+      });
+      printInfo(`Found: ${agents.length} agent(s)`);
+    }
+  });
+
+socialCmd
+  .command('sync <slug>')
+  .description('Sync all contacts from ACN (refresh endpoint and skills)')
+  .option('--dry-run', 'Preview changes without saving')
+  .action(async (slug, options) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const packDir = resolvePersonaDir(slug);
+    if (!packDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const gateway = resolveGateway(packDir);
+    printInfo(`Syncing contacts from ACN at ${gateway}...`);
+    let result;
+    try {
+      result = await syncContacts(slug, gateway, { dryRun: options.dryRun });
+    } catch (e) {
+      printError(`Sync failed: ${e.message}`);
+      process.exit(1);
+    }
+    if (options.dryRun) {
+      printInfo(`[dry-run] Would refresh: ${result.refreshed} | fail: ${result.failed} | skip: ${result.skipped}`);
+    } else {
+      printSuccess(`Sync complete — refreshed: ${result.refreshed} | failed: ${result.failed} | skipped: ${result.skipped}`);
+      if (result.failed > 0) {
+        printWarning(`${result.failed} contact(s) could not be refreshed (offline or deleted on ACN). They are preserved with last_synced=null.`);
+      }
+    }
+  });
+
+socialCmd
+  .command('remove <slug> <agent-id>')
+  .description('Remove a contact from the contact book')
+  .action((slug, agentId) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    if (!resolvePersonaDir(slug)) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const removed = removeContact(slug, agentId);
+    if (removed) {
+      printSuccess(`Removed contact: ${agentId}`);
+    } else {
+      printWarning(`Contact not found: ${agentId}`);
+    }
+  });
+
+// ---------------------------------------------------------------------------
 
 program.parse();

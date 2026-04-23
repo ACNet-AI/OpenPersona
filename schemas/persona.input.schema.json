@@ -528,6 +528,65 @@
               "description": "A2A protocol version (default: '0.3.0')"
             }
           }
+        },
+        "contacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Social Contacts — local contact book for known agents on ACN. Generates social/contacts.json in the pack. Runtime CRUD via 'openpersona social' CLI.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Generate social/contacts.json skeleton. Default false — opt-in."
+            },
+            "auto_discover": {
+              "type": "boolean",
+              "default": false,
+              "description": "After acn-register, automatically add agents from the same subnet into contacts"
+            },
+            "auto_discover_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 5,
+              "description": "Maximum agents to auto-discover per acn-register run"
+            },
+            "trust_default": {
+              "type": "string",
+              "enum": ["verified", "community", "unverified"],
+              "default": "unverified",
+              "description": "Default trust_level assigned to auto-discovered or acn-sync contacts"
+            },
+            "max_contacts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 500,
+              "description": "Maximum contacts before add is rejected with an overflow error"
+            },
+            "minIncomingTrust": {
+              "type": "string",
+              "enum": ["verified", "community", "unverified"],
+              "description": "Minimum trust_level required to accept incoming a2a_inbox messages. Omit to accept all (default). Used by Contact Trust Gate in state-sync.js (PR#2)."
+            },
+            "seed": {
+              "type": "array",
+              "description": "Pre-populated contacts written into the generated social/contacts.json",
+              "items": {
+                "type": "object",
+                "required": ["acn_agent_id", "name"],
+                "additionalProperties": true,
+                "properties": {
+                  "acn_agent_id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "trust_level": {
+                    "type": "string",
+                    "enum": ["verified", "community", "unverified"]
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

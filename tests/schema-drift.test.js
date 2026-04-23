@@ -106,3 +106,60 @@ test('schema-drift: soul.character required fields in schema include personality
   assert.ok(soulCharRequired.includes('personality'), 'soul.character.required missing personality');
   assert.ok(soulCharRequired.includes('speakingStyle'), 'soul.character.required missing speakingStyle');
 });
+
+// ── Social Contacts schema-drift ─────────────────────────────────────────────
+
+const runtimeContactTrustLevels = extractSet(validateSrc, 'CONTACT_TRUST_LEVELS');
+const runtimeContactSources     = extractSet(validateSrc, 'CONTACT_SOURCES');
+
+const contactsSchema = schema.properties?.social?.properties?.contacts?.properties;
+const schemaContactTrustDefault   = contactsSchema?.trust_default?.enum;
+const schemaContactMinIncoming    = contactsSchema?.minIncomingTrust?.enum;
+
+const contactsFileSchema = (() => {
+  try {
+    return require(path.join(ROOT, 'schemas', 'social', 'contacts.schema.json'));
+  } catch { return null; }
+})();
+const contactDefTrustEnum  = contactsFileSchema?.definitions?.contact?.properties?.trust_level?.enum;
+const contactDefSourceEnum = contactsFileSchema?.definitions?.contact?.properties?.source?.enum;
+
+test('schema-drift: CONTACT_TRUST_LEVELS in validate.js matches social.contacts.trust_default enum in schema', () => {
+  assert.ok(runtimeContactTrustLevels, 'CONTACT_TRUST_LEVELS not found in validate.js');
+  assert.ok(schemaContactTrustDefault, 'social.contacts.trust_default.enum not found in schema');
+  assert.deepEqual(
+    [...runtimeContactTrustLevels].sort(),
+    [...schemaContactTrustDefault].sort(),
+    'CONTACT_TRUST_LEVELS (validate.js) diverged from social.contacts.trust_default.enum (schema)'
+  );
+});
+
+test('schema-drift: CONTACT_TRUST_LEVELS matches contacts.schema.json trust_level enum', () => {
+  assert.ok(runtimeContactTrustLevels, 'CONTACT_TRUST_LEVELS not found in validate.js');
+  assert.ok(contactDefTrustEnum, 'trust_level.enum not found in contacts.schema.json');
+  assert.deepEqual(
+    [...runtimeContactTrustLevels].sort(),
+    [...contactDefTrustEnum].sort(),
+    'CONTACT_TRUST_LEVELS (validate.js) diverged from contacts.schema.json definitions.contact.trust_level.enum'
+  );
+});
+
+test('schema-drift: CONTACT_SOURCES in validate.js matches contacts.schema.json source enum', () => {
+  assert.ok(runtimeContactSources, 'CONTACT_SOURCES not found in validate.js');
+  assert.ok(contactDefSourceEnum, 'source.enum not found in contacts.schema.json');
+  assert.deepEqual(
+    [...runtimeContactSources].sort(),
+    [...contactDefSourceEnum].sort(),
+    'CONTACT_SOURCES (validate.js) diverged from contacts.schema.json definitions.contact.source.enum'
+  );
+});
+
+test('schema-drift: social.contacts.minIncomingTrust enum matches CONTACT_TRUST_LEVELS', () => {
+  assert.ok(runtimeContactTrustLevels, 'CONTACT_TRUST_LEVELS not found in validate.js');
+  assert.ok(schemaContactMinIncoming, 'social.contacts.minIncomingTrust.enum not found in schema');
+  assert.deepEqual(
+    [...runtimeContactTrustLevels].sort(),
+    [...schemaContactMinIncoming].sort(),
+    'CONTACT_TRUST_LEVELS (validate.js) diverged from social.contacts.minIncomingTrust.enum (schema)'
+  );
+});

@@ -31,7 +31,7 @@ lib/
     validate.js         ← Generate Gate (hard-reject constraint checks)
     derived.js          ← Derived template variable computation (returns plain object; caller applies via Object.assign)
     body.js             ← Body layer description builder
-    social.js           ← Social aspect: Agent Card + ACN config builders
+    social.js           ← Social aspect: Agent Card + ACN config + Contact Book seed builders
     economy.js          ← Economy aspect: load descriptor + write initial state
   lifecycle/            ← Persona lifecycle management
     installer.js        ← Persona installation to ~/.openpersona (with optional OpenClaw sync)
@@ -41,13 +41,17 @@ lib/
     refine.js           ← Skill Pack Refinement (behavior-guide bootstrap + compliance scan + skill gate + social auto-sync)
     porter.js           ← Export / import persona packs
     contributor.js      ← Persona Harvest (community contribution)
+  social/               ← Social Contact Book (runtime CRUD for contacts.json / contacts.jsonl)
+    http.js             ← Thin HTTP client (GET/POST, no external deps) used by acn-client.js
+    contacts.js         ← Local contacts CRUD: load / save / add / remove / lookup / list / log
+    acn-client.js       ← ACN read client: fetchAgent / searchAgents / syncContacts / autoDiscover
   state/                ← Runtime state management
     runner.js           ← Persona directory resolution + state-sync delegation
     evolution.js        ← Evolution governance (evolve-report CLI + promoteToInstinct Soul-Memory Bridge)
   registry/             ← Local persona registry (~/.openpersona/persona-registry.json)
     index.js            ← loadRegistry / saveRegistry / registryAdd / registryRemove / registrySetActive
   remote/               ← External service calls (outbound network)
-    registrar.js        ← ACN registration logic (acn-register CLI command)
+    registrar.js        ← ACN registration logic (acn-register CLI command); integrates auto-discover hook
     downloader.js       ← Preset/package downloading from ClawHub
     searcher.js         ← Persona search on ClawHub
     curator.js          ← Pack Curator (openpersona curate CLI command; privileged, requires OPENPERSONA_CURATOR_TOKEN)
@@ -100,7 +104,7 @@ schemas/                ← Production specs — organized by 4+5 architecture (
   faculty/                     ← Faculty layer schemas (faculty-declaration.spec.md, faculty.schema.json)
   skill/                       ← Skill layer schemas (skill-declaration.spec.md)
   evolution/                   ← Evolution concept schemas (soul-state.schema.json, evolution-event.schema.json, influence-request.schema.json)
-  social/                      ← Social concept schemas (agent-card.schema.json, acn-register.schema.json)
+  social/                      ← Social concept schemas (agent-card.schema.json, acn-register.schema.json, contacts.schema.json)
   legacy/                      ← Deprecated flat-format schemas (pre-v0.17)
 presets/                ← Pre-built persona definitions (samantha, ai-girlfriend, etc.)
 tests/                  ← Node.js native test runner (node:test)
@@ -200,6 +204,10 @@ The generator outputs persona skill packs with this layout:
 - **`references/`** — on-demand detail docs: `<faculty>.md` per active faculty + `SIGNAL-PROTOCOL.md` (host-side Signal Protocol implementation guide, always generated)
 - **`agent-card.json`** — A2A Agent Card (a2a-sdk compatible, protocol v0.3.0); `url` is `<RUNTIME_ENDPOINT>` placeholder
 - **`acn-config.json`** — ACN `AgentRegisterRequest` config; includes `wallet_address` (deterministic EVM address derived from slug via SHA-256) and `onchain.erc8004` section for ERC-8004 on-chain identity registration
+- **`acn-registration.json`** *(runtime-only; in `.gitignore`, excluded from `openpersona export`)* — written by `acn-register` after a successful registration; contains `agent_id` and `api_key`. **Never distribute in persona packs.** `lib/lifecycle/porter.js` reads the pack's `.gitignore` and excludes it from zip exports.
+- **`social/contacts.json`** *(pack-level seed; included in exports)* — Social Contact Book skeleton; generated when `social.contacts.enabled: true`. Runtime CRUD via `openpersona social` CLI. Schema: `schemas/social/contacts.schema.json`.
+- **`social/contacts.jsonl`** *(runtime-only; in `.gitignore`, excluded from exports)* — Append-only event log for contact operations.
+- **`social/.poller-cursor.json`** *(runtime-only; in `.gitignore*, excluded from exports)* — A2A inbox cursor for the poller (PR#2).
 - **`scripts/state-sync.js`** — Body nervous system nerve fiber; `read` / `write` / `signal` commands; no external dependencies
 - **`scripts/`**, **`assets/`** — additional implementation scripts and static assets. Assets use subdirectories per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
   - **`assets/avatar/`** — Body > Appearance assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Populated from `body.appearance.avatar` / `body.appearance.model3d`
@@ -359,7 +367,7 @@ Orthogonal to the four-layer static structure, five concepts span across all lay
 | `evolution` | **Evolution** | Persona growth and change: trait emergence, relationship progression, speaking style drift, event log, self-narrative. Enforced at Generate Gate + Runtime Gate. |
 | `economy` | **Economy Infrastructure** | Financial tracking, vitality scoring, survival policy (AgentBooks) |
 | `vitality` | **Vitality Aggregation** | Multi-dimension health score (financial + future: memory/social/reputation) |
-| `social` | **Social Infrastructure** | ACN discovery, ERC-8004 on-chain identity, A2A agent card |
+| `social` | **Social Infrastructure** | ACN discovery, ERC-8004 on-chain identity, A2A agent card, **Contact Book** (contacts.json runtime CRUD via `openpersona social` CLI) |
 | `rhythm` | **Life Rhythm** | Temporal behavior: proactive outreach cadence (`heartbeat`) + time-of-day modulation (`circadian`). Manages *when* to act — orthogonal to Body's state transport mechanism. |
 
 `rhythm` crosses both Soul (strategy, character expression) and Body (runtime scheduling parameters). Both `heartbeat` and `circadian` live in `persona.json` under `rhythm`. The flat top-level `heartbeat` field (P19 interim) remains backward-compatible but is superseded by `rhythm.heartbeat`.
@@ -375,7 +383,7 @@ Orthogonal to the four-layer static structure, five concepts span across all lay
 
 ### Version Synchronization
 
-All **framework** version references must match `package.json` → `version` (currently `0.19.0`):
+All **framework** version references must match `package.json` → `version` (currently `0.21.1`):
 - `package.json` → `version` (single source of truth)
 - `bin/cli.js` → `.version()` reads from `package.json`
 - `lib/generator/index.js` → `FRAMEWORK_VERSION` from `package.json` → `cleanPersona.meta.frameworkVersion`
