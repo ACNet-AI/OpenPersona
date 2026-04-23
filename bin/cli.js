@@ -1391,7 +1391,17 @@ const {
   lookupContact,
   listContacts,
 } = require('../lib/social/contacts');
-const { fetchAgent, searchAgents, syncContacts, pingAgent, sendMessage } = require('../lib/social/acn-client');
+const {
+  fetchAgent,
+  searchAgents,
+  syncContacts,
+  pingAgent,
+  sendMessage,
+  listSubnets,
+  joinSubnet,
+  leaveSubnet,
+  broadcastMessage,
+} = require('../lib/social/acn-client');
 
 const socialCmd = program
   .command('social')
@@ -1774,6 +1784,147 @@ socialCmd
         await runOnce();
         await new Promise((r) => setTimeout(r, interval));
       }
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// social subnet  — ACN subnet membership management
+// ---------------------------------------------------------------------------
+
+const subnetCmd = socialCmd
+  .command('subnet')
+  .description('Manage ACN subnet membership for a persona');
+
+subnetCmd
+  .command('list <slug>')
+  .description('List all subnets on the ACN gateway')
+  .action(async (slug) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    try {
+      const gateway = resolveGateway(personaDir);
+      const subnets = await listSubnets(gateway);
+      if (subnets.length === 0) {
+        printInfo('No subnets found on ACN gateway.');
+        return;
+      }
+      printInfo(`Subnets on ${gateway}:`);
+      for (const s of subnets) {
+        const count = s.agent_count != null ? chalk.dim(` (${s.agent_count} agents)`) : '';
+        console.log(`  ${chalk.cyan(s.subnet_id || s.id)}  ${s.name || ''}${count}`);
+      }
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+subnetCmd
+  .command('join <slug> <subnet-id>')
+  .description('Join a subnet on behalf of the persona')
+  .action(async (slug, subnetId) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    try {
+      const gateway = resolveGateway(personaDir);
+      const regPath = path.join(personaDir, 'acn-registration.json');
+      if (!fs.existsSync(regPath)) {
+        throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
+      const agentId = reg.agentId || reg.agent_id;
+      const apiKey  = reg.apiKey  || reg.api_key;
+      if (!agentId || !apiKey) {
+        throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      await joinSubnet(gateway, agentId, subnetId, apiKey);
+      printSuccess(`Joined subnet "${subnetId}" for persona "${slug}".`);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+subnetCmd
+  .command('leave <slug> <subnet-id>')
+  .description('Leave a subnet on behalf of the persona')
+  .action(async (slug, subnetId) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    try {
+      const gateway = resolveGateway(personaDir);
+      const regPath = path.join(personaDir, 'acn-registration.json');
+      if (!fs.existsSync(regPath)) {
+        throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
+      const agentId = reg.agentId || reg.agent_id;
+      const apiKey  = reg.apiKey  || reg.api_key;
+      if (!agentId || !apiKey) {
+        throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      await leaveSubnet(gateway, agentId, subnetId, apiKey);
+      printSuccess(`Left subnet "${subnetId}" for persona "${slug}".`);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// social broadcast  — broadcast a message to a subnet or agent list
+// ---------------------------------------------------------------------------
+
+socialCmd
+  .command('broadcast <slug> <message>')
+  .description('Broadcast a message to a subnet or explicit agent list')
+  .option('--subnet <id>', 'Broadcast to all agents in this subnet')
+  .option('--to <agent-ids>', 'Comma-separated list of target agent IDs (alternative to --subnet)')
+  .option('--type <type>', 'Message type tag (default: broadcast)', 'broadcast')
+  .action(async (slug, message, opts) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    try {
+      if (!opts.subnet && !opts.to) {
+        throw new Error('Specify --subnet <id> or --to <agent-id,...>');
+      }
+      const gateway = resolveGateway(personaDir);
+      const regPath = path.join(personaDir, 'acn-registration.json');
+      if (!fs.existsSync(regPath)) {
+        throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
+      const agentId = reg.agentId || reg.agent_id;
+      const apiKey  = reg.apiKey  || reg.api_key;
+      if (!agentId || !apiKey) {
+        throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
+      }
+      const targetIds = opts.to ? opts.to.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+      const payload = { type: opts.type, text: message };
+      const result = await broadcastMessage(gateway, agentId, apiKey, payload, {
+        subnetId: opts.subnet,
+        targetIds,
+      });
+      printSuccess(`Broadcast sent — delivered: ${result.delivered}, failed: ${result.failed}`);
+    } catch (e) {
+      printError(e.message);
+      process.exit(1);
     }
   });
 

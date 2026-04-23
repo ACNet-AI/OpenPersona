@@ -549,9 +549,28 @@ ACN gateway confirmed endpoints (v0.4.1, source-verified 2026-04-22):
 Phase A (send)     ← DONE — direct P2P + ACN relay fallback (DLQ-backed)
 Phase B (declare)  ← DONE — transport signal declarations
 Phase C (receive)  ← DONE — ACN offline inbox + Trust Gate + CLI poller
+Phase D (subnet)   ← DONE — subnet list/join/leave + broadcast + auto_join schema
 ```
 
-**All gates cleared. P13-B complete.**
+**All gates cleared. P13-B + P13-C complete.**
+
+---
+
+### P13-C — ACN Subnet & Broadcast (shipped)
+
+**Motivation:** Subnets are part of a persona's social identity on ACN — they control discoverability scope and enable private team/org isolation. `broadcastMessage` is the natural multi-target extension of `sendMessage`.
+
+**Implemented:**
+- `lib/social/acn-client.js`: `listSubnets`, `joinSubnet`, `leaveSubnet`, `broadcastMessage`
+- `schemas/persona.input.schema.json`: `social.subnets.auto_join[]` — list of subnets to join after `acn-register`
+- `lib/remote/registrar.js`: auto-join hook (non-fatal, runs before auto-discover)
+- `bin/cli.js`: `openpersona social subnet list/join/leave`, `openpersona social broadcast`
+- `tests/social-acn.test.js`: 7 new tests (18–24), all passing
+
+**Explicitly excluded (belong to future Economy / Collaboration concept):**
+- ACN Tasks API (`/tasks` CRUD) — work-unit lifecycle, not social identity
+- ACN Payments / AP2 — belongs to Economy systemic concept (already has `economic-identity.json`)
+- On-chain identity management — handled by `acn-register` + `acn-config.json` `onchain.erc8004` section
 
 ---
 

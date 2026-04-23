@@ -20,6 +20,13 @@
  * 15. checkWsPresence returns true when ACN reports connected:true
  * 16. checkWsPresence returns false when ACN reports connected:false
  * 17. getMessageHistory returns messages array from ACN
+ * 18. listSubnets returns subnets array from ACN
+ * 19. joinSubnet calls POST /api/v1/agents/{id}/subnets/{sid} with API key
+ * 20. joinSubnet throws on error response
+ * 21. leaveSubnet calls DELETE /api/v1/agents/{id}/subnets/{sid} with API key
+ * 22. broadcastMessage calls POST /api/v1/messages/broadcast with subnet_id
+ * 23. broadcastMessage calls POST /api/v1/messages/broadcast with target_agents list
+ * 24. broadcastMessage throws when neither subnetId nor targetIds provided
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -373,5 +380,178 @@ describe('social acn-client', () => {
     assert.equal(msgs[0].route_id, 'r1');
     assert.equal(capturedPath, '/api/v1/communication/history/bob?limit=50');
     assert.equal(capturedAuth, 'Bearer my-api-key');
+  });
+
+  // -------------------------------------------------------------------------
+  // Subnet tests (18-24)
+  // -------------------------------------------------------------------------
+
+  it('listSubnets returns subnets array from ACN', async () => {
+    const http = require('http');
+    const fakeSubnets = [
+      { subnet_id: 'public', name: 'Public', agent_count: 42 },
+      { subnet_id: 'team-alpha', name: 'Team Alpha', agent_count: 5 },
+    ];
+    let capturedPath;
+    const server = http.createServer((req, res) => {
+      capturedPath = req.url;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ subnets: fakeSubnets }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { listSubnets } = require('../lib/social/acn-client');
+    const subnets = await listSubnets(`http://127.0.0.1:${port}`);
+    server.close();
+
+    assert.equal(subnets.length, 2);
+    assert.equal(subnets[0].subnet_id, 'public');
+    assert.equal(capturedPath, '/api/v1/subnets');
+  });
+
+  it('joinSubnet calls POST /api/v1/agents/{id}/subnets/{sid} with API key', async () => {
+    const http = require('http');
+    let capturedMethod;
+    let capturedPath;
+    let capturedAuth;
+    const server = http.createServer((req, res) => {
+      capturedMethod = req.method;
+      capturedPath   = req.url;
+      capturedAuth   = req.headers.authorization;
+      req.resume();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'joined' }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { joinSubnet } = require('../lib/social/acn-client');
+    const result = await joinSubnet(`http://127.0.0.1:${port}`, 'agent-001', 'team-alpha', 'my-api-key');
+    server.close();
+
+    assert.equal(capturedMethod, 'POST');
+    assert.equal(capturedPath, '/api/v1/agents/agent-001/subnets/team-alpha');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
+    assert.equal(result.joined, true);
+    assert.equal(result.subnetId, 'team-alpha');
+  });
+
+  it('joinSubnet throws on error response', async () => {
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      req.resume();
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'subnet not found' }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { joinSubnet } = require('../lib/social/acn-client');
+    await assert.rejects(
+      () => joinSubnet(`http://127.0.0.1:${port}`, 'agent-001', 'missing-subnet', 'key'),
+      /subnet not found|HTTP 404/
+    );
+    server.close();
+  });
+
+  it('leaveSubnet calls DELETE /api/v1/agents/{id}/subnets/{sid} with API key', async () => {
+    const http = require('http');
+    let capturedMethod;
+    let capturedPath;
+    let capturedAuth;
+    const server = http.createServer((req, res) => {
+      capturedMethod = req.method;
+      capturedPath   = req.url;
+      capturedAuth   = req.headers.authorization;
+      req.resume();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'left' }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { leaveSubnet } = require('../lib/social/acn-client');
+    const result = await leaveSubnet(`http://127.0.0.1:${port}`, 'agent-001', 'team-alpha', 'my-api-key');
+    server.close();
+
+    assert.equal(capturedMethod, 'DELETE');
+    assert.equal(capturedPath, '/api/v1/agents/agent-001/subnets/team-alpha');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
+    assert.equal(result.left, true);
+    assert.equal(result.subnetId, 'team-alpha');
+  });
+
+  it('broadcastMessage calls POST /api/v1/messages/broadcast with subnet_id', async () => {
+    const http = require('http');
+    let capturedBody;
+    let capturedAuth;
+    const server = http.createServer((req, res) => {
+      capturedAuth = req.headers.authorization;
+      let data = '';
+      req.on('data', (c) => (data += c));
+      req.on('end', () => {
+        capturedBody = JSON.parse(data);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ delivered: 3, failed: 0 }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { broadcastMessage } = require('../lib/social/acn-client');
+    const result = await broadcastMessage(
+      `http://127.0.0.1:${port}`,
+      'sender-001',
+      'my-api-key',
+      { type: 'greeting', text: 'hello everyone' },
+      { subnetId: 'public' }
+    );
+    server.close();
+
+    assert.equal(result.delivered, 3);
+    assert.equal(result.failed, 0);
+    assert.equal(capturedBody.subnet_id, 'public');
+    assert.equal(capturedBody.from_agent, 'sender-001');
+    assert.equal(capturedBody.message.text, 'hello everyone');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
+  });
+
+  it('broadcastMessage calls POST /api/v1/messages/broadcast with target_agents list', async () => {
+    const http = require('http');
+    let capturedBody;
+    const server = http.createServer((req, res) => {
+      let data = '';
+      req.on('data', (c) => (data += c));
+      req.on('end', () => {
+        capturedBody = JSON.parse(data);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ delivered: 2, failed: 0 }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { broadcastMessage } = require('../lib/social/acn-client');
+    const result = await broadcastMessage(
+      `http://127.0.0.1:${port}`,
+      'sender-001',
+      'my-api-key',
+      { type: 'ping', text: 'hello' },
+      { targetIds: ['agent-a', 'agent-b'] }
+    );
+    server.close();
+
+    assert.equal(result.delivered, 2);
+    assert.deepEqual(capturedBody.target_agents, ['agent-a', 'agent-b']);
+    assert.equal(capturedBody.subnet_id, undefined);
+  });
+
+  it('broadcastMessage throws when neither subnetId nor targetIds provided', async () => {
+    const { broadcastMessage } = require('../lib/social/acn-client');
+    await assert.rejects(
+      () => broadcastMessage('http://localhost', 'sender', 'key', { text: 'hi' }, {}),
+      /subnetId|targetIds/
+    );
   });
 });

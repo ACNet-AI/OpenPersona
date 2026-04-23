@@ -44,8 +44,9 @@ Declared in `persona.json` under the top-level `social` field:
 |------|------|
 | `lib/generator/social.js` | Generates `agent-card.json`, `acn-config.json`, and `contacts.json` seed |
 | `lib/social/contacts.js` | Runtime CRUD for `social/contacts.json` + `social/contacts.jsonl` |
-| `lib/social/acn-client.js` | Read-only ACN HTTP client: `fetchAgent`, `searchAgents`, `syncContacts`, `autoDiscover` |
-| `lib/social/http.js` | Thin HTTP helper (GET/POST, no external deps) used by `acn-client.js` |
+| `lib/social/acn-client.js` | ACN HTTP client: `fetchAgent`, `searchAgents`, `syncContacts`, `autoDiscover`, `pingAgent`, `sendMessage`, `checkWsPresence`, `getMessageHistory`, `listSubnets`, `joinSubnet`, `leaveSubnet`, `broadcastMessage` |
+| `lib/social/inbox.js` | ACN offline inbox poller: `pollInbox`, Trust Gate, cursor management, `pendingCommands` injection |
+| `lib/social/http.js` | Thin HTTP helper (GET/POST, 15 s timeout, 5 MB cap, no external deps) used by `acn-client.js` |
 | `lib/remote/registrar.js` | ACN registration + auto-discover hook |
 
 ## Generated Output Files
@@ -62,11 +63,16 @@ Declared in `persona.json` under the top-level `social` field:
 |------|-------------|
 | `acn-registration.json` | Written by `acn-register` — contains `agent_id` and `api_key`. **Never distribute.** |
 | `social/contacts.jsonl` | Append-only event log for contact operations |
-| `social/.poller-cursor.json` | A2A inbox cursor (PR#2 poller) |
+| `social/.poller-cursor.json` | A2A inbox cursor — client-side deduplication for `--no-ack` polling mode |
 
 ## CLI Commands
 
 ```bash
+# Subnet membership
+openpersona social subnet list <slug>                    # List all subnets on ACN
+openpersona social subnet join <slug> <subnet-id>        # Join a subnet
+openpersona social subnet leave <slug> <subnet-id>       # Leave a subnet
+
 # Manage contacts
 openpersona social list <slug>                           # List all contacts
 openpersona social list <slug> --filter trust=community  # Filter by trust level
@@ -77,7 +83,24 @@ openpersona social search <slug> --skills <skill>        # Search ACN network
 openpersona social sync <slug>                           # Refresh from ACN
 openpersona social remove <slug> <agent-id>              # Remove a contact
 
-# Register with ACN (auto-discover hook integrated)
+# A2A messaging
+openpersona social ping <slug> <agent-id>                # Check if an agent is reachable
+openpersona social send <slug> <agent-id> "<message>"    # Send a message (direct or relay)
+openpersona social send <slug> <agent-id> "<message>" --no-fallback  # Direct only, no relay
+openpersona social send <slug> <agent-id> "<message>" --type request  # Custom message type
+
+# Inbox polling (ACN offline inbox → pendingCommands)
+openpersona social inbox <slug>                          # Poll once (server-side ack)
+openpersona social inbox <slug> --poll --interval 30     # Continuous polling every 30 s
+openpersona social inbox <slug> --no-ack                 # Peek without clearing inbox
+openpersona social inbox <slug> --dry-run                # Preview messages, don't write state
+
+# Broadcast (subnet or target list)
+openpersona social broadcast <slug> "<message>" --subnet public         # Broadcast to subnet
+openpersona social broadcast <slug> "<message>" --to agent-a,agent-b   # Broadcast to agents
+openpersona social broadcast <slug> "<message>" --subnet team --type announcement
+
+# Register with ACN (auto-discover + auto-join subnets hooks run here)
 openpersona acn-register [slug]
 ```
 
@@ -92,11 +115,26 @@ openpersona acn-register [slug]
 ## Data Flow
 
 ```
+# Contact discovery
 acn-register → auto-discover hook → addContact (source: auto-discover)
                                           ↓
 social sync → ACN /api/v1/agents → syncContacts → contacts.json update
                                           ↓
 social add --from-acn → fetchAgent → addContact (source: acn-sync)
+
+# A2A outbound (social send)
+sendMessage(target)
+  → pingAgent(endpoint)            HEAD ~50 ms
+       ├── online  → POST endpoint (direct)          status: "sent"
+       └── offline → POST ACN /communication/send    status: "relayed"
+                     (inbox_fallback: false → status: "offline")
+
+# A2A inbound (social inbox)
+pollInbox(slug)
+  → GET ACN /communication/history/{agent_id}?ack=true
+       → Trust Gate (minIncomingTrust vs contacts[].trust_level)
+            ├── accepted → state.json pendingCommands [{type:"a2a_message"}]
+            └── blocked  → discarded (ack=true already cleared from ACN)
 ```
 
 ## Agent-to-Agent Messaging Architecture
@@ -146,6 +184,23 @@ The runner either proxies the connection back via `pendingCommands`, or writes `
 | `inbox_fallback` | `true` | Post to ACN inbox when target offline |
 | `min_incoming_trust` | `"unverified"` | Minimum trust level to accept inbound messages |
 
+### Schema fields (`social.subnets`)
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `auto_join` | `[]` | Subnet IDs to join automatically after `acn-register` |
+
+Example:
+```json
+{
+  "social": {
+    "subnets": {
+      "auto_join": ["public", "enterprise-team-a"]
+    }
+  }
+}
+```
+
 ### Implementation sub-phases
 
 | Phase | What | Dependency |
@@ -153,6 +208,7 @@ The runner either proxies the connection back via `pendingCommands`, or writes `
 | **A — Send** | `pingAgent` + `sendMessage` + `openpersona social send` CLI | None — ships independently |
 | **B — Declare** | Signal payload extension + SKILL.md template update | None — framework-side only |
 | **C — Receive** | Inbox poll (`pollInbox`) + `openpersona social inbox` CLI | ACN inbox API availability |
+| **D — Subnet** | `listSubnets` / `joinSubnet` / `leaveSubnet` + `broadcastMessage` + `social.subnets.auto_join` schema | None — ships independently |
 
 ## Schemas
 

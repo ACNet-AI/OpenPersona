@@ -529,6 +529,19 @@
             }
           }
         },
+        "subnets": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "ACN subnet membership — controls which subnets this persona belongs to. Static membership is declared in acn-config.json via 'acn.subnet_ids'; this section adds dynamic behaviour at registration time.",
+          "properties": {
+            "auto_join": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Subnet IDs to join automatically after 'openpersona acn-register' succeeds. Runs joinSubnet for each entry. Use for private team or organisation subnets the persona should always be part of.",
+              "examples": [["public", "enterprise-team-a"]]
+            }
+          }
+        },
         "contacts": {
           "type": "object",
           "additionalProperties": false,
