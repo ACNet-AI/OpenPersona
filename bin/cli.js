@@ -1391,7 +1391,7 @@ const {
   lookupContact,
   listContacts,
 } = require('../lib/social/contacts');
-const { fetchAgent, searchAgents, syncContacts } = require('../lib/social/acn-client');
+const { fetchAgent, searchAgents, syncContacts, pingAgent, sendMessage } = require('../lib/social/acn-client');
 
 const socialCmd = program
   .command('social')
@@ -1619,6 +1619,94 @@ socialCmd
       printSuccess(`Removed contact: ${agentId}`);
     } else {
       printWarning(`Contact not found: ${agentId}`);
+    }
+  });
+
+socialCmd
+  .command('ping <slug> <agent-id>')
+  .description('Check whether a contact\'s endpoint is reachable')
+  .action(async (slug, agentId) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    if (!resolvePersonaDir(slug)) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const contact = lookupContact(slug, agentId);
+    if (!contact) {
+      printError(`Contact not found: "${agentId}". Add with: openpersona social add ${slug} --from-acn ${agentId}`);
+      process.exit(1);
+    }
+    if (!contact.endpoint) {
+      printError(`Contact "${agentId}" has no endpoint. Run: openpersona social sync ${slug}`);
+      process.exit(1);
+    }
+    printInfo(`Pinging ${contact.name || agentId} at ${contact.endpoint} …`);
+    const result = await pingAgent(contact.endpoint);
+    if (result.online) {
+      printSuccess(`Online (${result.latencyMs}ms)`);
+    } else {
+      printWarning(`Offline or unreachable (${result.latencyMs}ms)`);
+      process.exit(1);
+    }
+  });
+
+socialCmd
+  .command('send <slug> <agent-id> <message>')
+  .description('Send a message to a contact (direct if online, inbox fallback if offline)')
+  .option('--no-fallback', 'Disable ACN inbox fallback — fail if target is offline')
+  .option('--type <type>', 'Message type field (e.g. task, greeting, trait_nudge)', 'message')
+  .action(async (slug, agentId, message, opts) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+
+    const contact = lookupContact(slug, agentId);
+    if (!contact) {
+      printError(`Contact not found: "${agentId}". Add with: openpersona social add ${slug} --from-acn ${agentId}`);
+      process.exit(1);
+    }
+
+    const gateway = resolveGateway(personaDir, slug);
+    if (!gateway && opts.fallback !== false) {
+      printWarning('No ACN gateway configured — inbox fallback disabled');
+    }
+
+    // Load sender agent_id from acn-registration.json (optional)
+    let senderAgentId;
+    let apiKey;
+    const regPath = path.join(personaDir, 'acn-registration.json');
+    if (fs.existsSync(regPath)) {
+      try {
+        const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
+        senderAgentId = reg.agent_id;
+        apiKey = reg.api_key;
+      } catch { /* optional */ }
+    }
+
+    const payload = { type: opts.type, text: message };
+    const inboxFallback = opts.fallback !== false && !!gateway;
+
+    try {
+      const result = await sendMessage(gateway, agentId, contact.endpoint, payload, {
+        inboxFallback,
+        senderAgentId,
+        apiKey,
+      });
+
+      if (result.status === 'sent') {
+        printSuccess(`Message delivered directly to ${contact.name || agentId} (${result.latencyMs}ms)`);
+      } else if (result.status === 'inbox') {
+        printSuccess(`${contact.name || agentId} is offline — message queued in ACN inbox`);
+      } else {
+        printWarning(`${contact.name || agentId} is offline and inbox fallback is disabled. Message not delivered.`);
+        process.exit(1);
+      }
+    } catch (e) {
+      printError(`Send failed: ${e.message}`);
+      process.exit(1);
     }
   });
 

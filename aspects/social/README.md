@@ -99,6 +99,61 @@ social sync → ACN /api/v1/agents → syncContacts → contacts.json update
 social add --from-acn → fetchAgent → addContact (source: acn-sync)
 ```
 
+## Agent-to-Agent Messaging Architecture
+
+Having a contact book is not the same as being able to talk. Messaging uses **presence-aware adaptive routing**:
+
+```
+send(target_agent_id)
+  → pingAgent(endpoint)              ← HEAD request, ~50ms
+       ├── online  → POST to endpoint (direct, instant)
+       └── offline → inbox_fallback?
+                       ├── true  → POST to ACN gateway inbox  (store-and-forward)
+                       └── false → return {status: "offline"}
+```
+
+### Transport asymmetry
+
+| Direction | Transport | Runner required? |
+|-----------|-----------|-----------------|
+| **Outbound (send)** | HTTP POST to `contacts[].endpoint` | No |
+| **Inbound (receive)** | WebSocket/SSE long connection, or inbox poll | Yes (or Phase C polling) |
+
+Sending is always available (`lib/social/http.post`). Receiving requires either a persistent runner connection or inbox polling via `social/.poller-cursor.json`.
+
+### Persona declares transport needs
+
+The persona emits an `agent_communication` signal when it needs a transport the runner must provide:
+
+```json
+{
+  "type": "agent_communication",
+  "intent": "connect",
+  "target_agent_id": "agent-alice-001",
+  "transport": "websocket",
+  "endpoint": "wss://alice-bot.example.com/a2a/ws",
+  "priority": "medium"
+}
+```
+
+The runner either proxies the connection back via `pendingCommands`, or writes `{status: "unsupported", fallback: "http"}` to `signal-responses.json`. The persona handles the fallback — it never hard-requires a specific transport.
+
+### Schema fields (`social.contacts`)
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `preferred_transport` | `"direct-first"` | `"direct-first"` / `"websocket"` / `"inbox-only"` |
+| `inbox_fallback` | `true` | Post to ACN inbox when target offline |
+| `min_incoming_trust` | `"unverified"` | Minimum trust level to accept inbound messages |
+
+### Implementation sub-phases
+
+| Phase | What | Dependency |
+|-------|------|------------|
+| **A — Send** | `pingAgent` + `sendMessage` + `openpersona social send` CLI | None — ships independently |
+| **B — Declare** | Signal payload extension + SKILL.md template update | None — framework-side only |
+| **C — Receive** | Inbox poll (`pollInbox`) + `openpersona social inbox` CLI | ACN inbox API availability |
+
 ## Schemas
 
 - `schemas/social/contacts.schema.json` — Contact Book runtime format

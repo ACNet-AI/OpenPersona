@@ -436,6 +436,105 @@ A hosted matchmaking layer that periodically surfaces compatible persona pairs o
 
 ---
 
+### P13-B — Agent-to-Agent Direct Messaging (Medium Priority)
+
+**Foundation:** Contacts Book (Phase 1+2, shipped v0.21.2) — `social/contacts.json` gives every persona a local directory of known agents with `endpoint`, `trust_level`, `skills`, and `agent_card_url`.
+
+**Problem:** Having the contact book is not enough — there is no way for a persona to actually *talk* to another agent. Sending a message requires resolving three unknowns: (1) is the target online right now? (2) which transport to use? (3) what if it is offline?
+
+**Architecture decision:** Presence-aware adaptive routing, not fixed inbox-only.
+
+```
+send(target_agent_id)
+  → pingAgent(endpoint)        ← lightweight HEAD, ~50ms
+       ├── online  → POST directly to endpoint  (instant, HTTP or WebSocket via runner)
+       └── offline → inbox_fallback?
+                       ├── true  → POST to ACN gateway inbox  (store-and-forward)
+                       └── false → return {status: "offline"} to persona
+```
+
+This mirrors how real messaging systems work (Signal, Matrix): try direct first, fall back to store-and-forward only when needed. The persona is never blocked waiting for an unresponsive peer.
+
+**Transport asymmetry (key insight):**
+
+| Direction | Transport | Runner required? |
+|-----------|-----------|-----------------|
+| Send (outbound) | HTTP POST to endpoint | No — `lib/social/http.post()` is sufficient |
+| Receive (inbound) | Long connection (WS/SSE) or inbox poll | Yes — persona is not always running |
+
+Sending is cheap and can ship immediately. Receiving requires either a persistent runner connection (WebSocket) or periodic inbox polling (pull model). These ship as separate sub-phases.
+
+**Persona declares transport requirements → runner satisfies:**
+
+The Signal Protocol already lets personas express capability needs. We extend it:
+
+```json
+{
+  "type": "agent_communication",
+  "intent": "connect",
+  "target_agent_id": "agent-alice-001",
+  "transport": "websocket",
+  "endpoint": "wss://alice-bot.example.com/a2a/ws",
+  "priority": "medium"
+}
+```
+
+The runner inspects its own capabilities and either: (a) proxies a WebSocket connection back to the persona via `pendingCommands`, or (b) writes `{status: "unsupported", fallback: "http"}` to `signal-responses.json` so the persona can degrade gracefully. This keeps the persona transport-agnostic — it declares what it *wants*, not what it *can get*.
+
+New `persona.json` schema fields under `social.contacts`:
+
+```json
+{
+  "social": {
+    "contacts": {
+      "preferred_transport": "direct-first",
+      "inbox_fallback": true,
+      "min_incoming_trust": "community"
+    }
+  }
+}
+```
+
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `preferred_transport` | `"direct-first"` / `"websocket"` / `"inbox-only"` | Routing preference; persona emits signal when runner support needed |
+| `inbox_fallback` | `true` / `false` | Whether to post to ACN inbox when target is offline |
+| `min_incoming_trust` | `"verified"` / `"community"` / `"unverified"` | Incoming message trust gate (Contact Trust Gate in state-sync) |
+
+**Implementation — three sub-phases (each independently shippable):**
+
+**Phase A — Outbound send (no runner dependency):**
+- `lib/social/acn-client.pingAgent(endpoint)` — HEAD request with timeout; returns `{online: bool, latencyMs}`
+- `lib/social/acn-client.sendMessage(slug, targetAgentId, message, opts)` — ping → direct POST or ACN inbox fallback
+- `openpersona social send <slug> <agent-id> <message> [--no-fallback]`
+- Schema: add `preferred_transport` + `inbox_fallback` to `persona.input.schema.json` under `social.contacts`
+
+**Phase B — Transport declaration + runner negotiation:**
+- Extend `agent_communication` signal payload: add `transport`, `endpoint`, `intent` fields
+- Update `soul-awareness-body.partial.md`: teach persona to emit `intent: "connect"` signal with transport preference
+- Update `SIGNAL-PROTOCOL.md` template: document runner-side WebSocket proxy contract
+- No runner code written here — this is framework-side only (declarations + signal format)
+
+**Phase C — Inbound receive (inbox polling):**
+- `lib/social/acn-client.pollInbox(slug, apiKey, cursor)` — GET from ACN gateway, returns messages since cursor
+- `openpersona social inbox <slug> [--poll] [--interval 30]` — writes received messages into `pendingCommands`
+- Uses `social/.poller-cursor.json` (already reserved in `.gitignore`) to track last-seen position
+- Contact Trust Gate: filter incoming by `min_incoming_trust` (already in schema, needs state-sync template hook)
+
+**Dependency map:**
+
+```
+Phase A (send)     ← independent, ships first
+Phase B (declare)  ← independent, ships parallel to A
+Phase C (receive)  ← depends on ACN gateway supporting inbox API
+```
+
+**Implementation gate for Phase A:** No external dependencies — ships immediately.
+**Implementation gate for Phase B:** No runner required to ship the declaration layer; runner implementation is out of framework scope.
+**Implementation gate for Phase C:** Requires ACN gateway to expose an inbox/poll endpoint. Verify API contract before implementation.
+
+---
+
 ### P14 — Living Canvas: Persona Profile Page (Medium Priority)
 
 **Problem:** OpenPersona generates machine-readable identity artifacts (`agent-card.json`, `acn-config.json`, `SKILL.md`) for agent-to-agent discovery, but there is no human-facing visual entry point. A user who receives a persona slug has no way to "see" who this persona is — its appearance, capabilities, emotional state, and history — without reading raw JSON files or running CLI commands.
@@ -745,8 +844,8 @@ Expand `evolution` in `persona.json` to distinguish instance vs. pack levels and
 
 - `**evolution.instance`** — all existing flat `evolution.*` fields migrate here; the generator detects new format by presence of `evolution.instance` key and falls back to old flat format otherwise
 - `**evolution.pack.engine`** — `"signal"` (built-in Signal Protocol path, default) or `"autoskill"` (delegates to AutoSkill4OpenClaw); aligns with P24 design
-- `**evolution.faculty.activationChannels**` — enum array declaring which channels may trigger dormant-faculty activation: `"pendingCommands"` (host async queue), `"signal"` (Signal Protocol `capability_unlock` type), `"cli"` (`openpersona install` command); replaces the narrower `allowActivation + activatableFrom` pair
-- `**evolution.body.allowRuntimeExpansion**` — allows the host to add new `body.runtime.channels` entries via `state write` between conversations (e.g. enabling a new integration); default `false`
+- `**evolution.faculty.activationChannels`** — enum array declaring which channels may trigger dormant-faculty activation: `"pendingCommands"` (host async queue), `"signal"` (Signal Protocol `capability_unlock` type), `"cli"` (`openpersona install` command); replaces the narrower `allowActivation + activatableFrom` pair
+- `**evolution.body.allowRuntimeExpansion`** — allows the host to add new `body.runtime.channels` entries via `state write` between conversations (e.g. enabling a new integration); default `false`
 - `**evolution.body.allowModelSwap**` — allows the host to replace `body.runtime.models` entries via `state write` (e.g. upgrading the LLM model); default `false`
 - `**evolution.skill**` — three-axis policy covering the full CRUD surface: `allowNewInstall` (install a skill not in the original pack), `allowUpgrade` (bump version of an installed skill), `allowUninstall` (remove an installed skill at runtime); all default `false` for predictability
 

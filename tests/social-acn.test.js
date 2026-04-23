@@ -11,6 +11,12 @@
  *  6. syncContacts tolerates 404 for individual contacts (partial failure)
  *  7. autoDiscover skips self (ownAgentId match)
  *  8. autoDiscover adds agents up to limit
+ *  9. pingAgent returns online:true when endpoint responds
+ * 10. pingAgent returns online:false on timeout/error
+ * 11. sendMessage delivers directly when online
+ * 12. sendMessage falls back to ACN inbox when offline + inboxFallback:true
+ * 13. sendMessage returns {status:'offline'} when offline + inboxFallback:false
+ * 14. sendMessage includes sender_agent_id in envelope when provided
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -168,5 +174,123 @@ describe('social acn-client', () => {
     const added = await autoDiscover('acn-test', 'http://fake-acn', { limit: 10 });
     assert.equal(added, 2);
     httpLib.get = origGet;
+  });
+
+  // ── pingAgent ────────────────────────────────────────────────────────────
+
+  it('pingAgent returns online:true when endpoint responds', async () => {
+    // Spin up a minimal HTTP server that accepts HEAD requests
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      res.writeHead(200);
+      res.end();
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { pingAgent } = require('../lib/social/acn-client');
+    const result = await pingAgent(`http://127.0.0.1:${port}/a2a`);
+    server.close();
+
+    assert.equal(result.online, true);
+    assert.ok(result.latencyMs >= 0);
+  });
+
+  it('pingAgent returns online:false when endpoint unreachable', async () => {
+    const { pingAgent } = require('../lib/social/acn-client');
+    // Port 1 is typically unavailable / refused
+    const result = await pingAgent('http://127.0.0.1:1/a2a');
+    assert.equal(result.online, false);
+  });
+
+  // ── sendMessage ──────────────────────────────────────────────────────────
+
+  it('sendMessage delivers directly when target is online', async () => {
+    const http = require('http');
+    let receivedBody = null;
+    const server = http.createServer((req, res) => {
+      // pingAgent uses HEAD; sendMessage uses POST — handle both
+      if (req.method === 'HEAD') { res.writeHead(200); res.end(); return; }
+      let data = '';
+      req.on('data', (c) => { data += c; });
+      req.on('end', () => { receivedBody = JSON.parse(data); res.writeHead(200); res.end(); });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const endpoint = `http://127.0.0.1:${port}/a2a`;
+
+    const { sendMessage } = require('../lib/social/acn-client');
+    const result = await sendMessage(
+      'http://fake-acn', 'target-agent', endpoint,
+      { type: 'greeting', text: 'hello' },
+      { senderAgentId: 'sender-001', inboxFallback: false }
+    );
+    server.close();
+
+    assert.equal(result.status, 'sent');
+    assert.equal(receivedBody.sender_agent_id, 'sender-001');
+    assert.equal(receivedBody.text, 'hello');
+    assert.ok(receivedBody.sent_at);
+  });
+
+  it('sendMessage falls back to ACN inbox when target is offline', async () => {
+    // Set up an inbox server (simulates ACN gateway inbox endpoint)
+    const http = require('http');
+    let inboxBody = null;
+    const inboxServer = http.createServer((req, res) => {
+      let data = '';
+      req.on('data', (c) => { data += c; });
+      req.on('end', () => { inboxBody = JSON.parse(data); res.writeHead(200); res.end(); });
+    });
+    await new Promise((resolve) => inboxServer.listen(0, '127.0.0.1', resolve));
+    const { port } = inboxServer.address();
+
+    const { sendMessage } = require('../lib/social/acn-client');
+    const result = await sendMessage(
+      `http://127.0.0.1:${port}`,
+      'offline-agent',
+      'http://127.0.0.1:1/dead-endpoint', // unreachable → offline
+      { type: 'task', text: 'do something' },
+      { inboxFallback: true }
+    );
+    inboxServer.close();
+
+    assert.equal(result.status, 'inbox');
+    assert.equal(inboxBody.text, 'do something');
+  });
+
+  it('sendMessage returns offline when target offline and inboxFallback false', async () => {
+    const { sendMessage } = require('../lib/social/acn-client');
+    const result = await sendMessage(
+      'http://fake-acn',
+      'offline-agent',
+      'http://127.0.0.1:1/dead-endpoint',
+      { type: 'greeting', text: 'hi' },
+      { inboxFallback: false }
+    );
+    assert.equal(result.status, 'offline');
+  });
+
+  it('sendMessage includes sender_agent_id in envelope', async () => {
+    const http = require('http');
+    let captured = null;
+    const server = http.createServer((req, res) => {
+      if (req.method === 'HEAD') { res.writeHead(200); res.end(); return; }
+      let data = '';
+      req.on('data', (c) => { data += c; });
+      req.on('end', () => { captured = JSON.parse(data); res.writeHead(200); res.end(); });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { sendMessage } = require('../lib/social/acn-client');
+    await sendMessage(
+      'http://fake-acn', 'tgt', `http://127.0.0.1:${port}/a2a`,
+      { text: 'hi' },
+      { senderAgentId: 'my-agent-id', inboxFallback: false }
+    );
+    server.close();
+
+    assert.equal(captured.sender_agent_id, 'my-agent-id');
   });
 });

@@ -567,7 +567,18 @@
             "minIncomingTrust": {
               "type": "string",
               "enum": ["verified", "community", "unverified"],
-              "description": "Minimum trust_level required to accept incoming a2a_inbox messages. Omit to accept all (default). Used by Contact Trust Gate in state-sync.js (PR#2)."
+              "description": "Minimum trust_level required to accept incoming a2a_inbox messages. Omit to accept all (default). Used by Contact Trust Gate in state-sync.js (P13-B Phase C)."
+            },
+            "preferred_transport": {
+              "type": "string",
+              "enum": ["direct-first", "websocket", "inbox-only"],
+              "default": "direct-first",
+              "description": "Outbound messaging transport preference. 'direct-first': ping then POST directly, fall back to inbox. 'websocket': emit agent_communication signal requesting a WS connection. 'inbox-only': skip presence check, always route via ACN inbox."
+            },
+            "inbox_fallback": {
+              "type": "boolean",
+              "default": true,
+              "description": "When preferred_transport is 'direct-first' and the target is offline, automatically post to the ACN gateway inbox. Set false to receive {status:'offline'} instead."
             },
             "seed": {
               "type": "array",
