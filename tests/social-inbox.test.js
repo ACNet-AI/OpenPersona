@@ -11,12 +11,13 @@
  *  6.  pollInbox does NOT send ack param when ack=false
  *  7.  pollInbox blocks messages below minIncomingTrust (Trust Gate)
  *  8.  pollInbox allows messages above or equal to minIncomingTrust
- *  9.  pollInbox accepts all when minIncomingTrust not configured
+ *  9.  pollInbox accepts all when minIncomingTrust not configured (explicit)
  * 10.  pollInbox uses cursor deduplication in no-ack mode
- * 11.  getTrustLevel returns contact trust if found, unverified otherwise
- * 12.  meetsMinTrust returns correct boolean for each pairing
- * 13.  getMessageHistory passes ack=true as query param
- * 14.  getMessageHistory omits ack param when not set
+ * 11.  pollInbox dry-run does not write state or cursor
+ * 12.  getTrustLevel returns contact trust if found, unverified otherwise
+ * 13.  meetsMinTrust returns correct boolean for each pairing
+ * 14.  getMessageHistory passes ack=true as query param
+ * 15.  getMessageHistory omits ack param when not set
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -73,7 +74,7 @@ if (arg === 'write') {
 }
 
 async function startAcnServer(messages, opts = {}) {
-  const { statusCode = 200, checkPath = null } = opts;
+  const { statusCode = 200 } = opts;
   let capturedUrl = null;
   const server = http.createServer((req, res) => {
     capturedUrl = req.url;
@@ -325,6 +326,28 @@ describe('social inbox pollInbox', () => {
 
     // Both messages should be filtered by cursor
     assert.equal(result.injected, 0);
+  });
+
+  it('accepts all messages when minIncomingTrust is not configured', async () => {
+    // No minTrust → no Trust Gate → all messages accepted regardless of trust_level
+    makePersonaDir(personaDir); // no minTrust, no contacts (sender will be 'unverified')
+    const fakeMessages = [
+      { route_id: 'r-open', from_agent: 'stranger-uuid', to_agent: 'my-agent',
+        timestamp: '2026-04-22T13:00:00Z', message: { text: 'open door' } },
+    ];
+    const { server, port } = await startAcnServer(fakeMessages);
+    fs.writeFileSync(path.join(personaDir, 'acn-config.json'),
+      JSON.stringify({ acn_gateway: `http://127.0.0.1:${port}` }));
+    fs.writeFileSync(path.join(personaDir, 'acn-registration.json'),
+      JSON.stringify({ agentId: 'my-agent', apiKey: 'key' }));
+
+    const { pollInbox } = require('../lib/social/inbox');
+    const result = await pollInbox('test-persona', { ack: true, dryRun: true });
+    server.close();
+
+    assert.equal(result.injected, 1, 'message from unknown sender must be accepted when no minTrust');
+    assert.equal(result.filtered, 0);
+    assert.equal(result.messages[0].payload.trust_level, 'unverified');
   });
 
   it('dry-run does not write to state or update cursor', async () => {

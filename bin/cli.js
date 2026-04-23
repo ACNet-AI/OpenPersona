@@ -1736,7 +1736,10 @@ socialCmd
         }
 
         if (result.filtered > 0) {
-          printWarning(`${result.filtered} message(s) blocked by Contact Trust Gate.`);
+          printWarning(
+            `${result.filtered} message(s) blocked by Contact Trust Gate and discarded` +
+            (ack ? ' (ack=true: already cleared from ACN inbox).' : '.')
+          );
         }
 
         if (result.injected > 0) {
