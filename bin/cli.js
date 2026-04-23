@@ -1674,15 +1674,16 @@ socialCmd
       printWarning('No ACN gateway configured — inbox fallback disabled');
     }
 
-    // Load sender agent_id from acn-registration.json (optional)
+    // Load sender credentials from acn-registration.json (optional).
+    // registrar.js writes camelCase (agentId/apiKey); tolerate both spellings.
     let senderAgentId;
     let apiKey;
     const regPath = path.join(personaDir, 'acn-registration.json');
     if (fs.existsSync(regPath)) {
       try {
         const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
-        senderAgentId = reg.agent_id;
-        apiKey = reg.api_key;
+        senderAgentId = reg.agentId || reg.agent_id;
+        apiKey = reg.apiKey || reg.api_key;
       } catch { /* optional */ }
     }
 
@@ -1698,15 +1699,78 @@ socialCmd
 
       if (result.status === 'sent') {
         printSuccess(`Message delivered directly to ${contact.name || agentId} (${result.latencyMs}ms)`);
-      } else if (result.status === 'inbox') {
-        printSuccess(`${contact.name || agentId} is offline — message queued in ACN inbox`);
+      } else if (result.status === 'relayed') {
+        printSuccess(`${contact.name || agentId} is offline — message relayed via ACN (DLQ-backed)`);
       } else {
-        printWarning(`${contact.name || agentId} is offline and inbox fallback is disabled. Message not delivered.`);
+        printWarning(`${contact.name || agentId} is offline and relay fallback is disabled. Message not delivered.`);
         process.exit(1);
       }
     } catch (e) {
       printError(`Send failed: ${e.message}`);
       process.exit(1);
+    }
+  });
+
+socialCmd
+  .command('inbox <slug>')
+  .description('Poll the ACN offline inbox and inject received messages into state.json pendingCommands')
+  .option('--poll', 'Keep polling on a loop (Ctrl-C to stop)')
+  .option('--interval <secs>', 'Polling interval in seconds (with --poll)', '30')
+  .option('--limit <n>', 'Max messages per poll (ACN hard-cap: 50)', '50')
+  .option('--no-ack', 'Peek without clearing inbox (uses client-side cursor). Default is server-side ack.')
+  .option('--dry-run', 'Print messages without writing to state.json')
+  .action(async (slug, opts) => {
+    const { pollInbox } = require('../lib/social/inbox');
+    const ack      = opts.ack !== false;  // --no-ack sets opts.ack = false
+    const limit    = Math.min(parseInt(opts.limit, 10) || 50, 50);
+    const dryRun   = !!opts.dryRun;
+    const interval = Math.max(parseInt(opts.interval, 10) || 30, 5) * 1000;
+
+    const runOnce = async () => {
+      try {
+        const result = await pollInbox(slug, { ack, limit, dryRun });
+
+        if (result.injected === 0 && result.filtered === 0) {
+          if (!opts.poll) printInfo('No new messages in ACN inbox.');
+          return;
+        }
+
+        if (result.filtered > 0) {
+          printWarning(`${result.filtered} message(s) blocked by Contact Trust Gate.`);
+        }
+
+        if (result.injected > 0) {
+          if (dryRun) {
+            printInfo(`[dry-run] ${result.injected} message(s) would be injected into pendingCommands:`);
+          } else {
+            printSuccess(`Injected ${result.injected} message(s) into ${slug} pendingCommands.`);
+          }
+          for (const cmd of result.messages) {
+            const p = cmd.payload;
+            const trust = chalk.dim(`[${p.trust_level}]`);
+            const from  = chalk.bold(p.from_name !== p.from_agent ? `${p.from_name} <${p.from_agent}>` : p.from_agent);
+            const msgPreview = typeof p.message === 'object'
+              ? (p.message.text || JSON.stringify(p.message).slice(0, 80))
+              : String(p.message).slice(0, 80);
+            console.log(`  ${trust} ${from}  ${chalk.dim(p.received_at)}`);
+            console.log(`    ${msgPreview}`);
+          }
+        }
+      } catch (e) {
+        printError(`Inbox poll failed: ${e.message}`);
+        if (!opts.poll) process.exit(1);
+      }
+    };
+
+    if (!opts.poll) {
+      await runOnce();
+    } else {
+      printInfo(`Polling ACN inbox for "${slug}" every ${interval / 1000}s (Ctrl-C to stop) …`);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await runOnce();
+        await new Promise((r) => setTimeout(r, interval));
+      }
     }
   });
 
