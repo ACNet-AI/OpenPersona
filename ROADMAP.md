@@ -515,23 +515,42 @@ New `persona.json` schema fields under `social.contacts`:
 - Update `SIGNAL-PROTOCOL.md` template: document runner-side WebSocket proxy contract
 - No runner code written here — this is framework-side only (declarations + signal format)
 
-**Phase C — Inbound receive (inbox polling):**
-- `lib/social/acn-client.pollInbox(slug, apiKey, cursor)` — GET from ACN gateway, returns messages since cursor
-- `openpersona social inbox <slug> [--poll] [--interval 30]` — writes received messages into `pendingCommands`
-- Uses `social/.poller-cursor.json` (already reserved in `.gitignore`) to track last-seen position
+**Phase C — Inbound receive (message history polling):**
+
+ACN gateway confirmed endpoints (v0.4.1, verified 2026-04-22):
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/communication/history/{agent_id}` | Fetch messages received by agent (Redis, last 1000, 7-day TTL) |
+| `GET /api/v1/websocket/agent/{agent_id}/status` | Check whether agent has active WS connection |
+| `WS  /ws/{agent_id}` | Real-time WebSocket channel (first-message auth) |
+
+Already implemented (`acn-client.js`, shipped with ACN fix):
+- `getMessageHistory(gateway, agentId, apiKey, opts)` — wraps `GET /api/v1/communication/history/{id}`
+- `checkWsPresence(gateway, agentId, apiKey)` — wraps `GET /api/v1/websocket/agent/{id}/status`
+
+Still to implement for Phase C:
+- `openpersona social inbox <slug> [--poll] [--interval 30]` — CLI poller: calls `getMessageHistory`,
+  deduplicates via `social/.poller-cursor.json` (already in `.gitignore`), writes new messages into `pendingCommands`
 - Contact Trust Gate: filter incoming by `min_incoming_trust` (already in schema, needs state-sync template hook)
+
+**Relay fix (shipped with Phase A fix):**
+The previously assumed `POST /api/v1/agents/{id}/inbox` endpoint does not exist. The correct fallback
+for offline delivery is `POST /api/v1/communication/send` — ACN relays to the target's registered
+endpoint and stores in a Redis-backed Dead Letter Queue (DLQ) for automatic retry. Return status
+changed from `'inbox'` → `'relayed'`.
 
 **Dependency map:**
 
 ```
-Phase A (send)     ← independent, ships first
-Phase B (declare)  ← independent, ships parallel to A
-Phase C (receive)  ← depends on ACN gateway supporting inbox API
+Phase A (send)     ← DONE — direct P2P + ACN relay fallback (DLQ-backed)
+Phase B (declare)  ← DONE — transport signal declarations
+Phase C (receive)  ← READY — ACN history API confirmed; CLI poller to implement
 ```
 
-**Implementation gate for Phase A:** No external dependencies — ships immediately.
-**Implementation gate for Phase B:** No runner required to ship the declaration layer; runner implementation is out of framework scope.
-**Implementation gate for Phase C:** Requires ACN gateway to expose an inbox/poll endpoint. Verify API contract before implementation.
+**Implementation gate for Phase A:** DONE.
+**Implementation gate for Phase B:** DONE.
+**Implementation gate for Phase C:** ACN `GET /api/v1/communication/history/{id}` confirmed. No blockers.
 
 ---
 

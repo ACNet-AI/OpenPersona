@@ -14,9 +14,12 @@
  *  9. pingAgent returns online:true when endpoint responds
  * 10. pingAgent returns online:false on timeout/error
  * 11. sendMessage delivers directly when online
- * 12. sendMessage falls back to ACN inbox when offline + inboxFallback:true
+ * 12. sendMessage falls back to ACN relay (/api/v1/communication/send) when offline
  * 13. sendMessage returns {status:'offline'} when offline + inboxFallback:false
  * 14. sendMessage includes sender_agent_id in envelope when provided
+ * 15. checkWsPresence returns true when ACN reports connected:true
+ * 16. checkWsPresence returns false when ACN reports connected:false
+ * 17. getMessageHistory returns messages array from ACN
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -233,17 +236,19 @@ describe('social acn-client', () => {
     assert.ok(receivedBody.sent_at);
   });
 
-  it('sendMessage falls back to ACN inbox when target is offline', async () => {
-    // Set up an inbox server (simulates ACN gateway inbox endpoint)
+  it('sendMessage falls back to ACN relay when target is offline', async () => {
+    // Simulate ACN gateway handling POST /api/v1/communication/send
     const http = require('http');
-    let inboxBody = null;
-    const inboxServer = http.createServer((req, res) => {
+    let relayBody = null;
+    let relayPath = null;
+    const relayServer = http.createServer((req, res) => {
+      relayPath = req.url;
       let data = '';
       req.on('data', (c) => { data += c; });
-      req.on('end', () => { inboxBody = JSON.parse(data); res.writeHead(200); res.end(); });
+      req.on('end', () => { relayBody = JSON.parse(data); res.writeHead(200); res.end('{}'); });
     });
-    await new Promise((resolve) => inboxServer.listen(0, '127.0.0.1', resolve));
-    const { port } = inboxServer.address();
+    await new Promise((resolve) => relayServer.listen(0, '127.0.0.1', resolve));
+    const { port } = relayServer.address();
 
     const { sendMessage } = require('../lib/social/acn-client');
     const result = await sendMessage(
@@ -251,12 +256,17 @@ describe('social acn-client', () => {
       'offline-agent',
       'http://127.0.0.1:1/dead-endpoint', // unreachable → offline
       { type: 'task', text: 'do something' },
-      { inboxFallback: true }
+      { inboxFallback: true, senderAgentId: 'sender-001', apiKey: 'key-abc' }
     );
-    inboxServer.close();
+    relayServer.close();
 
-    assert.equal(result.status, 'inbox');
-    assert.equal(inboxBody.text, 'do something');
+    assert.equal(result.status, 'relayed');
+    // Must hit the correct ACN relay endpoint
+    assert.equal(relayPath, '/api/v1/communication/send');
+    // Relay body must carry from_agent / target_agent / message
+    assert.equal(relayBody.from_agent, 'sender-001');
+    assert.equal(relayBody.target_agent, 'offline-agent');
+    assert.equal(relayBody.message.text, 'do something');
   });
 
   it('sendMessage returns offline when target offline and inboxFallback false', async () => {
@@ -292,5 +302,76 @@ describe('social acn-client', () => {
     server.close();
 
     assert.equal(captured.sender_agent_id, 'my-agent-id');
+  });
+
+  it('checkWsPresence returns true when ACN reports connected:true', async () => {
+    const http = require('http');
+    let capturedPath = null;
+    let capturedAuth = null;
+    const server = http.createServer((req, res) => {
+      capturedPath = req.url;
+      capturedAuth = req.headers.authorization;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ agent_id: 'agent-xyz', connected: true }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { checkWsPresence } = require('../lib/social/acn-client');
+    const connected = await checkWsPresence(
+      `http://127.0.0.1:${port}`, 'agent-xyz', 'my-api-key'
+    );
+    server.close();
+
+    assert.equal(connected, true);
+    assert.equal(capturedPath, '/api/v1/websocket/agent/agent-xyz/status');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
+  });
+
+  it('checkWsPresence returns false when ACN reports connected:false', async () => {
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ agent_id: 'agent-xyz', connected: false }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { checkWsPresence } = require('../lib/social/acn-client');
+    const connected = await checkWsPresence(
+      `http://127.0.0.1:${port}`, 'agent-xyz', 'my-api-key'
+    );
+    server.close();
+
+    assert.equal(connected, false);
+  });
+
+  it('getMessageHistory returns messages array from ACN', async () => {
+    const http = require('http');
+    const fakeMessages = [
+      { route_id: 'r1', from_agent: 'alice', to_agent: 'bob', timestamp: '2026-01-01T00:00:00Z' },
+      { route_id: 'r2', from_agent: 'charlie', to_agent: 'bob', timestamp: '2026-01-02T00:00:00Z' },
+    ];
+    let capturedPath = null;
+    let capturedAuth = null;
+    const server = http.createServer((req, res) => {
+      capturedPath = req.url;
+      capturedAuth = req.headers.authorization;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ agent_id: 'bob', messages: fakeMessages, count: 2 }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { getMessageHistory } = require('../lib/social/acn-client');
+    const msgs = await getMessageHistory(
+      `http://127.0.0.1:${port}`, 'bob', 'my-api-key', { limit: 50 }
+    );
+    server.close();
+
+    assert.equal(msgs.length, 2);
+    assert.equal(msgs[0].route_id, 'r1');
+    assert.equal(capturedPath, '/api/v1/communication/history/bob?limit=50');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
   });
 });
