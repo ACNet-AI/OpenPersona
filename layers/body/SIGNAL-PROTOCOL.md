@@ -234,21 +234,113 @@ The persona is approaching or has exceeded a resource constraint — API cost, t
 
 ### `agent_communication`
 
-The persona wants to send a message to another agent or peer session.
+The persona wants to communicate with another agent. Three distinct intents are supported,
+each with a different payload shape:
 
-**Payload:**
+#### Intent: `send` — one-shot message (no persistent connection needed)
+
+Used after `openpersona social send` has been called but the persona wants the host to be
+aware the message was attempted (logging, audit trail).
+
 ```json
-{ "to": "persona:life-assistant", "message": "Please schedule a 9am reminder for the user", "replyExpected": false }
+{
+  "intent": "send",
+  "target_agent_id": "agent-alice-001",
+  "reason": "Delegating summarization task",
+  "priority": "medium"
+}
+```
+
+**What the host can do:** Log the outbound message; no active connection needed.
+
+---
+
+#### Intent: `connect` — request a persistent transport (WebSocket / SSE)
+
+Used when the persona's `social.contacts.preferred_transport` is `"websocket"` and it wants
+the host to establish a long-lived channel to a peer.
+
+```json
+{
+  "intent": "connect",
+  "target_agent_id": "agent-alice-001",
+  "transport": "websocket",
+  "endpoint": "wss://alice-bot.example.com/a2a/ws",
+  "reason": "Need real-time collaboration for ongoing task",
+  "priority": "high"
+}
+```
+
+**Transport negotiation contract:**
+
+The host should respond via `signal-responses.json` with **one of**:
+
+```json
+{
+  "status": "resolved",
+  "response": {
+    "transport": "websocket",
+    "channel_id": "ws-session-abc123",
+    "note": "Messages from peer will arrive as pendingCommands of type agent_message"
+  }
+}
+```
+
+```json
+{
+  "status": "rejected",
+  "response": {
+    "reason": "websocket_unsupported",
+    "fallback": "http",
+    "note": "Use openpersona social send for HTTP delivery instead"
+  }
+}
+```
+
+The persona reads the response at the start of the next turn. If `status === "rejected"`,
+the persona degrades gracefully (e.g., falls back to inbox-based delivery).
+
+**Runner responsibilities when `transport: "websocket"` is requested:**
+1. Establish a WebSocket connection to `endpoint`
+2. Bridge incoming peer messages into `pendingCommands` as `{ type: "agent_message", payload: <msg>, source: target_agent_id }`
+3. Route outbound messages from the persona (emitted via `agent_communication` with `intent: "send"`) through the open socket
+4. Write `channel_id` to the response so the persona can reference it in future signals
+
+If the runner does not support WebSocket proxying, it **must** respond with `status: "rejected"` and `fallback: "http"` so the persona does not wait indefinitely.
+
+---
+
+#### Intent: `receive` — declare readiness to receive inbound messages
+
+Used when the persona wants the host to start routing inbound A2A messages to its
+`pendingCommands` queue (Phase C inbox polling).
+
+```json
+{
+  "intent": "receive",
+  "reason": "Enable inbound agent messages",
+  "priority": "low"
+}
 ```
 
 **What the host can do:**
-- Route the message to the target session through its own inter-agent channel
-- If `replyExpected: true`, relay the reply back as a response entry
+- Start polling the ACN gateway inbox for this persona's `agent_id`
+- Write received messages into the persona's `state.json.pendingCommands` as `agent_message` entries
 
 **Example response:**
 ```json
-{ "status": "resolved", "response": { "delivered": true, "to": "persona:life-assistant" } }
+{ "status": "resolved", "response": { "polling": true, "interval_seconds": 30 } }
 ```
+
+---
+
+**OpenClaw native mapping (updated):**
+
+| Signal `agent_communication` intent | OpenClaw native action |
+|-------------------------------------|----------------------|
+| `send` | `sessions_send` tool |
+| `connect` (websocket) | `websocket_proxy` plugin → bridge to `pendingCommands` |
+| `receive` | `inbox_poller` plugin → poll ACN, write `pendingCommands` |
 
 ---
 

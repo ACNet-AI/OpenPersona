@@ -16,6 +16,8 @@
  * 11. Generator emitPhase writes social/contacts.json when contacts enabled
  * 12. Generator emitPhase does NOT write social/contacts.json when contacts disabled
  * 13. Generated .gitignore includes social/contacts.jsonl and social/.poller-cursor.json
+ * 14. Generated soul/injection.md contains social send CLI commands when contacts enabled
+ * 15. Generated soul/injection.md contains connect signal instructions when contacts enabled
  */
 
 const { test } = require('node:test');
@@ -172,6 +174,59 @@ test('generated .gitignore includes social/contacts.jsonl and social/.poller-cur
     const gitignore = fs.readFileSync(path.join(skillDir, '.gitignore'), 'utf-8');
     assert.ok(gitignore.includes('social/contacts.jsonl'), '.gitignore must include contacts.jsonl');
     assert.ok(gitignore.includes('social/.poller-cursor.json'), '.gitignore must include .poller-cursor.json');
+  } finally {
+    await fs.remove(tmp);
+  }
+});
+
+test('generated soul/injection.md contains social send CLI when contacts enabled', async () => {
+  const { generate } = require('../lib/generator');
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'op-gen-contacts-tmpl-'));
+  try {
+    const persona = {
+      soul: {
+        identity: { personaName: 'Nexus', slug: 'gen-contacts-tmpl', bio: 'test agent' },
+        character: { personality: 'curious', speakingStyle: 'direct' },
+      },
+      social: {
+        acn: { gateway: 'https://acn.example.com' },
+        contacts: { enabled: true },
+      },
+    };
+    const { skillDir } = await generate(persona, tmp);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(injection.includes('openpersona social send'), 'injection.md must contain social send command');
+    assert.ok(injection.includes('openpersona social ping'), 'injection.md must contain social ping command');
+    assert.ok(injection.includes('Social Contact Book'), 'injection.md must contain Contact Book section header');
+  } finally {
+    await fs.remove(tmp);
+  }
+});
+
+test('generated soul/injection.md contains connect signal instructions when contacts enabled', async () => {
+  const { generate } = require('../lib/generator');
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'op-gen-contacts-sig-'));
+  try {
+    const persona = {
+      soul: {
+        identity: { personaName: 'Nexus', slug: 'gen-contacts-sig', bio: 'test agent' },
+        character: { personality: 'curious', speakingStyle: 'direct' },
+      },
+      social: {
+        acn: { gateway: 'https://acn.example.com' },
+        contacts: { enabled: true },
+      },
+    };
+    const { skillDir } = await generate(persona, tmp);
+    const injection = fs.readFileSync(path.join(skillDir, 'soul', 'injection.md'), 'utf-8');
+    assert.ok(
+      injection.includes('"intent":"connect"') || injection.includes('"intent": "connect"'),
+      'injection.md must include connect signal example'
+    );
+    assert.ok(injection.includes('websocket'), 'injection.md must mention websocket transport');
+    assert.ok(injection.includes('"intent":"receive"') || injection.includes('"intent": "receive"'),
+      'injection.md must include receive signal example'
+    );
   } finally {
     await fs.remove(tmp);
   }
