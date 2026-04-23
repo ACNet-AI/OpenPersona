@@ -532,13 +532,13 @@
         "subnets": {
           "type": "object",
           "additionalProperties": false,
-          "description": "ACN subnet membership — controls which subnets this persona belongs to. Static membership is declared in acn-config.json via 'acn.subnet_ids'; this section adds dynamic behaviour at registration time.",
+          "description": "ACN subnet membership — dynamic join behaviour at registration time. Static membership at registration is declared separately under 'acn.subnet_ids' inside acn-config.json (passed in the /agents/join payload). Use 'subnets.auto_join' only for ADDITIONAL private subnets that require a Bearer-authenticated POST after the initial join (e.g. private team or org subnets you are invited into). Do NOT duplicate subnet IDs already listed in acn-config.json — they are joined automatically during registration.",
           "properties": {
             "auto_join": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Subnet IDs to join automatically after 'openpersona acn-register' succeeds. Runs joinSubnet for each entry. Use for private team or organisation subnets the persona should always be part of.",
-              "examples": [["public", "enterprise-team-a"]]
+              "description": "Subnet IDs to join via POST /agents/{id}/subnets/{sid} after 'openpersona acn-register' succeeds. Intended for private subnets NOT declared in acn-config.json subnet_ids. Each join is non-fatal (failure logs a warning, registration still succeeds).",
+              "examples": [["enterprise-team-a", "project-alpha"]]
             }
           }
         },

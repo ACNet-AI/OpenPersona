@@ -23,10 +23,12 @@
  * 18. listSubnets returns subnets array from ACN
  * 19. joinSubnet calls POST /api/v1/agents/{id}/subnets/{sid} with API key
  * 20. joinSubnet throws on error response
- * 21. leaveSubnet calls DELETE /api/v1/agents/{id}/subnets/{sid} with API key
- * 22. broadcastMessage calls POST /api/v1/messages/broadcast with subnet_id
- * 23. broadcastMessage calls POST /api/v1/messages/broadcast with target_agents list
- * 24. broadcastMessage throws when neither subnetId nor targetIds provided
+ * 21. leaveSubnet calls DELETE via httpLib.del (5 MB cap path, not _deleteRequest)
+ * 22. leaveSubnet throws on error response
+ * 23. broadcastMessage calls POST /api/v1/messages/broadcast with subnet_id
+ * 24. broadcastMessage calls POST /api/v1/messages/broadcast with target_agents list
+ * 25. broadcastMessage throws when neither subnetId nor targetIds provided
+ * 26. http.del sends DELETE with correct headers and parses JSON response
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -455,7 +457,7 @@ describe('social acn-client', () => {
     server.close();
   });
 
-  it('leaveSubnet calls DELETE /api/v1/agents/{id}/subnets/{sid} with API key', async () => {
+  it('leaveSubnet calls DELETE via httpLib.del (5 MB cap path, not _deleteRequest)', async () => {
     const http = require('http');
     let capturedMethod;
     let capturedPath;
@@ -480,6 +482,24 @@ describe('social acn-client', () => {
     assert.equal(capturedAuth, 'Bearer my-api-key');
     assert.equal(result.left, true);
     assert.equal(result.subnetId, 'team-alpha');
+  });
+
+  it('leaveSubnet throws on error response', async () => {
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      req.resume();
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'not a member' }));
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { leaveSubnet } = require('../lib/social/acn-client');
+    await assert.rejects(
+      () => leaveSubnet(`http://127.0.0.1:${port}`, 'agent-001', 'team-alpha', 'key'),
+      /not a member|HTTP 403/
+    );
+    server.close();
   });
 
   it('broadcastMessage calls POST /api/v1/messages/broadcast with subnet_id', async () => {
@@ -553,5 +573,34 @@ describe('social acn-client', () => {
       () => broadcastMessage('http://localhost', 'sender', 'key', { text: 'hi' }, {}),
       /subnetId|targetIds/
     );
+  });
+
+  it('http.del sends DELETE with correct headers and parses JSON response', async () => {
+    const http = require('http');
+    let capturedMethod;
+    let capturedPath;
+    let capturedAuth;
+    const server = http.createServer((req, res) => {
+      capturedMethod = req.method;
+      capturedPath   = req.url;
+      capturedAuth   = req.headers.authorization;
+      req.resume();
+      res.writeHead(204, { 'Content-Type': 'application/json' });
+      res.end('');
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const httpLib = require('../lib/social/http');
+    const result = await httpLib.del(
+      `http://127.0.0.1:${port}/api/v1/test`,
+      { Authorization: 'Bearer testkey' }
+    );
+    server.close();
+
+    assert.equal(capturedMethod, 'DELETE');
+    assert.equal(capturedPath, '/api/v1/test');
+    assert.equal(capturedAuth, 'Bearer testkey');
+    assert.equal(result.status, 204);
   });
 });

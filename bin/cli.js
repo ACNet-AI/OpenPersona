@@ -1796,26 +1796,53 @@ const subnetCmd = socialCmd
   .description('Manage ACN subnet membership for a persona');
 
 subnetCmd
-  .command('list <slug>')
-  .description('List all subnets on the ACN gateway')
-  .action(async (slug) => {
-    const { resolvePersonaDir } = require('../lib/state/runner');
-    const personaDir = resolvePersonaDir(slug);
-    if (!personaDir) {
-      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
-      process.exit(1);
-    }
+  .command('list [slug]')
+  .description('List all subnets on the ACN gateway. Pass [slug] to highlight the persona\'s current membership.')
+  .option('--gateway <url>', 'ACN gateway URL (overrides acn-config.json or default)')
+  .action(async (slug, opts) => {
     try {
-      const gateway = resolveGateway(personaDir);
+      // Resolve gateway: --gateway flag > acn-config.json > default
+      let gateway = opts.gateway;
+      let knownSubnets = new Set();
+
+      if (!gateway) {
+        if (slug) {
+          const { resolvePersonaDir } = require('../lib/state/runner');
+          const personaDir = resolvePersonaDir(slug);
+          if (personaDir) {
+            gateway = resolveGateway(personaDir);
+            // Read declared + runtime subnet membership for annotation
+            try {
+              const acnCfg = path.join(personaDir, 'acn-config.json');
+              if (fs.existsSync(acnCfg)) {
+                const cfg = JSON.parse(fs.readFileSync(acnCfg, 'utf-8'));
+                (cfg.subnet_ids || []).forEach((id) => knownSubnets.add(id));
+              }
+              // Also include social.subnets.auto_join from persona.json
+              const pjPath = path.join(personaDir, 'persona.json');
+              if (fs.existsSync(pjPath)) {
+                const pj = JSON.parse(fs.readFileSync(pjPath, 'utf-8'));
+                const aj = pj.social && pj.social.subnets && pj.social.subnets.auto_join;
+                if (Array.isArray(aj)) aj.forEach((id) => knownSubnets.add(id));
+              }
+            } catch { /* best-effort */ }
+          }
+        }
+        if (!gateway) gateway = 'https://acn-production.up.railway.app';
+      }
+
       const subnets = await listSubnets(gateway);
       if (subnets.length === 0) {
         printInfo('No subnets found on ACN gateway.');
         return;
       }
-      printInfo(`Subnets on ${gateway}:`);
+      const label = slug ? ` (${chalk.dim('* = member')})` : '';
+      printInfo(`Subnets on ${gateway}:${label}`);
       for (const s of subnets) {
+        const id = s.subnet_id || s.id || '';
+        const member = knownSubnets.has(id) ? chalk.green(' *') : '  ';
         const count = s.agent_count != null ? chalk.dim(` (${s.agent_count} agents)`) : '';
-        console.log(`  ${chalk.cyan(s.subnet_id || s.id)}  ${s.name || ''}${count}`);
+        console.log(`${member} ${chalk.cyan(id)}  ${s.name || ''}${count}`);
       }
     } catch (e) {
       printError(e.message);
@@ -1916,6 +1943,9 @@ socialCmd
         throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
       }
       const targetIds = opts.to ? opts.to.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+      if (targetIds && targetIds.length === 0) {
+        throw new Error('--to value produced an empty agent ID list after parsing. Provide at least one valid agent ID.');
+      }
       const payload = { type: opts.type, text: message };
       const result = await broadcastMessage(gateway, agentId, apiKey, payload, {
         subnetId: opts.subnet,
