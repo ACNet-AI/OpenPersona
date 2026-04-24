@@ -915,6 +915,89 @@ program
     }
   });
 
+// ── evaluate ──────────────────────────────────────────────────────────────────
+
+program
+  .command('evaluate <slug>')
+  .description('Score a persona pack across 4 Layers + 5 Systemic Concepts (4+5 quality audit)')
+  .option('--json', 'Output raw JSON report')
+  .option('--output <file>', 'Write JSON report to <file>')
+  .action((slug, options) => {
+    const { evaluatePersona } = require('../lib/lifecycle/evaluator');
+    let report;
+    try {
+      report = evaluatePersona(slug);
+    } catch (err) {
+      printError(`evaluate: ${err.message}`);
+      process.exit(1);
+    }
+
+    if (options.output) {
+      fs.writeFileSync(options.output, JSON.stringify(report, null, 2), 'utf-8');
+      printSuccess(`Evaluation report written to ${options.output}`);
+      return;
+    }
+
+    if (options.json) {
+      process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+      return;
+    }
+
+    // Pretty-print
+    const scoreBar = (s) => {
+      const filled = Math.round(s);
+      return '█'.repeat(filled) + '░'.repeat(10 - filled) + ` ${s}/10`;
+    };
+
+    console.log('');
+    console.log(`  ┌─ OpenPersona Evaluation: ${report.slug} ${'─'.repeat(Math.max(0, 40 - report.slug.length))}`);
+    console.log(`  │  Overall Score: ${report.overallScore}/10  [${report.band}]`);
+    if (!report.constitution.passed) {
+      printWarning(`  │  ⚠ Constitution: FAILED (${report.constitution.violations.length} violation(s))`);
+    } else {
+      printSuccess(`  │  ✓ Constitution: PASSED`);
+    }
+    console.log(`  └${'─'.repeat(52)}`);
+    console.log('');
+
+    for (const d of report.dimensions) {
+      const label = (d.dimension + ':').padEnd(12);
+      const neutral = d.neutral ? ' (not declared)' : '';
+      console.log(`  ${label} ${scoreBar(d.score)}${neutral}`);
+      for (const issue of (d.issues || [])) {
+        printWarning(`             ✗ ${issue}`);
+      }
+      for (const sug of (d.suggestions || [])) {
+        printInfo(`             → ${sug}`);
+      }
+    }
+
+    if (report.constitution.violations.length > 0) {
+      console.log('');
+      printWarning('  Constitution Violations (§3 Safety):');
+      for (const v of report.constitution.violations) {
+        printWarning(`    [${v.section}] ${v.label}  (line ${v.lineNumber})`);
+      }
+    }
+    if (report.constitution.warnings.length > 0) {
+      console.log('');
+      printWarning('  Constitution Concerns (§2/§7):');
+      for (const w of report.constitution.warnings) {
+        printWarning(`    [${w.section}] ${w.label}  (line ${w.lineNumber})`);
+      }
+    }
+
+    const sum = report.summary;
+    if (sum.strengths.length > 0) {
+      console.log('');
+      printSuccess(`  Strengths: ${sum.strengths.join(', ')}`);
+    }
+    if (sum.gaps.length > 0) {
+      printWarning(`  Needs Work: ${sum.gaps.join(', ')}`);
+    }
+    console.log('');
+  });
+
 // ---------------------------------------------------------------------------
 // dataset — HF dataset directory integration
 // ---------------------------------------------------------------------------
