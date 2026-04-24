@@ -802,11 +802,13 @@ stateCmd
     }
     printInfo(`${peek ? '(peek — not consumed) ' : ''}${total} pending response(s) for "${slug}":`);
     for (const r of responses) {
-      const statusIcon = r.status === 'resolved' ? '✓' : r.status === 'rejected' ? '✗' : '~';
-      printInfo(`  ${statusIcon}  [${r.type}]  status=${r.status}  ts=${r.timestamp}`);
+      const isRejected = r.status === 'rejected' || r.status === 'unreachable';
+      const statusIcon = r.status === 'resolved' || r.status === 'fulfilled' ? '✓' : isRejected ? '✗' : '~';
+      const printer = isRejected ? printWarning : printInfo;
+      printer(`  ${statusIcon}  [${r.type}]  status=${r.status}  ts=${r.timestamp}`);
       if (r.response && typeof r.response === 'object') {
         for (const [k, v] of Object.entries(r.response)) {
-          printInfo(`      ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
+          printer(`      ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
         }
       }
     }

@@ -5,6 +5,7 @@
  *   openpersona state read <slug>
  *   openpersona state write <slug> <patch>
  *   openpersona state signal <slug> <type> [payload]
+ *   openpersona state responses <slug> [--type] [--peek] [--json]
  */
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
@@ -300,5 +301,166 @@ describe('openpersona update command — state preservation', () => {
     const narrativePath = path.join(fakeInstallDir, 'soul', 'self-narrative.md');
     const content = await fs.readFile(narrativePath, 'utf-8');
     assert.ok(content.includes('preserved test narrative'), 'self-narrative.md must survive update');
+  });
+});
+
+describe('openpersona state responses', () => {
+  let TMP_DIR;
+  let skillDir;
+  // openclawHome → OPENCLAW_HOME controls where signal-responses.json is written
+  let openclawHome;
+  // opHome → OPENPERSONA_HOME controls where the persona registry lives
+  let opHome;
+  let feedbackDir;
+  let responsesPath;
+  let registryPath;
+  const SLUG = 'cli-resp-test';
+
+  before(async () => {
+    TMP_DIR = path.join(os.tmpdir(), 'openpersona-cli-resp-' + Date.now());
+    openclawHome = path.join(TMP_DIR, 'openclaw');
+    opHome       = path.join(TMP_DIR, 'openpersona');
+    feedbackDir  = path.join(openclawHome, 'feedback');
+    responsesPath = path.join(feedbackDir, 'signal-responses.json');
+    registryPath  = path.join(opHome, 'persona-registry.json');
+    await fs.ensureDir(feedbackDir);
+    await fs.ensureDir(opHome);
+
+    const persona = {
+      personaName: 'CliRespTest',
+      slug: SLUG,
+      bio: 'CLI responses integration tester',
+      personality: 'methodical',
+      speakingStyle: 'Precise',
+    };
+    const result = await generate(persona, TMP_DIR);
+    skillDir = result.skillDir;
+    registryAdd(SLUG, persona, skillDir, registryPath);
+  });
+
+  after(async () => {
+    await fs.remove(TMP_DIR);
+  });
+
+  // Helper: seed signal-responses.json with given entries
+  function seedResponses(entries) {
+    fs.writeFileSync(responsesPath, JSON.stringify(entries, null, 2));
+  }
+
+  // Helper: run CLI with the shared OPENCLAW_HOME + OPENPERSONA_HOME env
+  function cliResp(args) {
+    return spawnSync(process.execPath, [CLI, ...args], {
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        OPENCLAW_HOME:    openclawHome,
+        OPENPERSONA_HOME: opHome,
+      },
+    });
+  }
+
+  it('returns empty output when no pending responses exist', () => {
+    // Ensure file is absent or empty array
+    fs.writeFileSync(responsesPath, JSON.stringify([]));
+    const r = cliResp(['state', 'responses', SLUG]);
+    assert.strictEqual(r.status, 0, `CLI exited non-zero:\n${r.stderr}`);
+    assert.ok(r.stdout.includes('No pending'), 'must report no pending responses');
+  });
+
+  it('--json flag returns raw JSON with responses array', () => {
+    seedResponses([
+      { type: 'capability_gap', slug: SLUG, status: 'resolved',
+        response: { capability: 'web_search', message: 'Installed.' },
+        processed: false, timestamp: new Date().toISOString() },
+    ]);
+    const r = cliResp(['state', 'responses', SLUG, '--json']);
+    assert.strictEqual(r.status, 0, `CLI exited non-zero:\n${r.stderr}`);
+    let data;
+    assert.doesNotThrow(() => { data = JSON.parse(r.stdout); }, 'output must be valid JSON with --json');
+    assert.strictEqual(data.total, 1, 'total must be 1');
+    assert.strictEqual(data.responses[0].type, 'capability_gap', 'returned type must match');
+    assert.strictEqual(data.responses[0].status, 'resolved');
+
+    // Reseed for subsequent tests
+    seedResponses([]);
+  });
+
+  it('consumes responses and marks them processed', () => {
+    seedResponses([
+      { type: 'scheduling', slug: SLUG, status: 'resolved',
+        response: { jobId: 'j42' }, processed: false, timestamp: new Date().toISOString() },
+      { type: 'scheduling', slug: 'other-slug', status: 'resolved',
+        response: { jobId: 'j99' }, processed: false, timestamp: new Date().toISOString() },
+    ]);
+
+    // First call — consume
+    const r1 = cliResp(['state', 'responses', SLUG, '--json']);
+    assert.strictEqual(r1.status, 0);
+    const d1 = JSON.parse(r1.stdout);
+    assert.strictEqual(d1.total, 1, 'must return 1 response for this slug');
+
+    // File must now have the entry marked processed
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === true,  'consumed entry must be marked processed');
+    assert.ok(stored[1].processed === false, 'other-slug entry must remain unprocessed');
+
+    // Second call — nothing left
+    const r2 = cliResp(['state', 'responses', SLUG, '--json']);
+    assert.strictEqual(JSON.parse(r2.stdout).total, 0, 'second call must return 0');
+  });
+
+  it('--peek reads without consuming', () => {
+    seedResponses([
+      { type: 'tool_missing', slug: SLUG, status: 'resolved',
+        response: { tool: 'ffmpeg', installed: true }, processed: false, timestamp: new Date().toISOString() },
+    ]);
+
+    const r = cliResp(['state', 'responses', SLUG, '--peek', '--json']);
+    assert.strictEqual(r.status, 0);
+    const data = JSON.parse(r.stdout);
+    assert.strictEqual(data.total, 1, 'peek must return the response');
+    assert.strictEqual(data.peek, true, 'peek flag must be true in output');
+
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === false, '--peek must not mark the entry as processed');
+
+    // Cleanup
+    seedResponses([]);
+  });
+
+  it('--type filters to matching signal type only', () => {
+    seedResponses([
+      { type: 'capability_gap',      slug: SLUG, status: 'resolved', response: { ok: 1 }, processed: false, timestamp: new Date().toISOString() },
+      { type: 'agent_communication', slug: SLUG, status: 'resolved', response: { ok: 2 }, processed: false, timestamp: new Date().toISOString() },
+    ]);
+
+    const r = cliResp(['state', 'responses', SLUG, '--type', 'agent_communication', '--json']);
+    assert.strictEqual(r.status, 0);
+    const data = JSON.parse(r.stdout);
+    assert.strictEqual(data.total, 1, 'must return only the agent_communication response');
+    assert.strictEqual(data.responses[0].type, 'agent_communication');
+
+    // capability_gap must remain unprocessed
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === false, 'capability_gap must be untouched by type-filtered consume');
+    assert.ok(stored[1].processed === true,  'agent_communication must be consumed');
+
+    seedResponses([]);
+  });
+
+  it('pretty-print shows status icon and response fields', () => {
+    seedResponses([
+      { type: 'capability_gap', slug: SLUG, status: 'resolved',
+        response: { capability: 'web_search', message: 'Installed and ready.' },
+        processed: false, timestamp: new Date().toISOString() },
+    ]);
+
+    const r = cliResp(['state', 'responses', SLUG]);
+    assert.strictEqual(r.status, 0);
+    assert.ok(r.stdout.includes('capability_gap'), 'pretty output must include signal type');
+    assert.ok(r.stdout.includes('resolved'),       'pretty output must include status');
+    assert.ok(r.stdout.includes('web_search') || r.stdout.includes('Installed'), 'pretty output must include response fields');
+
+    seedResponses([]);
   });
 });

@@ -3,9 +3,10 @@
  * state-sync.js — Runtime state bridge for OpenPersona personas
  *
  * Commands:
- *   read                         — Print current evolution state summary (last 5 events)
- *   write <json-patch>           — Merge JSON patch into state.json (pack root)
- *   signal <type> [payload-json] — Emit signal to host via ~/.openclaw/feedback/
+ *   read                               — Print current evolution state summary (last 5 events)
+ *   write <json-patch>                 — Merge JSON patch into state.json (pack root)
+ *   signal <type> [payload-json]       — Emit signal to host via ~/.openclaw/feedback/
+ *   responses [type] [--peek]          — Read (and consume) pending host responses
  *
  * Signal types: scheduling, file_io, tool_missing, capability_gap, resource_limit, agent_communication
  */
