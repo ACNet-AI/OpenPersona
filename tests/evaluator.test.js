@@ -173,6 +173,36 @@ describe('evaluatePersona', () => {
     assert.ok(skill.issues.some(i => /trust level/.test(i)));
   });
 
+  it('Faculty: penalizes voice faculty missing provider', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.faculties = [{ name: 'memory' }, { name: 'voice' }]; // voice without provider
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const fac = report.dimensions.find(d => d.dimension === 'Faculty');
+    assert.ok(fac.issues.some(i => /provider/.test(i)),
+      'Expected provider issue for voice without provider');
+  });
+
+  it('Faculty: suggests expression faculty when absent', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.faculties = [{ name: 'memory' }]; // no voice/avatar
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const fac = report.dimensions.find(d => d.dimension === 'Faculty');
+    assert.ok(fac.suggestions.some(s => /expression/.test(s)),
+      'Expected expression faculty suggestion');
+  });
+
+  it('Faculty: suggests sense faculty when absent', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.faculties = [{ name: 'memory' }, { name: 'voice', provider: 'elevenlabs' }]; // no vision/emotion-sensing
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const fac = report.dimensions.find(d => d.dimension === 'Faculty');
+    assert.ok(fac.suggestions.some(s => /sense/.test(s)),
+      'Expected sense faculty suggestion');
+  });
+
   it('Evolution: penalizes disabled evolution', () => {
     const p = JSON.parse(JSON.stringify(FULL_PERSONA));
     p.evolution.instance.enabled = false;
@@ -182,6 +212,17 @@ describe('evaluatePersona', () => {
     // disabled evolution loses 3 points (10 → 7)
     assert.ok(evo.score <= 7, `Expected Evolution <= 7 when disabled, got ${evo.score}`);
     assert.ok(evo.issues.some(i => /enabled/.test(i)));
+  });
+
+  it('Economy: disabled economy scores 0, not 3 (B1 regression)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.economy = { enabled: false }; // declared but disabled
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const eco = report.dimensions.find(d => d.dimension === 'Economy');
+    assert.ok(eco.score <= 3,
+      `Disabled economy must not earn declaration bonus — got ${eco.score}`);
+    assert.ok(eco.issues.some(i => /enabled/.test(i)));
   });
 
   it('Economy: neutral 5 when not declared', () => {

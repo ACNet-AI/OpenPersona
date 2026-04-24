@@ -145,12 +145,12 @@ npx openpersona evaluate <slug>
 
 ## Install
 
-```bash
-npx openpersona skill install acnlabs/evaluator-skill
-```
-
-Or install the full OpenPersona framework (includes evaluator-skill):
+evaluator-skill ships bundled with the OpenPersona framework and is available immediately after installing it:
 
 ```bash
 npm install -g openpersona
+# evaluator-skill is included — no separate install needed
+npx openpersona evaluate <slug>
 ```
+
+A standalone distributable (`acnlabs/evaluator-skill`) will be published to openpersona.co once a separate repository is created.
