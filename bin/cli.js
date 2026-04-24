@@ -1863,7 +1863,6 @@ subnetCmd
       process.exit(1);
     }
     try {
-      const gateway = resolveGateway(personaDir);
       const regPath = path.join(personaDir, 'acn-registration.json');
       if (!fs.existsSync(regPath)) {
         throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
@@ -1871,6 +1870,7 @@ subnetCmd
       const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
       const agentId = reg.agentId || reg.agent_id;
       const apiKey  = reg.apiKey  || reg.api_key;
+      const gateway = reg.gateway || resolveGateway(personaDir);
       if (!agentId || !apiKey) {
         throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
       }
@@ -1893,7 +1893,6 @@ subnetCmd
       process.exit(1);
     }
     try {
-      const gateway = resolveGateway(personaDir);
       const regPath = path.join(personaDir, 'acn-registration.json');
       if (!fs.existsSync(regPath)) {
         throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
@@ -1901,6 +1900,7 @@ subnetCmd
       const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
       const agentId = reg.agentId || reg.agent_id;
       const apiKey  = reg.apiKey  || reg.api_key;
+      const gateway = reg.gateway || resolveGateway(personaDir);
       if (!agentId || !apiKey) {
         throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
       }
@@ -1933,7 +1933,6 @@ socialCmd
       if (!opts.subnet && !opts.to) {
         throw new Error('Specify --subnet <id> or --to <agent-id,...>');
       }
-      const gateway = resolveGateway(personaDir);
       const regPath = path.join(personaDir, 'acn-registration.json');
       if (!fs.existsSync(regPath)) {
         throw new Error(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
@@ -1941,6 +1940,7 @@ socialCmd
       const reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
       const agentId = reg.agentId || reg.agent_id;
       const apiKey  = reg.apiKey  || reg.api_key;
+      const gateway = reg.gateway || resolveGateway(personaDir);
       if (!agentId || !apiKey) {
         throw new Error(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
       }
@@ -1970,7 +1970,7 @@ socialCmd
   .option('--daemon',            'Keep sending heartbeats in a loop (Ctrl-C to stop)')
   .option('--interval <secs>',  'Heartbeat interval in seconds (with --daemon)', '60')
   .option('--endpoint <url>',   'Advertise this A2A endpoint URL with the heartbeat')
-  .option('--status <status>',  'Agent status to advertise: online | busy | away', 'online')
+  .option('--status <status>',  'Agent status to advertise: online | busy | away (omit to leave unchanged)')
   .action(async (slug, opts) => {
     const { resolvePersonaDir } = require('../lib/state/runner');
     const personaDir = resolvePersonaDir(slug);
@@ -2000,7 +2000,7 @@ socialCmd
     }
 
     const hbOpts = {
-      status: opts.status,
+      ...(opts.status   && { status:   opts.status }),
       ...(opts.endpoint && { endpoint: opts.endpoint }),
     };
 
@@ -2027,6 +2027,10 @@ socialCmd
     } else {
       const intervalMs = Math.max(10, parseInt(opts.interval, 10) || 60) * 1000;
       printInfo(`Heartbeat daemon for "${slug}" — every ${intervalMs / 1000}s (Ctrl-C to stop)`);
+      process.on('SIGINT', () => {
+        process.stdout.write('\n');
+        process.exit(0);
+      });
       await beat();
       // eslint-disable-next-line no-constant-condition
       while (true) {
