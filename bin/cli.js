@@ -292,6 +292,7 @@ program
   .option('--runtime <name>', 'For skill packs: target runtime (claude|cursor|openclaw|hermes|openpersona)')
   .option('--global', 'For skill packs: install to ~/.agents/skills/ (user-global)')
   .option('--all', 'For skill packs: install to all detected runtime dirs in CWD')
+  .option('--force', 'Bypass constitution compliance check (not recommended — review flagged content first)')
   .addHelpText('after', [
     '',
     'Examples:',
@@ -332,6 +333,7 @@ program
           runtime: options.runtime,
           global: options.global,
           all: options.all,
+          force: options.force,
           source: target,
         });
       } else {
@@ -968,6 +970,7 @@ skillCmd
   .option('--runtime <name>', `Target runtime: ${skillInstaller.VALID_RUNTIMES.join(' | ')}`)
   .option('--global', 'Install to ~/.agents/skills/ (user-global AGENTS.md convention)')
   .option('--all', 'Install to all detected runtime dirs in CWD (.cursor/, .claude/, .agents/)')
+  .option('--force', 'Bypass constitution compliance check (not recommended — review flagged content first)')
   .addHelpText('after', [
     '',
     'Examples:',
@@ -1010,6 +1013,7 @@ skillCmd
         runtime: options.runtime,
         global: options.global,
         all: options.all,
+        force: options.force,
         source: target,
       });
     } catch (e) {

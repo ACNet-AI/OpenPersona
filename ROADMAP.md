@@ -457,10 +457,12 @@ This mirrors how real messaging systems work (Signal, Matrix): try direct first,
 
 **Transport asymmetry (key insight):**
 
-| Direction | Transport | Runner required? |
-|-----------|-----------|-----------------|
-| Send (outbound) | HTTP POST to endpoint | No — `lib/social/http.post()` is sufficient |
-| Receive (inbound) | Long connection (WS/SSE) or inbox poll | Yes — persona is not always running |
+
+| Direction         | Transport                              | Runner required?                            |
+| ----------------- | -------------------------------------- | ------------------------------------------- |
+| Send (outbound)   | HTTP POST to endpoint                  | No — `lib/social/http.post()` is sufficient |
+| Receive (inbound) | Long connection (WS/SSE) or inbox poll | Yes — persona is not always running         |
+
 
 Sending is cheap and can ship immediately. Receiving requires either a persistent runner connection (WebSocket) or periodic inbox polling (pull model). These ship as separate sub-phases.
 
@@ -495,21 +497,25 @@ New `persona.json` schema fields under `social.contacts`:
 }
 ```
 
-| Field | Values | Meaning |
-|-------|--------|---------|
+
+| Field                 | Values                                            | Meaning                                                             |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
 | `preferred_transport` | `"direct-first"` / `"websocket"` / `"inbox-only"` | Routing preference; persona emits signal when runner support needed |
-| `inbox_fallback` | `true` / `false` | Whether to post to ACN inbox when target is offline |
-| `min_incoming_trust` | `"verified"` / `"community"` / `"unverified"` | Incoming message trust gate (Contact Trust Gate in state-sync) |
+| `inbox_fallback`      | `true` / `false`                                  | Whether to post to ACN inbox when target is offline                 |
+| `min_incoming_trust`  | `"verified"` / `"community"` / `"unverified"`     | Incoming message trust gate (Contact Trust Gate in state-sync)      |
+
 
 **Implementation — three sub-phases (each independently shippable):**
 
 **Phase A — Outbound send (no runner dependency):**
+
 - `lib/social/acn-client.pingAgent(endpoint)` — HEAD request with timeout; returns `{online: bool, latencyMs}`
 - `lib/social/acn-client.sendMessage(slug, targetAgentId, message, opts)` — ping → direct POST or ACN inbox fallback
 - `openpersona social send <slug> <agent-id> <message> [--no-fallback]`
 - Schema: add `preferred_transport` + `inbox_fallback` to `persona.input.schema.json` under `social.contacts`
 
 **Phase B — Transport declaration + runner negotiation:**
+
 - Extend `agent_communication` signal payload: add `transport`, `endpoint`, `intent` fields
 - Update `soul-awareness-body.partial.md`: teach persona to emit `intent: "connect"` signal with transport preference
 - Update `SIGNAL-PROTOCOL.md` template: document runner-side WebSocket proxy contract
@@ -519,25 +525,30 @@ New `persona.json` schema fields under `social.contacts`:
 
 ACN gateway confirmed endpoints (v0.4.1, source-verified 2026-04-22):
 
-| Endpoint | Purpose | Notes |
-|----------|---------|-------|
-| `GET /api/v1/communication/history/{agent_id}?limit=N&ack=true\|false` | Offline inbox: messages that failed direct delivery | Cap 50, TTL 30 days |
-| `GET /api/v1/websocket/agent/{agent_id}/status` | WS presence check | Bearer auth |
-| `WS  /ws/{agent_id}` | Real-time WebSocket channel | First-message auth |
+
+| Endpoint                                                       | Purpose                     | Notes                                               |
+| -------------------------------------------------------------- | --------------------------- | --------------------------------------------------- |
+| `GET /api/v1/communication/history/{agent_id}?limit=N&ack=true | false`                      | Offline inbox: messages that failed direct delivery |
+| `GET /api/v1/websocket/agent/{agent_id}/status`                | WS presence check           | Bearer auth                                         |
+| `WS /ws/{agent_id}`                                            | Real-time WebSocket channel | First-message auth                                  |
+
 
 **Key ACN inbox semantics (from source code, not assumption):**
+
 - Only failed-delivery messages appear in the inbox (`_store_inbox` is called only in the route exception handler).
 - `ack=true` → server deletes `acn:inbox:{agent_id}` key after return (at-most-once, recommended).
 - `ack=false` → peek without clearing; client must deduplicate via `.poller-cursor.json`.
 - Inbox cap: **50 messages** (not 1000); TTL: **30 days** (not 7 days).
 
 **Implemented (Phase C):**
+
 - `lib/social/acn-client.js` — `getMessageHistory(gateway, agentId, apiKey, { limit, ack })`
 - `lib/social/acn-client.js` — `checkWsPresence(gateway, agentId, apiKey)`
 - `lib/social/inbox.js` — `pollInbox(slug, opts)`: fetches ACN inbox → Contact Trust Gate → writes `pendingCommands`
 - `openpersona social inbox <slug> [--poll] [--interval 30] [--no-ack] [--dry-run]` — CLI poller
 
 **pendingCommands entry type: `a2a_message`**
+
 ```json
 { "type": "a2a_message", "source": "acn_inbox",
   "payload": { "from_agent", "from_name", "trust_level", "route_id", "message", "received_at" } }
@@ -562,6 +573,7 @@ Phase E (heartbeat) ← DONE — sendHeartbeat + CLI one-shot + --daemon keep-al
 **Motivation:** Subnets are part of a persona's social identity on ACN — they control discoverability scope and enable private team/org isolation. `broadcastMessage` is the natural multi-target extension of `sendMessage`.
 
 **Implemented:**
+
 - `lib/social/acn-client.js`: `listSubnets`, `joinSubnet`, `leaveSubnet`, `broadcastMessage`
 - `schemas/persona.input.schema.json`: `social.subnets.auto_join[]` — list of subnets to join after `acn-register`
 - `lib/remote/registrar.js`: auto-join hook (non-fatal, runs before auto-discover)
@@ -575,11 +587,13 @@ Phase E (heartbeat) ← DONE — sendHeartbeat + CLI one-shot + --daemon keep-al
 **Motivation:** Without periodic heartbeats, ACN marks agents as offline after its TTL window, breaking the presence-aware routing in P13-B (pingAgent → direct delivery fails, always falls back to relay). Heartbeat is the missing keepalive that makes the online/offline distinction meaningful.
 
 **Implemented:**
+
 - `lib/social/acn-client.js`: `sendHeartbeat(gateway, agentId, apiKey, opts)` — POST to `/api/v1/agents/{id}/heartbeat` with optional `endpoint`, `status`, `skills` body fields
 - `bin/cli.js`: `openpersona social heartbeat <slug>` — one-shot and `--daemon --interval <secs>` keep-alive loop
 - `tests/social-acn.test.js`: 3 new tests (27–29), all passing (29/29 total)
 
 **Explicitly excluded (belong to future Economy / Collaboration concept):**
+
 - ACN Tasks API (`/tasks` CRUD) — work-unit lifecycle, not social identity
 - ACN Payments / AP2 — belongs to Economy systemic concept (already has `economic-identity.json`)
 - On-chain identity management — handled by `acn-register` + `acn-config.json` `onchain.erc8004` section
@@ -893,12 +907,12 @@ Expand `evolution` in `persona.json` to distinguish instance vs. pack levels and
 
 **Field-level notes:**
 
-- `**evolution.instance`** — all existing flat `evolution.*` fields migrate here; the generator detects new format by presence of `evolution.instance` key and falls back to old flat format otherwise
+- `**evolution.instance`** — all existing flat `evolution.`* fields migrate here; the generator detects new format by presence of `evolution.instance` key and falls back to old flat format otherwise
 - `**evolution.pack.engine`** — `"signal"` (built-in Signal Protocol path, default) or `"autoskill"` (delegates to AutoSkill4OpenClaw); aligns with P24 design
 - `**evolution.faculty.activationChannels`** — enum array declaring which channels may trigger dormant-faculty activation: `"pendingCommands"` (host async queue), `"signal"` (Signal Protocol `capability_unlock` type), `"cli"` (`openpersona install` command); replaces the narrower `allowActivation + activatableFrom` pair
 - `**evolution.body.allowRuntimeExpansion`** — allows the host to add new `body.runtime.channels` entries via `state write` between conversations (e.g. enabling a new integration); default `false`
-- `**evolution.body.allowModelSwap**` — allows the host to replace `body.runtime.models` entries via `state write` (e.g. upgrading the LLM model); default `false`
-- `**evolution.skill**` — three-axis policy covering the full CRUD surface: `allowNewInstall` (install a skill not in the original pack), `allowUpgrade` (bump version of an installed skill), `allowUninstall` (remove an installed skill at runtime); all default `false` for predictability
+- `**evolution.body.allowModelSwap`** — allows the host to replace `body.runtime.models` entries via `state write` (e.g. upgrading the LLM model); default `false`
+- `**evolution.skill`** — three-axis policy covering the full CRUD surface: `allowNewInstall` (install a skill not in the original pack), `allowUpgrade` (bump version of an installed skill), `allowUninstall` (remove an installed skill at runtime); all default `false` for predictability
 
 **Backward-compatible shim — complete field mapping:**
 
