@@ -1401,6 +1401,7 @@ const {
   joinSubnet,
   leaveSubnet,
   broadcastMessage,
+  sendHeartbeat,
 } = require('../lib/social/acn-client');
 
 const socialCmd = program
@@ -1956,6 +1957,82 @@ socialCmd
     } catch (e) {
       printError(e.message);
       process.exit(1);
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// social heartbeat  — ACN keepalive to maintain online status
+// ---------------------------------------------------------------------------
+
+socialCmd
+  .command('heartbeat <slug>')
+  .description('Send a heartbeat to ACN to maintain online status')
+  .option('--daemon',            'Keep sending heartbeats in a loop (Ctrl-C to stop)')
+  .option('--interval <secs>',  'Heartbeat interval in seconds (with --daemon)', '60')
+  .option('--endpoint <url>',   'Advertise this A2A endpoint URL with the heartbeat')
+  .option('--status <status>',  'Agent status to advertise: online | busy | away', 'online')
+  .action(async (slug, opts) => {
+    const { resolvePersonaDir } = require('../lib/state/runner');
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not installed: "${slug}". Install first with: openpersona install <source>`);
+      process.exit(1);
+    }
+
+    const regPath = path.join(personaDir, 'acn-registration.json');
+    if (!fs.existsSync(regPath)) {
+      printError(`ACN credentials not found for "${slug}". Run: openpersona acn-register ${slug}`);
+      process.exit(1);
+    }
+    let reg;
+    try {
+      reg = JSON.parse(fs.readFileSync(regPath, 'utf-8'));
+    } catch {
+      printError('Failed to read acn-registration.json');
+      process.exit(1);
+    }
+    const agentId = reg.agentId || reg.agent_id;
+    const apiKey  = reg.apiKey  || reg.api_key;
+    const gateway = reg.gateway || resolveGateway(personaDir);
+    if (!agentId || !apiKey) {
+      printError(`ACN credentials incomplete for "${slug}". Run: openpersona acn-register ${slug}`);
+      process.exit(1);
+    }
+
+    const hbOpts = {
+      status: opts.status,
+      ...(opts.endpoint && { endpoint: opts.endpoint }),
+    };
+
+    const beat = async () => {
+      try {
+        await sendHeartbeat(gateway, agentId, apiKey, hbOpts);
+        if (opts.daemon) {
+          process.stdout.write(`\r${chalk.dim(new Date().toLocaleTimeString())} ${chalk.green('♥')} heartbeat sent`);
+        } else {
+          printSuccess(`Heartbeat sent for "${slug}" (${agentId})`);
+        }
+      } catch (e) {
+        if (opts.daemon) {
+          process.stdout.write(`\r${chalk.dim(new Date().toLocaleTimeString())} ${chalk.red('✗')} heartbeat failed: ${e.message}`);
+        } else {
+          printError(`Heartbeat failed: ${e.message}`);
+          process.exit(1);
+        }
+      }
+    };
+
+    if (!opts.daemon) {
+      await beat();
+    } else {
+      const intervalMs = Math.max(10, parseInt(opts.interval, 10) || 60) * 1000;
+      printInfo(`Heartbeat daemon for "${slug}" — every ${intervalMs / 1000}s (Ctrl-C to stop)`);
+      await beat();
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await new Promise((r) => setTimeout(r, intervalMs));
+        await beat();
+      }
     }
   });
 

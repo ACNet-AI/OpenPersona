@@ -546,13 +546,14 @@ ACN gateway confirmed endpoints (v0.4.1, source-verified 2026-04-22):
 **Dependency map:**
 
 ```
-Phase A (send)     ← DONE — direct P2P + ACN relay fallback (DLQ-backed)
-Phase B (declare)  ← DONE — transport signal declarations
-Phase C (receive)  ← DONE — ACN offline inbox + Trust Gate + CLI poller
-Phase D (subnet)   ← DONE — subnet list/join/leave + broadcast + auto_join schema
+Phase A (send)      ← DONE — direct P2P + ACN relay fallback (DLQ-backed)
+Phase B (declare)   ← DONE — transport signal declarations
+Phase C (receive)   ← DONE — ACN offline inbox + Trust Gate + CLI poller
+Phase D (subnet)    ← DONE — subnet list/join/leave + broadcast + auto_join schema
+Phase E (heartbeat) ← DONE — sendHeartbeat + CLI one-shot + --daemon keep-alive
 ```
 
-**All gates cleared. P13-B + P13-C complete.**
+**All gates cleared. P13-B + P13-C + P13-D complete.**
 
 ---
 
@@ -566,6 +567,17 @@ Phase D (subnet)   ← DONE — subnet list/join/leave + broadcast + auto_join s
 - `lib/remote/registrar.js`: auto-join hook (non-fatal, runs before auto-discover)
 - `bin/cli.js`: `openpersona social subnet list/join/leave`, `openpersona social broadcast`
 - `tests/social-acn.test.js`: 7 new tests (18–24), all passing
+
+---
+
+### P13-D — ACN Heartbeat (shipped)
+
+**Motivation:** Without periodic heartbeats, ACN marks agents as offline after its TTL window, breaking the presence-aware routing in P13-B (pingAgent → direct delivery fails, always falls back to relay). Heartbeat is the missing keepalive that makes the online/offline distinction meaningful.
+
+**Implemented:**
+- `lib/social/acn-client.js`: `sendHeartbeat(gateway, agentId, apiKey, opts)` — POST to `/api/v1/agents/{id}/heartbeat` with optional `endpoint`, `status`, `skills` body fields
+- `bin/cli.js`: `openpersona social heartbeat <slug>` — one-shot and `--daemon --interval <secs>` keep-alive loop
+- `tests/social-acn.test.js`: 3 new tests (27–29), all passing (29/29 total)
 
 **Explicitly excluded (belong to future Economy / Collaboration concept):**
 - ACN Tasks API (`/tasks` CRUD) — work-unit lifecycle, not social identity

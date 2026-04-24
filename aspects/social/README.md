@@ -44,7 +44,7 @@ Declared in `persona.json` under the top-level `social` field:
 |------|------|
 | `lib/generator/social.js` | Generates `agent-card.json`, `acn-config.json`, and `contacts.json` seed |
 | `lib/social/contacts.js` | Runtime CRUD for `social/contacts.json` + `social/contacts.jsonl` |
-| `lib/social/acn-client.js` | ACN HTTP client: `fetchAgent`, `searchAgents`, `syncContacts`, `autoDiscover`, `pingAgent`, `sendMessage`, `checkWsPresence`, `getMessageHistory`, `listSubnets`, `joinSubnet`, `leaveSubnet`, `broadcastMessage` |
+| `lib/social/acn-client.js` | ACN HTTP client: `fetchAgent`, `searchAgents`, `syncContacts`, `autoDiscover`, `pingAgent`, `sendMessage`, `checkWsPresence`, `getMessageHistory`, `listSubnets`, `joinSubnet`, `leaveSubnet`, `broadcastMessage`, `sendHeartbeat` |
 | `lib/social/inbox.js` | ACN offline inbox poller: `pollInbox`, Trust Gate, cursor management, `pendingCommands` injection |
 | `lib/social/http.js` | Thin HTTP helper (GET/POST, 15 s timeout, 5 MB cap, no external deps) used by `acn-client.js` |
 | `lib/remote/registrar.js` | ACN registration + auto-discover hook |
@@ -100,6 +100,13 @@ openpersona social broadcast <slug> "<message>" --subnet public         # Broadc
 openpersona social broadcast <slug> "<message>" --to agent-a,agent-b   # Broadcast to agents
 openpersona social broadcast <slug> "<message>" --subnet team --type announcement
 
+# Heartbeat — maintain online status in ACN registry
+openpersona social heartbeat <slug>                      # Send once
+openpersona social heartbeat <slug> --daemon             # Keep-alive loop (default 60 s)
+openpersona social heartbeat <slug> --daemon --interval 30   # Custom interval
+openpersona social heartbeat <slug> --endpoint https://mybot.example.com/a2a  # Advertise endpoint
+openpersona social heartbeat <slug> --status busy        # Advertise status
+
 # Register with ACN (auto-discover + auto-join subnets hooks run here)
 openpersona acn-register [slug]
 ```
@@ -128,6 +135,11 @@ sendMessage(target)
        ├── online  → POST endpoint (direct)          status: "sent"
        └── offline → POST ACN /communication/send    status: "relayed"
                      (inbox_fallback: false → status: "offline")
+
+# Heartbeat keepalive (social heartbeat --daemon)
+setInterval(sendHeartbeat, interval)
+  → POST ACN /agents/{id}/heartbeat   (maintains online status)
+       optional body: { endpoint, status, skills }
 
 # A2A inbound (social inbox)
 pollInbox(slug)
@@ -209,6 +221,7 @@ Example:
 | **B — Declare** | Signal payload extension + SKILL.md template update | None — framework-side only |
 | **C — Receive** | Inbox poll (`pollInbox`) + `openpersona social inbox` CLI | ACN inbox API availability |
 | **D — Subnet** | `listSubnets` / `joinSubnet` / `leaveSubnet` + `broadcastMessage` + `social.subnets.auto_join` schema | None — ships independently |
+| **E — Heartbeat** | `sendHeartbeat` + `openpersona social heartbeat` CLI (one-shot + `--daemon` keep-alive) | Requires ACN registration |
 
 ## Schemas
 

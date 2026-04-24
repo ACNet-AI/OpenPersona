@@ -29,6 +29,9 @@
  * 24. broadcastMessage calls POST /api/v1/messages/broadcast with target_agents list
  * 25. broadcastMessage throws when neither subnetId nor targetIds provided
  * 26. http.del sends DELETE with correct headers and parses JSON response
+ * 27. sendHeartbeat POSTs to /api/v1/agents/{id}/heartbeat with API key
+ * 28. sendHeartbeat includes optional endpoint and status in body
+ * 29. sendHeartbeat throws on non-2xx response
  */
 
 const { describe, it, before, after } = require('node:test');
@@ -602,5 +605,93 @@ describe('social acn-client', () => {
     assert.equal(capturedPath, '/api/v1/test');
     assert.equal(capturedAuth, 'Bearer testkey');
     assert.equal(result.status, 204);
+  });
+
+  // -------------------------------------------------------------------------
+  // Heartbeat tests (27-29)
+  // -------------------------------------------------------------------------
+
+  it('sendHeartbeat POSTs to /api/v1/agents/{id}/heartbeat with API key', async () => {
+    const http = require('http');
+    let capturedMethod;
+    let capturedPath;
+    let capturedAuth;
+    let capturedBody;
+    const server = http.createServer((req, res) => {
+      capturedMethod = req.method;
+      capturedPath   = req.url;
+      capturedAuth   = req.headers.authorization;
+      let data = '';
+      req.on('data', (c) => (data += c));
+      req.on('end', () => {
+        capturedBody = JSON.parse(data);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { sendHeartbeat } = require('../lib/social/acn-client');
+    const result = await sendHeartbeat(
+      `http://127.0.0.1:${port}`, 'agent-001', 'my-api-key'
+    );
+    server.close();
+
+    assert.equal(capturedMethod, 'POST');
+    assert.equal(capturedPath, '/api/v1/agents/agent-001/heartbeat');
+    assert.equal(capturedAuth, 'Bearer my-api-key');
+    assert.equal(result.ok, true);
+    assert.ok(result.sentAt);
+    // No optional fields — body should be empty object
+    assert.deepEqual(capturedBody, {});
+  });
+
+  it('sendHeartbeat includes optional endpoint and status in body', async () => {
+    const http = require('http');
+    let capturedBody;
+    const server = http.createServer((req, res) => {
+      let data = '';
+      req.on('data', (c) => (data += c));
+      req.on('end', () => {
+        capturedBody = JSON.parse(data);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { sendHeartbeat } = require('../lib/social/acn-client');
+    await sendHeartbeat(
+      `http://127.0.0.1:${port}`, 'agent-001', 'my-api-key',
+      { endpoint: 'https://agent.example.com/a2a', status: 'busy', skills: ['coding'] }
+    );
+    server.close();
+
+    assert.equal(capturedBody.endpoint, 'https://agent.example.com/a2a');
+    assert.equal(capturedBody.status, 'busy');
+    assert.deepEqual(capturedBody.skills, ['coding']);
+  });
+
+  it('sendHeartbeat throws on non-2xx response', async () => {
+    const http = require('http');
+    const server = http.createServer((req, res) => {
+      let data = '';
+      req.on('data', (c) => (data += c));
+      req.on('end', () => {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ detail: 'invalid api key' }));
+      });
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const { sendHeartbeat } = require('../lib/social/acn-client');
+    await assert.rejects(
+      () => sendHeartbeat(`http://127.0.0.1:${port}`, 'agent-001', 'bad-key'),
+      /invalid api key|HTTP 401/
+    );
+    server.close();
   });
 });
