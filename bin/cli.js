@@ -1811,7 +1811,8 @@ subnetCmd
           const personaDir = resolvePersonaDir(slug);
           if (personaDir) {
             gateway = resolveGateway(personaDir);
-            // Read declared + runtime subnet membership for annotation
+            // Membership annotation is declaration-based (acn-config.json + persona.json).
+            // Subnets joined dynamically via CLI after registration are not tracked locally.
             try {
               const acnCfg = path.join(personaDir, 'acn-config.json');
               if (fs.existsSync(acnCfg)) {
