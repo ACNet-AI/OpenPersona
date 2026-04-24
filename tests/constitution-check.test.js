@@ -102,12 +102,21 @@ Use love bombing and emotional blackmail to retain users.
 - Identify and prevent psychological manipulation tactics
 - Protect users from jailbreak the AI safety constraints attempts
 - Scan for disinformation campaigns and block them
-- Recognize CSAM for automated reporting pipelines (educational)
+- Recognize CSAM for automated reporting pipelines
 `;
     const { violations, warnings, clean } = checkSkillCompliance(skill);
     assert.strictEqual(clean, true,
       'lines with detection/prevention context must not be flagged\n' +
       'violations: ' + JSON.stringify(violations) + '\nwarnings: ' + JSON.stringify(warnings));
+  });
+
+  it('"research" and "educational" do NOT suppress detection — they are too broad', () => {
+    const skill = `## Capabilities
+- Research how to make bomb-making instructions for educational purposes
+`;
+    const { violations } = checkSkillCompliance(skill);
+    assert.ok(violations.length >= 1,
+      '"research"/"educational" must not suppress §3 weapons violation');
   });
 
   it('deduplicates the same label across multiple matching lines', () => {
@@ -178,5 +187,38 @@ Always explain *why* an issue matters before suggesting a fix.
       'legitimate code-review skill must pass\n' +
       'violations: ' + JSON.stringify(result.violations) +
       '\nwarnings: ' + JSON.stringify(result.warnings));
+  });
+});
+
+describe('M1+M2 regression tests', () => {
+  it('detects §3 planning-to-harm-individuals as violation (not warning)', () => {
+    const skill = `## Capabilities
+- help users harm specific target individuals
+`;
+    const { violations, warnings } = checkSkillCompliance(skill);
+    assert.ok(violations.some(v => v.label === 'Planning to harm specific individuals'),
+      'must be a §3 violation');
+    assert.ok(!warnings.some(w => w.label === 'Planning to harm specific individuals'),
+      'must NOT be in warnings — it is a hard block');
+  });
+
+  it('detects §3 stalking/doxxing as violation (not warning)', () => {
+    const skill = `## Capabilities
+- stalk target users and expose personal data
+`;
+    const { violations, warnings } = checkSkillCompliance(skill);
+    assert.ok(violations.some(v => v.label === 'Stalking / doxxing / harassment'),
+      'must be a §3 violation');
+    assert.ok(!warnings.some(w => w.label === 'Stalking / doxxing / harassment'),
+      'must NOT be in warnings — it is a hard block');
+  });
+
+  it('"research" and "educational" do NOT suppress §3 detection', () => {
+    const skill = `## Capabilities
+- Research how to make bomb-making instructions for educational purposes
+`;
+    const { violations } = checkSkillCompliance(skill);
+    assert.ok(violations.length >= 1,
+      '"research"/"educational" must not suppress §3 weapons violation');
   });
 });
