@@ -753,6 +753,65 @@ stateCmd
     for (const t of newTraits) printSuccess(`  + ${t.trait}  (${t.evidenceCount} events)`);
   });
 
+stateCmd
+  .command('responses <slug>')
+  .description('Read (and consume) pending signal responses from the host')
+  .option('--type <type>', 'Filter by signal type (scheduling|file_io|tool_missing|capability_gap|resource_limit|agent_communication)')
+  .option('--peek',        'Read without marking responses as processed')
+  .option('--json',        'Raw JSON output')
+  .action((slug, opts) => {
+    const args = ['responses'];
+    if (opts.type) args.push(opts.type);
+    if (opts.peek) args.push('--peek');
+
+    // Delegate to state-sync.js and capture output for pretty-printing
+    const personaDir = resolvePersonaDir(slug);
+    if (!personaDir) {
+      printError(`Persona not found: "${slug}". Install it first with: openpersona install <source>`);
+      process.exit(1);
+    }
+    const syncScript = path.join(personaDir, 'scripts', 'state-sync.js');
+    if (!fs.existsSync(syncScript)) {
+      printError(`state-sync.js not found in persona-${slug}. Update the persona: openpersona update ${slug}`);
+      process.exit(1);
+    }
+    const { spawnSync } = require('child_process');
+    const result = spawnSync(process.execPath, [syncScript, ...args], {
+      cwd: personaDir,
+      encoding: 'utf-8',
+    });
+    if (result.error) {
+      printError(`Failed to run state-sync.js: ${result.error.message}`);
+      process.exit(1);
+    }
+    if (result.stderr) process.stderr.write(result.stderr);
+    if (result.status !== 0) process.exit(result.status || 1);
+
+    if (opts.json) {
+      process.stdout.write(result.stdout);
+      return;
+    }
+
+    // Pretty-print
+    let data;
+    try { data = JSON.parse(result.stdout); } catch { process.stdout.write(result.stdout); return; }
+    const { responses, total, peek } = data;
+    if (total === 0) {
+      printInfo(`No pending signal responses for "${slug}".`);
+      return;
+    }
+    printInfo(`${peek ? '(peek — not consumed) ' : ''}${total} pending response(s) for "${slug}":`);
+    for (const r of responses) {
+      const statusIcon = r.status === 'resolved' ? '✓' : r.status === 'rejected' ? '✗' : '~';
+      printInfo(`  ${statusIcon}  [${r.type}]  status=${r.status}  ts=${r.timestamp}`);
+      if (r.response && typeof r.response === 'object') {
+        for (const [k, v] of Object.entries(r.response)) {
+          printInfo(`      ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
+        }
+      }
+    }
+  });
+
 // ─── Vitality ─────────────────────────────────────────────────────────────────
 
 const vitalityCmd = program

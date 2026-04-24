@@ -407,6 +407,198 @@ describe('state-sync script generation', () => {
 
     await fs.remove(TMP_SS);
   });
+
+  it('state-sync.js responses returns empty when no signal-responses.json exists', async () => {
+    const persona = {
+      personaName: 'RespEmpty',
+      slug: 'resp-empty',
+      bio: 'responses empty tester',
+      personality: 'calm',
+      speakingStyle: 'Concise',
+    };
+    const TMP_RE = path.join(require('os').tmpdir(), 'op-test-resp-empty-' + Date.now());
+    await fs.ensureDir(TMP_RE);
+    const { skillDir } = await generate(persona, TMP_RE);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const openclawHome = path.join(TMP_RE, 'openclaw');
+    const env = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    const out = execSync(`node "${syncScript}" responses`, { encoding: 'utf-8', cwd: skillDir, env });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.total, 0, 'total must be 0 when no responses file exists');
+    assert.deepStrictEqual(result.responses, [], 'responses array must be empty');
+
+    await fs.remove(TMP_RE);
+  });
+
+  it('state-sync.js responses consumes pending responses and marks them processed', async () => {
+    const persona = {
+      personaName: 'RespConsume',
+      slug: 'resp-consume',
+      bio: 'responses consume tester',
+      personality: 'methodical',
+      speakingStyle: 'Direct',
+    };
+    const TMP_RC = path.join(require('os').tmpdir(), 'op-test-resp-consume-' + Date.now());
+    await fs.ensureDir(TMP_RC);
+    const { skillDir } = await generate(persona, TMP_RC);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const openclawHome = path.join(TMP_RC, 'openclaw');
+    const feedbackDir = path.join(openclawHome, 'feedback');
+    const responsesPath = path.join(feedbackDir, 'signal-responses.json');
+    const env = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    // Write two responses: one for this slug (pending), one for another slug
+    await fs.ensureDir(feedbackDir);
+    const fakeResponses = [
+      { type: 'capability_gap', slug: 'resp-consume', status: 'resolved', response: { capability: 'web_search' }, processed: false, timestamp: new Date().toISOString() },
+      { type: 'scheduling',     slug: 'other-persona', status: 'resolved', response: { jobId: 'j1' },              processed: false, timestamp: new Date().toISOString() },
+    ];
+    fs.writeFileSync(responsesPath, JSON.stringify(fakeResponses, null, 2));
+
+    // First read — should return the pending entry and mark it processed
+    const out1 = execSync(`node "${syncScript}" responses`, { encoding: 'utf-8', cwd: skillDir, env });
+    const r1 = JSON.parse(out1);
+    assert.strictEqual(r1.total, 1, 'must return 1 pending response for this slug');
+    assert.strictEqual(r1.responses[0].type, 'capability_gap', 'returned response must have correct type');
+    assert.strictEqual(r1.peek, false, 'peek must be false by default');
+
+    // After consume, the file entry must be marked processed
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === true, 'consumed response must be marked processed:true in file');
+    assert.ok(stored[1].processed === false, 'other slug entry must remain unprocessed');
+
+    // Second read — same slug should return 0 (already consumed)
+    const out2 = execSync(`node "${syncScript}" responses`, { encoding: 'utf-8', cwd: skillDir, env });
+    const r2 = JSON.parse(out2);
+    assert.strictEqual(r2.total, 0, 'second read must return 0 — already consumed');
+
+    await fs.remove(TMP_RC);
+  });
+
+  it('state-sync.js responses --peek reads without marking processed', async () => {
+    const persona = {
+      personaName: 'RespPeek',
+      slug: 'resp-peek',
+      bio: 'responses peek tester',
+      personality: 'curious',
+      speakingStyle: 'Inquisitive',
+    };
+    const TMP_RP = path.join(require('os').tmpdir(), 'op-test-resp-peek-' + Date.now());
+    await fs.ensureDir(TMP_RP);
+    const { skillDir } = await generate(persona, TMP_RP);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const openclawHome = path.join(TMP_RP, 'openclaw');
+    const feedbackDir = path.join(openclawHome, 'feedback');
+    const responsesPath = path.join(feedbackDir, 'signal-responses.json');
+    const env = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    await fs.ensureDir(feedbackDir);
+    const fakeResponses = [
+      { type: 'scheduling', slug: 'resp-peek', status: 'resolved', response: { jobId: 'j99' }, processed: false, timestamp: new Date().toISOString() },
+    ];
+    fs.writeFileSync(responsesPath, JSON.stringify(fakeResponses, null, 2));
+
+    // Peek — must return the response but NOT mark it processed
+    const out = execSync(`node "${syncScript}" responses --peek`, { encoding: 'utf-8', cwd: skillDir, env });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.total, 1, 'peek must return the pending response');
+    assert.strictEqual(result.peek, true, 'peek flag must be true in output');
+
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === false, '--peek must NOT mark the response as processed');
+
+    await fs.remove(TMP_RP);
+  });
+
+  it('state-sync.js responses [type] filters by signal type', async () => {
+    const persona = {
+      personaName: 'RespFilter',
+      slug: 'resp-filter',
+      bio: 'responses filter tester',
+      personality: 'analytical',
+      speakingStyle: 'Technical',
+    };
+    const TMP_RF = path.join(require('os').tmpdir(), 'op-test-resp-filter-' + Date.now());
+    await fs.ensureDir(TMP_RF);
+    const { skillDir } = await generate(persona, TMP_RF);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const openclawHome = path.join(TMP_RF, 'openclaw');
+    const feedbackDir = path.join(openclawHome, 'feedback');
+    const responsesPath = path.join(feedbackDir, 'signal-responses.json');
+    const env = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    await fs.ensureDir(feedbackDir);
+    const fakeResponses = [
+      { type: 'capability_gap',    slug: 'resp-filter', status: 'resolved', response: { ok: 1 }, processed: false, timestamp: new Date().toISOString() },
+      { type: 'agent_communication', slug: 'resp-filter', status: 'resolved', response: { ok: 2 }, processed: false, timestamp: new Date().toISOString() },
+    ];
+    fs.writeFileSync(responsesPath, JSON.stringify(fakeResponses, null, 2));
+
+    // Filter to agent_communication only
+    const out = execSync(`node "${syncScript}" responses agent_communication`, { encoding: 'utf-8', cwd: skillDir, env });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.total, 1, 'type filter must return only matching responses');
+    assert.strictEqual(result.responses[0].type, 'agent_communication', 'returned response must match type filter');
+
+    // capability_gap entry must remain unprocessed (not touched by type-filtered consume)
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === false, 'capability_gap must remain unprocessed when type filter excludes it');
+    assert.ok(stored[1].processed === true,  'agent_communication must be marked processed');
+
+    await fs.remove(TMP_RF);
+  });
+
+  it('state-sync.js emitSignal marks matching response as processed', async () => {
+    const persona = {
+      personaName: 'EmitConsumeTest',
+      slug: 'emit-consume',
+      bio: 'emit+consume loop tester',
+      personality: 'thorough',
+      speakingStyle: 'Precise',
+    };
+    const TMP_EC = path.join(require('os').tmpdir(), 'op-test-emit-consume-' + Date.now());
+    await fs.ensureDir(TMP_EC);
+    const { skillDir } = await generate(persona, TMP_EC);
+
+    const { execSync } = require('child_process');
+    const syncScript = path.join(skillDir, 'scripts', 'state-sync.js');
+    const openclawHome = path.join(TMP_EC, 'openclaw');
+    const feedbackDir = path.join(openclawHome, 'feedback');
+    const responsesPath = path.join(feedbackDir, 'signal-responses.json');
+    const env = { ...process.env, OPENCLAW_HOME: openclawHome };
+
+    await fs.ensureDir(feedbackDir);
+    // Pre-seed a resolved capability_gap response for this persona
+    fs.writeFileSync(responsesPath, JSON.stringify([
+      { type: 'capability_gap', slug: 'emit-consume', status: 'resolved',
+        response: { capability: 'web_search', message: 'Installed.' }, processed: false,
+        timestamp: new Date().toISOString() },
+    ], null, 2));
+
+    // Emit a capability_gap signal — emitSignal should find and return the pending response
+    const out = execSync(`node "${syncScript}" signal capability_gap '{"need":"web_search"}'`, {
+      encoding: 'utf-8', cwd: skillDir, env,
+    });
+    const result = JSON.parse(out);
+    assert.strictEqual(result.success, true, 'signal emit must succeed');
+    assert.ok(result.response !== null, 'emitSignal must return the pending host response');
+    assert.strictEqual(result.response.status, 'resolved', 'returned response status must be resolved');
+
+    // The response must now be marked as processed in the file
+    const stored = JSON.parse(fs.readFileSync(responsesPath, 'utf-8'));
+    assert.ok(stored[0].processed === true, 'emitSignal must mark the consumed response as processed:true');
+
+    await fs.remove(TMP_EC);
+  });
 });
 
 describe('body.interface schema and generation', () => {

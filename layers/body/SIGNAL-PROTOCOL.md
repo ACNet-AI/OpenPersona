@@ -15,6 +15,15 @@ OpenPersona ships the **client side** (`scripts/state-sync.js`) with every gener
 The **host side** is an open contract — this document specifies it so that any runner or platform
 can implement it without depending on OpenPersona internals.
 
+**The full closed loop — four steps:**
+
+```
+1. Persona emits        →  signals.json            (state-sync.js signal <type> [payload])
+2. Host reads + acts    →  signal-responses.json    (host-side script or plugin)
+3. Persona consumes     ←  signal-responses.json    (state-sync.js responses [type])
+4. Runner sees result   ←  next-turn context        (openpersona state responses <slug>)
+```
+
 ---
 
 ## Why This Matters
@@ -78,6 +87,15 @@ Each entry appended to `signals.json`:
 **Array semantics:** the persona appends; the file is capped at 200 entries (oldest pruned).
 The host should process new (unresponded) signals and may prune acknowledged entries.
 
+**Emitting via CLI:**
+```bash
+# From the persona pack directory
+node scripts/state-sync.js signal agent_communication '{"intent":"connect","target_agent_id":"agent-bob","transport":"websocket"}'
+
+# Via OpenPersona CLI (from any directory)
+openpersona state signal <slug> agent_communication '{"intent":"connect","target_agent_id":"agent-bob","transport":"websocket"}'
+```
+
 ---
 
 ## Response Schema (Host → Persona)
@@ -110,6 +128,27 @@ Each entry written to `signal-responses.json`:
 **Lookup semantics:** the persona reads the **last** entry where
 `type === signal.type && slug === signal.slug && processed === false`.
 The host writes new responses; the persona marks them processed after reading.
+
+**Consuming via CLI:**
+```bash
+# Read and consume all pending responses (marks processed: true)
+node scripts/state-sync.js responses
+
+# Filter to a specific type
+node scripts/state-sync.js responses agent_communication
+
+# Peek without consuming (processed stays false)
+node scripts/state-sync.js responses --peek
+
+# Via OpenPersona CLI (pretty-printed)
+openpersona state responses <slug>
+openpersona state responses <slug> --type agent_communication
+openpersona state responses <slug> --peek
+openpersona state responses <slug> --json          # raw JSON
+```
+
+Emitting a signal with `state-sync.js signal` also automatically reads and marks the latest
+matching response, so the persona sees the host's answer inline at emit time.
 
 ---
 

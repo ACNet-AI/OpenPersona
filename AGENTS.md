@@ -207,7 +207,7 @@ The generator outputs persona skill packs with this layout:
 - **`acn-registration.json`** *(runtime-only; in `.gitignore`, excluded from `openpersona export`)* — written by `acn-register` after a successful registration; contains `agent_id` and `api_key`. **Never distribute in persona packs.** `lib/lifecycle/porter.js` reads the pack's `.gitignore` and excludes it from zip exports.
 - **`social/contacts.json`** *(pack-level seed; included in exports)* — Social Contact Book skeleton; generated when `social.contacts.enabled: true`. Runtime CRUD via `openpersona social` CLI. Schema: `schemas/social/contacts.schema.json`.
 - **`social/contacts.jsonl`** *(runtime-only; in `.gitignore`, excluded from exports)* — Append-only event log for contact operations.
-- **`social/.poller-cursor.json`** *(runtime-only; in `.gitignore*, excluded from exports)* — A2A inbox cursor for the poller (PR#2).
+- **`social/.poller-cursor.json`** *(runtime-only; in `.gitignore`, excluded from exports)* — A2A inbox cursor; used by `pollInbox` in `--no-ack` mode for client-side deduplication.
 - **`scripts/state-sync.js`** — Body nervous system nerve fiber; `read` / `write` / `signal` commands; no external dependencies
 - **`scripts/`**, **`assets/`** — additional implementation scripts and static assets. Assets use subdirectories per [Agent Skills spec](https://agentskills.io/specification#assets%2F):
   - **`assets/avatar/`** — Body > Appearance assets: images, Live2D models (`.model3.json`), VRM (`.vrm`), textures. Populated from `body.appearance.avatar` / `body.appearance.model3d`

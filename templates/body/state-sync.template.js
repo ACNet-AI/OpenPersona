@@ -291,12 +291,22 @@ function emitSignal(type, payloadJson) {
     signals.push(signal);
     if (signals.length > 200) signals = signals.slice(-200);
     fs.writeFileSync(SIGNALS_PATH, JSON.stringify(signals, null, 2));
+    // Read the latest unprocessed host response for this type and mark it consumed.
     let response = null;
     if (fs.existsSync(SIGNAL_RESPONSES_PATH)) {
       try {
-        const responses = JSON.parse(fs.readFileSync(SIGNAL_RESPONSES_PATH, 'utf-8'));
-        if (Array.isArray(responses)) {
-          response = responses.filter((r) => r.type === type && r.slug === slug && !r.processed).pop() || null;
+        const allResponses = JSON.parse(fs.readFileSync(SIGNAL_RESPONSES_PATH, 'utf-8'));
+        if (Array.isArray(allResponses)) {
+          let lastIdx = -1;
+          for (let i = 0; i < allResponses.length; i++) {
+            const r = allResponses[i];
+            if (r.type === type && r.slug === slug && !r.processed) lastIdx = i;
+          }
+          if (lastIdx >= 0) {
+            response = allResponses[lastIdx];
+            allResponses[lastIdx] = { ...response, processed: true };
+            fs.writeFileSync(SIGNAL_RESPONSES_PATH, JSON.stringify(allResponses, null, 2));
+          }
         }
       } catch {}
     }
@@ -305,6 +315,57 @@ function emitSignal(type, payloadJson) {
     console.error('state-sync signal error:', e.message);
     process.exit(1);
   }
+}
+
+/**
+ * Read pending signal responses from the host.
+ *
+ * @param {string|null} typeFilter - Optional signal type to filter by
+ * @param {boolean}     peek       - If true, read without marking as processed
+ */
+function readResponses(typeFilter, peek) {
+  let slug = 'unknown';
+  const personaJsonPath = path.join(PERSONA_DIR, 'persona.json');
+  if (fs.existsSync(personaJsonPath)) {
+    try {
+      const personaData = JSON.parse(fs.readFileSync(personaJsonPath, 'utf-8'));
+      slug = personaData.slug || 'unknown';
+    } catch {}
+  }
+
+  if (!fs.existsSync(SIGNAL_RESPONSES_PATH)) {
+    console.log(JSON.stringify({ slug, responses: [], total: 0, peek: !!peek }));
+    return;
+  }
+
+  let allResponses = [];
+  try {
+    allResponses = JSON.parse(fs.readFileSync(SIGNAL_RESPONSES_PATH, 'utf-8'));
+    if (!Array.isArray(allResponses)) allResponses = [];
+  } catch (e) {
+    console.error('state-sync responses error: ' + e.message);
+    process.exit(1);
+  }
+
+  const pending = allResponses.filter(
+    (r) => r.slug === slug && !r.processed && (!typeFilter || r.type === typeFilter)
+  );
+
+  if (!peek && pending.length > 0) {
+    // Mark matched entries as processed in-place
+    for (const r of allResponses) {
+      if (r.slug === slug && !r.processed && (!typeFilter || r.type === typeFilter)) {
+        r.processed = true;
+      }
+    }
+    try {
+      fs.writeFileSync(SIGNAL_RESPONSES_PATH, JSON.stringify(allResponses, null, 2));
+    } catch (e) {
+      console.error('state-sync responses: failed to mark processed: ' + e.message);
+    }
+  }
+
+  console.log(JSON.stringify({ slug, responses: pending, total: pending.length, peek: !!peek }));
 }
 
 switch (command) {
@@ -319,12 +380,21 @@ switch (command) {
     if (!args[0]) { console.error('Usage: node scripts/state-sync.js signal <type> [payload-json]'); process.exit(1); }
     emitSignal(args[0], args[1] || null);
     break;
+  case 'responses': {
+    // args: [type?] [peek?]
+    // Accept --peek flag anywhere in args or literal 'peek' token
+    const peekFlag = args.includes('--peek') || args.includes('peek');
+    const typeArg  = args.find((a) => a && a !== '--peek' && a !== 'peek') || null;
+    readResponses(typeArg, peekFlag);
+    break;
+  }
   default:
     console.error([
       'Usage: node scripts/state-sync.js <command>',
-      '  read                         — Print evolution state summary',
-      '  write <json-patch>           — Persist state changes to state.json (pack root)',
-      '  signal <type> [payload-json] — Emit signal to host runtime',
+      '  read                               — Print evolution state summary',
+      '  write <json-patch>                 — Persist state changes to state.json (pack root)',
+      '  signal <type> [payload-json]       — Emit signal to host runtime',
+      '  responses [type] [--peek]          — Read (and consume) pending host responses',
     ].join('\n'));
     process.exit(1);
 }
