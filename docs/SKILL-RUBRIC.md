@@ -1,20 +1,22 @@
 # SKILL-RUBRIC
 
 > **A draft rubric for evaluating Agent Skill design quality.**
-> v0.1.2 — markdown-only spec, deliberately not yet a skill.
+> v0.1.3 — markdown-only spec, deliberately not yet a skill.
 
 ---
 
 ## Status
 
-- **v0.1.2 (draft)** — derived by collapsing an 8-dimension framework used in
-  a one-off review of `persona-evaluator 0.3.0`. v0.1.2 folds in v0.1.1
-  self-eval findings; see Provenance for the full changelog.
+- **v0.1.3 (draft)** — derived by collapsing an 8-dimension framework used in
+  a one-off review of `persona-evaluator 0.3.0`. v0.1.3 folds in two P0
+  patches from the Session 2 multi-skill pass
+  ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)); see Provenance
+  for the full changelog.
 - **Not yet a skill.** This file is a markdown standard intended for community
-  review. It will graduate to a skill (`skill-evaluator`) only after Session 2
-  (apply to ≥ 3 skills, measure inter-rater variance) demonstrates acceptable
-  reproducibility.
-- **Single-author, single-LLM origin.** See [Open Issues](#open-issues--known-limitations-v012).
+  review. It will graduate to a skill (`skill-evaluator`) only after Session 3
+  (multi-LLM pass on ≥ 3 skills, measuring inter-rater variance) demonstrates
+  acceptable reproducibility.
+- **Single-author, single-LLM origin.** See [Open Issues](#open-issues--known-limitations-v013).
 
 ---
 
@@ -239,8 +241,8 @@ role-aware approach `persona-evaluator` uses for personas.
 | Skill type    | Strict (must-be-strong)                  | Lenient (won't be heavily penalised)                            | Examples in this repo                                                |
 | ------------- | ---------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `tool`        | Reliability, Output-fit, Architecture    | Lifecycle-fit (often repo-internal, no public distribution yet) | `persona-evaluator`, `persona-knowledge`, `persona-model-trainer`    |
-| `persona`     | Problem-fit, Output-fit, Reliability     | Lifecycle-fit (persona packs rarely need versioning rituals)    | `entrepreneur-skill`, `secondme-skill`, `brand-persona-skill`        |
-| `framework`   | Architecture, Lifecycle-fit, Reliability | Problem-fit (foundational by purpose)                           | `open-persona`                                                       |
+| `persona`     | Problem-fit, Output-fit, Reliability     | Lifecycle-fit (persona packs rarely need versioning rituals)    | `entrepreneur-skill`, `brand-persona-skill`                          |
+| `framework`   | Architecture, Lifecycle-fit, Reliability | Problem-fit (foundational by purpose)                           | `open-persona`, `secondme-skill`                                     |
 | `meta`        | Architecture, Lifecycle-fit              | Problem-fit (it delegates to generated skills)                  | `anyone-skill`                                                       |
 | `spec`        | Architecture, Output-fit, Lifecycle-fit  | Problem-fit (foundational standard, judged by adoption)         | `SKILL-RUBRIC` (this file)                                           |
 
@@ -278,6 +280,18 @@ These are the same shape `persona-evaluator` uses, adapted for skill design.
 - **Don't overload the type.** A persona skill should be evaluated as a
   persona skill — don't apply tool weights to it because you "personally find
   reliability important here".
+- **Disclose disagreements with the declared type.** Reviewing Procedure
+  step 1 says "read SKILL.md `description` and `metadata.tags`" to classify
+  type — but read the **body** too. If the SKILL.md body shape contradicts
+  the declared / tagged type (e.g. labelled `persona` but the body reads
+  "orchestration skill package... Foundation / Capability chain"), surface
+  that as a separate **cross-cutting observation** in the report and score
+  against the **inferred** type. Do not silently re-score against the
+  declared type, and do not silently apply the inferred type without
+  flagging it. (Mirrored from
+  [`persona-evaluator` SKILL.md L154](../skills/persona-evaluator/SKILL.md);
+  added in v0.1.3 after Session 2 found `secondme-skill` mis-typed —
+  see [SESSION-2 F4](./SKILL-RUBRIC-SESSION-2.md#cross-cutting-findings).)
 - **Lean lower under uncertainty.** A rounded-up 7 is more harmful than an
   honest 5. The 5 prompts a fix; the 7 blesses status quo.
 - **Note v0.1.x's known limitations** in every report. See
@@ -288,7 +302,7 @@ These are the same shape `persona-evaluator` uses, adapted for skill design.
 ## Output Format
 
 ```markdown
-## Skill Design Review (SKILL-RUBRIC v0.1.2)
+## Skill Design Review (SKILL-RUBRIC v0.1.3)
 
 **Subject:** <skill-slug or spec-path>
 **Type (declared / inferred):** tool | persona | framework | meta | spec
@@ -326,17 +340,18 @@ These are the same shape `persona-evaluator` uses, adapted for skill design.
 
 ---
 
-## Open Issues / Known Limitations (v0.1.2)
+## Open Issues / Known Limitations (v0.1.3)
 
 These are tracked here so the next rubric iteration knows what to fix.
 **This is the canonical list — other sections that mention "known limitations"
 should link here rather than duplicate.**
 
-1. **Inter-rater variance unmeasured.** No data on how stable scores are
-   across LLMs or across multiple runs of the same LLM. Session 2 of the
-   rollout plan addresses this. The D3.1 calibration ladder is the rubric's
-   own admission that v0.1.x will mostly produce 0–4 reliability scores
-   until this is fixed.
+1. **Inter-rater variance unmeasured.** Session 2 (single-LLM, single-pass
+   over 8 skills, see [SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md))
+   confirmed every D3 score collapsed to 4/10 under the calibration ladder —
+   exactly as predicted, and not yet inter-rater data. **Session 3**
+   (multi-LLM pass) is what addresses this; v0.1.x will mostly produce 0–4
+   reliability scores until then.
 2. **D3 Reliability is overloaded.** It currently mixes reproducibility
    (cross-LLM stability, now a hard cap) and adversarial robustness (gaming
    / injection). These may need to split into D3a / D3b in v0.2.
@@ -354,11 +369,16 @@ should link here rather than duplicate.**
 7. **No CI integration yet.** Spec gate is automated (`validate-skills.mjs`);
    the five dimensions require an LLM. A future `skill-evaluator` skill would
    close this gap.
-8. **Body length past 250-line soft anchor.** v0.1.2 self-applies its own
-   D2.3 anchor: this single file is past the "consider splitting" line, well
-   under the 500-line spec ceiling. Splitting into
-   `references/DIMENSIONS.md` and `references/WEIGHTING.md` is on the v0.2
-   track per Self-eval Log v0.1.1's D2 sharpening.
+8. **Body length now past the 500-line spec warning ceiling.** v0.1.3
+   self-applies its own D2.3 anchor honestly: this file crossed the spec's
+   500-line ceiling in v0.1.3 (now ~540 lines, up from v0.1.2's 495). The
+   spec validator would emit a non-blocking warning if the rubric were a
+   skill — it is not, so the warning is recorded here instead.
+   `validate-skills.mjs` already emits the analogous warning for
+   `open-persona` (532) and `persona-model-trainer` (724). The rubric now
+   sits between those two. Splitting into `references/DIMENSIONS.md` and
+   `references/WEIGHTING.md` is **overdue** and elevated from v0.2-track
+   to v0.2.0-blocking.
 9. **`spec` type has only one example so far** (this file itself). Whether
    the strict/lenient profile generalises will be tested when more
    `spec`-type documents emerge in this repo.
@@ -372,14 +392,16 @@ Where this rubric is heading, in order:
 1. **Session 1 (done)** — write this markdown.
 2. **Session 1.5 (done, 2026-04-26)** — self-eval v0.1.1 against itself,
    surface 4 cross-cutting findings, fold into v0.1.2 (this version).
-3. **Session 2** — apply v0.1.2 to ≥ 3 skills in this repo. Record
-   per-dimension scores and rationale. Look for: dimensions with no
-   discrimination (every skill scores the same → kill the dimension),
-   dimensions impossible to score (rubric not executable → rewrite), and
-   disagreements between LLMs (reproducibility evidence).
-4. **Session 3** — fold Session 2's findings into v0.2.0. Decide whether to
-   collapse or split D3 / D5. Update type weights if patterns emerge. Split
-   into `references/` per Open Issues 8.
+3. **Session 2 (done, 2026-04-26)** — applied v0.1.2 to all 8 in-repo
+   skills with a single LLM. Surfaced 10 cross-cutting findings (F1–F10)
+   and 13 proposed v0.2.0 changes. Two P0 patches folded into v0.1.3
+   immediately (this version). Full report:
+   [SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md).
+4. **Session 3** — repeat Session 2's 8-skill pass with at least Claude +
+   GPT to produce inter-rater variance data, then fold the 11 remaining
+   v0.2.0 proposals from Session 2 + new disagreements into v0.2.0. Decide
+   whether to split D3 (reproducibility vs adversarial). Update type
+   weights if patterns emerge. Split into `references/` per Open Issues 8.
 5. **Session 4 (conditional)** — if v0.2.0 reaches "stable enough" (subjective
    for now; objective bar would be inter-rater variance < 1.5 per dimension),
    graduate to a skill: `skill-evaluator`, modelled architecturally on
@@ -409,9 +431,10 @@ Don't.
 Evidence-of-use record for D1.3 ("Evidence of use"). Each row is one real
 invocation of this rubric, including invocations against itself.
 
-| Version | Date       | Subject        | Reviewer            | Overall | Findings driving next bump |
-| ------- | ---------- | -------------- | ------------------- | ------- | -------------------------- |
-| v0.1.1  | 2026-04-26 | `SKILL-RUBRIC` | human + Claude 4.6  | 6.6/10  | C1–C4 → folded into v0.1.2 |
+| Version | Date       | Subject                | Reviewer            | Overall          | Findings driving next bump            |
+| ------- | ---------- | ---------------------- | ------------------- | ---------------- | ------------------------------------- |
+| v0.1.1  | 2026-04-26 | `SKILL-RUBRIC`         | human + Claude 4.6  | 6.6/10           | C1–C4 → folded into v0.1.2            |
+| v0.1.2  | 2026-04-26 | 8 in-repo skills       | human + Claude 4.6  | median 6.2/10    | F1–F10 → P0 in v0.1.3, P1 in v0.2.0   |
 
 ### v0.1.1 self-eval (2026-04-26) — 6.6/10
 
@@ -460,6 +483,33 @@ Explainability, Actionability, Ecosystem-fit, Evolvability) were collapsed to
 
 **Changelog**
 
+- **v0.1.3 (2026-04-26)** — folded in two P0 findings from Session 2's
+  multi-skill pass ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)):
+  - reclassified `secondme-skill` from `persona` to `framework` in the
+    Type-aware Weighting examples, on evidence from its SKILL.md L14–16
+    ("orchestration skill package... Foundation / Capability chain"); the
+    misclassification was **the rubric's failure**, not the skill's
+    (Reviewing Procedure step 1 read frontmatter only, not body) — see
+    Session 2 finding F4;
+  - added "Disclose disagreements with the declared type" to Hard Rules,
+    mirroring `persona-evaluator` SKILL.md L154's mature wording, so
+    future declared-vs-inferred conflicts are surfaced as cross-cutting
+    observations rather than silently re-scored;
+  - updated Reviewing Procedure step 1 prose (in the Hard Rules
+    cross-reference) to require reading the SKILL.md body in addition
+    to frontmatter for type classification;
+  - updated Open Issues 1 and Rollout Plan to reflect Session 2 done and
+    Session 3 = multi-LLM;
+  - added Self-eval Log row for the v0.1.2 → v0.1.3 multi-skill pass.
+  - **dogfooding regression noted:** the v0.1.3 changelog itself pushed
+    body length over the spec's 500-line warn ceiling (Open Issues 8
+    promoted from v0.2-track to v0.2.0-blocking).
+  - **deferred to v0.2.0:** 11 P1 changes from Session 2 (D3 split,
+    D2.3 graduated pressure, D2.2 position requirement, D2.4 binary
+    tool-usage check, calibration anchors, predicted-uncapped D3,
+    persona-D5 prose, D5.4 forward-looking marker, `spec`-type weighting
+    revisit, type-detector body reading codified, Self-eval Log lifted to
+    recommended SKILL.md section). All require design review, not patch.
 - **v0.1.2 (2026-04-26)** — folded in v0.1.1 self-eval findings (C1–C4):
   - added `spec` as a 5th type for non-skill standards / rubrics / checklists
     (closes self-eval cross-cutting #1);
@@ -492,4 +542,5 @@ Explainability, Actionability, Ecosystem-fit, Evolvability) were collapsed to
 
 This was a **single-author, single-LLM derivation**. v0.1.x inherits the
 weaknesses of that origin and must not be treated as a community standard
-until Session 2 produces multi-LLM evidence.
+until Session 3 produces multi-LLM evidence (Session 2 was still
+single-LLM — see [SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)).
