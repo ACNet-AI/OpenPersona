@@ -6,7 +6,8 @@ __pycache__/
 packages/
 frontend/
 .cursor/
-docs/
+docs/*
+!docs/SKILL-RUBRIC.md
 .env
 .env.*
 !.env.example
