@@ -276,6 +276,8 @@ A standalone distributable (`acnlabs/persona-evaluator`) will be published to op
 
 ## Changelog
 
+> Full changelog with rationale, test surface, and re-validation evidence is in [CHANGELOG.md](./CHANGELOG.md). Summary below:
+
 - **0.3.0** (2026-04-26) — Initial release. Three modes shipped together as one coherent skill:
   - **Structural** CLI (`npx openpersona evaluate <slug>`) — 4 Layers × 5 Systemic Concepts × Constitution gate, deterministic, CI-friendly.
   - **Semantic white-box** (`--pack-content`) — per-field rubrics in [references/RUBRICS.md](references/RUBRICS.md), role-aware severity (`strict` / `normal` / `lenient`), self- and peer-mode bias counters.
@@ -297,4 +299,4 @@ A standalone distributable (`acnlabs/persona-evaluator`) will be published to op
   - **Re-validation:** entrepreneur-skill (authored) scores **7/10 Good** post-fix (was 6 phantom); persona-secondme-skill (generated) scores **7/10 Good**. Both share `character.background: null` as the genuine null field — this is W4's actual scope (a real null, not a W6 phantom). Generated-vs-authored parity at 7/10 establishes the secondme pipeline produces packs comparable to hand-crafted personas.
   - Test surface: 879 tests pass (was 872 pre-fix), 131 suites, 8/8 skills pass spec.
 
-The deeper rubric and review trail for the wound-fix pass lives in [docs/SKILL-RUBRIC.md](../../docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](../../docs/SKILL-RUBRIC-SESSION-2.md).
+The deeper rubric and review trail for the wound-fix pass lives in [docs/SKILL-RUBRIC.md](https://github.com/acnlabs/OpenPersona/blob/main/docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](https://github.com/acnlabs/OpenPersona/blob/main/docs/SKILL-RUBRIC-SESSION-2.md) in the main OpenPersona repo.
