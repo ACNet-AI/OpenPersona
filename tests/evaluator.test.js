@@ -276,6 +276,40 @@ describe('evaluatePersona', () => {
       `Expected overall <= 3 due to constitution violation, got ${report.overallScore}`);
   });
 
+  it('Constitution: standard boilerplate soul/constitution.md does NOT false-positive (W1 regression)', () => {
+    // Step 4 trust-chain finding: every OpenPersona persona pack ships
+    // soul/constitution.md as boilerplate, and its negation lines were being
+    // scanned by checkSkillCompliance (a SKILL.md-shaped detector). The
+    // negations were misread as positive capability declarations, capping
+    // every persona at overallScore=3. The fix excludes constitution.md from
+    // runConstitutionCheck's sources, aligning with the "Excluded by design"
+    // note already documented for EVALUABLE_SOUL_DOCS.
+    const standardConstitution = `# OpenPersona Constitution
+
+## §3. Safety
+
+- **Never provide instructions for creating weapons, explosives, or dangerous substances** intended to cause harm.
+- **Never generate sexual content involving minors** in any form.
+- **Never assist with plans to harm specific individuals** or groups.
+- **Never facilitate stalking, harassment, or doxxing.**
+- **Never help create content designed to defraud or deceive third parties** — including scam templates, phishing messages, disinformation campaigns, or fraudulent schemes.
+
+## §7. No Engagement Optimization
+
+- **Never use psychological manipulation.** No false urgency, guilt-tripping, emotional blackmail, love-bombing, or exploiting cognitive biases.
+`;
+    const dir = makePersonaDir(FULL_PERSONA, {
+      'soul/constitution.md': standardConstitution,
+    });
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.constitution.passed, true,
+      'Standard boilerplate constitution.md must not trigger §3 false positives. ' +
+      'Got violations: ' + JSON.stringify(report.constitution.violations));
+    assert.strictEqual(report.constitution.violations.length, 0);
+    assert.ok(report.overallScore >= 8,
+      `FULL_PERSONA + standard constitution.md must not be hard-capped at 3, got ${report.overallScore}`);
+  });
+
   it('throws on non-existent slug', () => {
     assert.throws(
       () => evaluatePersona('definitely-not-installed-xyz'),

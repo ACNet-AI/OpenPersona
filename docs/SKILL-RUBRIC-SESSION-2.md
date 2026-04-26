@@ -285,3 +285,69 @@ v0.3.1 wound-fix landed (above). **Step 4 is next**: validate
 not author — completing the trust chain. Candidate subjects: `secondme-skill`
 (framework type, structurally distant from evaluator) or `entrepreneur-skill`
 (persona type, lowest Session 2 score = clearest wound surface to detect).
+
+---
+
+## Step 4 first-run finding (CRITICAL functional bug, 2026-04-26)
+
+**Subject chosen**: `entrepreneur-skill` per Step 3 plan (lowest Session 2
+surface, clearest expected wound). First invocation of
+`npx openpersona evaluate entrepreneur-skill` immediately surfaced a
+production-impacting bug **not in the persona under test, but in
+`persona-evaluator` itself** — exactly the failure mode the trust chain was
+designed to catch.
+
+### W1 — Boilerplate `soul/constitution.md` produces 100% false-positive §3 violations
+
+| Field          | Value                                                                                                                              |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Severity       | **CRITICAL** (overall score hard-capped at 3 on every persona)                                                                    |
+| Impact surface | **2/2 = 100%** of installed personas (`find ~/.openpersona/personas -name constitution.md \| wc -l` = 2)                          |
+| Symptom        | `entrepreneur-skill` reported as `band: Failing`, `overallScore: 3`, false §3 violation `Planning to harm specific individuals`   |
+| Real cause     | `lib/lifecycle/evaluator.js:625` included `soul/constitution.md` in `runConstitutionCheck`'s scan sources                          |
+| Why it failed  | `checkSkillCompliance` is shaped for SKILL.md-style **positive capability declarations**; `constitution.md` is exclusively **negation patterns** (`Never assist with plans to harm…`). The detector has no negation-context awareness, so prohibitions read as capabilities |
+| Self-evidence  | The same file (`lib/lifecycle/evaluator.js:651-653`) **already documents `constitution.md` as "Excluded by design"** for `EVALUABLE_SOUL_DOCS` — the bug is a self-contradicting code path, not a design choice |
+| Side effect    | 13-line offset in reported line numbers (W3) is a downstream symptom of file concatenation; resolved automatically when constitution.md leaves the source list |
+
+### Fix landed (same commit)
+
+- **Code**: `lib/lifecycle/evaluator.js` `runConstitutionCheck` — removed
+  `soul/constitution.md` from `sources`; added rationale comment
+  cross-referencing the existing "Excluded by design" note 30 lines below.
+- **Regression test**: `tests/evaluator.test.js` — new case
+  `Constitution: standard boilerplate soul/constitution.md does NOT
+  false-positive (W1 regression)` injects authentic boilerplate from a real
+  installed persona pack and asserts `constitution.passed === true` +
+  `overallScore >= 8`.
+- **Verification**:
+  - `node --test tests/` — **864/864 pass, 0 fail** (full repo suite)
+  - `npx openpersona evaluate entrepreneur-skill` post-fix:
+    `overallScore: 3 → 6`, `band: Failing → Developing`,
+    `constitution.passed: true`, violations `[]`. The recovered 6/10 surfaces
+    the persona's *real* gaps (Soul missing `personaName`/`slug`/`bio`,
+    background too short) — exactly the diagnostic value `persona-evaluator`
+    was designed to deliver and could not before W1 was lifted.
+
+### Deferred follow-ups (out of scope for this commit)
+
+- **W2 (HIGH)**: `DETECTION_CONTEXT_RE` in `lib/lifecycle/constitution-check.js`
+  has no negation keywords (`never`, `do not`, `must not`, `refuse`, `forbid`).
+  A user-authored `behavior-guide.md` containing legitimate negations
+  (`Never reveal private data`) could still false-positive. W1 closes the
+  100%-impact path; W2 is the long-tail residual. Separate commit, separate
+  test surface (negation-aware detector with positive + negative fixtures).
+- **Step 4 capability validation proper**: now genuinely proceeds against
+  `entrepreneur-skill` (and optionally `secondme-skill`) on the *fixed*
+  evaluator. The 6/10 score on `entrepreneur-skill` is the trust-chain's
+  first real verdict from a corrected tool.
+
+### Trust-chain commentary
+
+This finding is the strongest possible validation of the user's trust-chain
+ordering. Steps 1–3 were entirely document-level (rubric integrity →
+verdict re-validation → wound fixes on `SKILL.md`). They could not have
+surfaced W1; only first-run dogfooding against a real persona pack could.
+The chain caught a 100%-impact functional bug *before* any of the verdicts
+in Session 2 had been used to make a meaningful capability judgement —
+which is exactly the failure mode "validate the validator before trusting
+its outputs" exists to prevent.
