@@ -484,6 +484,30 @@ test('installer: contains explicit warning for package.json fallback', () => {
   );
 });
 
+test('installer: parseSkillMdFrontmatter exposes nested mapping as dotted keys', () => {
+  // Sister-fix to the curator parser (commit 316fddf): installer.js had its own
+  // copy of parseSkillMdFrontmatter that did NOT expand nested `metadata: \n
+  // <indent>version: "..."` into `fm['metadata.version']`. This caused
+  // `npx openpersona install <slug>` to read version=undefined for any pack
+  // using the agentskills.io-recommended nested metadata block, even though
+  // /api/curate and the frontend already supported it.
+  //
+  // The fix adds the same dotted-key expansion the curator already has. This
+  // regression guard keeps both parsers structurally aligned.
+  const installerSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'lifecycle', 'installer.js'),
+    'utf-8'
+  );
+  assert.ok(
+    installerSrc.includes("fm[`${currentKey}.${childKv[1]}`] = childVal;"),
+    'installer parser must expose nested mapping children as dotted keys (e.g. metadata.version) — mirrors the curator parser'
+  );
+  assert.ok(
+    installerSrc.includes("`key: >`, `key: |`, or `key:` mapping block"),
+    'installer parser comment must document the nested-mapping support so future maintainers do not re-introduce the regression'
+  );
+});
+
 test('downloader: supports owner/repo#subpath selector and multi-pack guidance', () => {
   const downloaderSrc = require('node:fs').readFileSync(
     path.join(ROOT, 'lib', 'remote', 'downloader.js'),
