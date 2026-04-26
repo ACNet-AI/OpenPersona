@@ -19,6 +19,20 @@ Use the `severity` already attached to each dimension by the structural evaluato
 
 This keeps a `tool` persona's thin one-line background from being savaged by a rubric built for a `companion`, while still catching cross-field contradictions regardless of role.
 
+### Null-field scoring (overrides severity)
+
+The lenient floor of ≥ 6 was written for **terse-but-present** content. It does **not** apply to null/missing fields. A field that is absent entirely scores by these rules instead, regardless of the rubric's content questions:
+
+| Severity         | Null-field score | Required rationale                                                                  |
+| ---------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `strict`         | **0–2**          | Cite "field is null — cannot apply rubric questions"; this is a defect for the role |
+| `normal`         | **0–2**          | Same as strict — the field is required by the rubric and missing                    |
+| `lenient`        | **3–4**          | Absence is acceptable for the role, but the rubric still cannot evaluate quality    |
+
+Always document a null-field score with explicit text in the report (e.g. ``character.speakingStyle`` is null — cannot score). Never score 0 in silence; the rationale is what tells the persona author *why* zero, not just that it is zero.
+
+If multiple fields in the same rubric are null, score each independently — do not aggregate. The cross-cutting observation that "Soul block is uniformly empty" belongs in the report's `### Cross-cutting observations` section, not the per-field score.
+
 ## `character.background` rubric
 
 Ask:
@@ -75,7 +89,7 @@ Each file in `packContent.soulDocs` gets its own short score (0–10). Skip file
 
 1. **Operationalisation:** Does it translate Soul fields into concrete dos/don'ts? Or is it just prose-restating `persona.json`?
 2. **Distinctive instructions:** Does it contain guidance that would actually change LLM output ("when discussing finance, surface uncertainty before recommendations") rather than generic instructions ("be helpful and accurate")?
-3. **Soul-fidelity:** Do the dos/don'ts reflect *this* persona's `personality` and `boundaries`, or could the same guide be dropped into any persona unchanged?
+3. **Soul-fidelity:** Do the dos/don'ts reflect *this* persona's `personality` and `boundaries`, or could the same guide be dropped into any persona unchanged? **Prerequisite:** this check requires `character.personality` and/or `character.speakingStyle` to be populated — if either is null, mark Soul-fidelity as **untestable** for this file and explain in the report (e.g. "Soul-fidelity untestable — `character.personality` is null, no Soul fields to be faithful *to*"). Do not penalise behavior-guide.md for failing a check whose reference fields don't exist; the absence is already counted in the per-field null-field score above.
 
 Note: §3 Safety violations are already surfaced by the structural evaluator and the Procedure tells you to **stop** when `constitution.passed === false`. Don't double-penalise — if you got this far, structural §3 already passed; treat behavior-guide as creative material, not a safety document.
 

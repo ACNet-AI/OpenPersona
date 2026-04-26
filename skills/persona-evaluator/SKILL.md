@@ -6,7 +6,7 @@ compatibility: "Structural mode requires OpenPersona CLI (npx openpersona >= 0.2
 allowed-tools: "Bash(npx openpersona:*) Read"
 metadata:
   author: "acnlabs"
-  version: "0.3.1"
+  version: "0.3.2"
   repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona-evaluator, audit, quality, persona, openpersona, 4+5, self-evaluation, peer-evaluation, semantic, black-box, probe"
 ---
@@ -285,5 +285,9 @@ A standalone distributable (`acnlabs/persona-evaluator`) will be published to op
   - Removed unjustified `Bash(node:*)` from `allowed-tools` (zero documented uses across SKILL.md, README.md, references/).
   - Promoted mode-selection table from `### Mode selection quick reference` (buried under `## Black-box Semantic Evaluation` at H3) to a top-level `## Choosing a mode` section right after Quick Start, so a host LLM picks the correct mode within ~30 seconds of opening the file.
   - Added this changelog (D5.3 versioning anchor — was previously vanity-bump-only).
+- **0.3.2** (2026-04-26) — Methodological wound-fix pass driven by Step 4 capability validation on `entrepreneur-skill`:
+  - **W4 fix:** [references/RUBRICS.md](references/RUBRICS.md) now specifies null-field scoring (strict/normal: 0–2; lenient: 3–4) as an override on top of severity-aware scoring, with explicit rationale-required clause. The previous lenient-floor-of-≥6 was written for terse-but-present content and was incorrectly applied to absent fields.
+  - **W5 fix:** `behavior-guide.md` Soul-fidelity check now requires `character.personality` and/or `character.speakingStyle` to be populated; if both are null, the check is marked **untestable** rather than failed. Avoids double-penalising a behavior-guide for failing a check whose reference fields don't exist.
+  - Both wounds were surfaced by dogfooding `persona-evaluator` on a real persona where Soul fields were null — the rubric scored the persona harshly using checks that were structurally inapplicable.
 
 The deeper rubric and review trail for the wound-fix pass lives in [docs/SKILL-RUBRIC.md](../../docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](../../docs/SKILL-RUBRIC-SESSION-2.md).

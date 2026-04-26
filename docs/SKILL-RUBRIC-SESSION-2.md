@@ -437,8 +437,8 @@ Both surfaced *only* by running peer-evaluation against a real pack. They could 
 ### Deferred backlog (next session)
 
 - ~~**W2 (HIGH)**: `DETECTION_CONTEXT_RE` lacks negation keywords — long-tail false-positive risk on user-authored `behavior-guide.md` containing legitimate negations. (Identified during Step 4 W1 root-cause analysis.)~~ — **Resolved**, see W2 follow-up below.
-- **W4 (MEDIUM)**: `RUBRICS.md` lenient/strict null-field scoring underspecified.
-- **W5 (MEDIUM)**: `RUBRICS.md` `behavior-guide.md` Soul-fidelity check assumes populated `character.*`.
+- ~~**W4 (MEDIUM)**: `RUBRICS.md` lenient/strict null-field scoring underspecified.~~ — **Resolved**, see W4/W5 follow-up below.
+- ~~**W5 (MEDIUM)**: `RUBRICS.md` `behavior-guide.md` Soul-fidelity check assumes populated `character.*`.~~ — **Resolved**, see W4/W5 follow-up below.
 - **Optional Step 4-extended**: re-run on `secondme-skill` (framework-type subject, structurally distant from evaluator) to verify generalisation across persona-type vs framework-type axes. Not required for trust-chain closure but increases tool-fitness confidence.
 
 ---
@@ -515,3 +515,113 @@ W4 / W5 (MEDIUM, rubric-document changes) and the optional Step
 4-extended remain deferred — they involve a different file
 (`RUBRICS.md`) and a different reasoning surface, so a session boundary
 between W2 and them is healthy.
+
+---
+
+## W4 / W5 follow-up landed (rubric methodological wounds, 2026-04-26)
+
+Same-day continuation after W2. The session boundary the W2 closer
+predicted ("a different file, a different reasoning surface") turned
+out to still be tractable because both W4 and W5 are localised to
+`skills/persona-evaluator/references/RUBRICS.md` and share a single
+underlying methodological gap: the rubric was written for
+**present-but-thin** content and breaks down on **absent** content.
+
+### W4 — null-field scoring underspecified
+
+**Problem.** The severity-aware scoring section established a lenient
+floor of ≥ 6 for "terse-but-consistent" fields. During Step 4 dogfooding
+on `entrepreneur-skill`, this floor was misapplied to `null` fields —
+the rubric had no separate clause for absence, so a missing
+`character.speakingStyle` could either be scored harshly using strict
+rules (false-defect) or scored ≥ 6 by lenient floor (false-pass). Both
+outcomes degrade evaluator credibility.
+
+**Fix.** Added a new `### Null-field scoring (overrides severity)`
+subsection right under severity-aware scoring. Clauses:
+
+- `strict` / `normal` severity: null field scores **0–2**, with
+  required rationale citing "field is null — cannot apply rubric
+  questions".
+- `lenient` severity: null field scores **3–4**, acknowledging that
+  absence is acceptable for the role but quality cannot be evaluated.
+- Always document the rationale; never score 0 in silence. The score
+  signals the defect, the rationale tells the persona author *why*.
+- Multiple null fields in the same rubric score independently. The
+  cross-cutting "Soul block is uniformly empty" observation belongs in
+  `### Cross-cutting observations`, not the per-field score.
+
+This is an **override** on top of severity-aware scoring, not a
+replacement. The lenient floor of ≥ 6 still applies to terse-but-present
+content; only null content takes the override path.
+
+### W5 — `behavior-guide.md` Soul-fidelity assumes populated `character.*`
+
+**Problem.** The `behavior-guide.md` rubric's Soul-fidelity check asks
+"Do the dos/don'ts reflect *this* persona's `personality` and
+`boundaries`?" If `character.personality` and `character.speakingStyle`
+are both null, the check has no reference point — and yet the rubric
+forced a score, leading to either a false-failure ("not faithful to
+personality") or a meaningless pass.
+
+**Fix.** Added a **Prerequisite** clause to the Soul-fidelity check:
+
+> Prerequisite: this check requires `character.personality` and/or
+> `character.speakingStyle` to be populated — if either is null, mark
+> Soul-fidelity as **untestable** for this file and explain in the
+> report (e.g. "Soul-fidelity untestable — `character.personality` is
+> null, no Soul fields to be faithful *to*"). Do not penalise
+> behavior-guide.md for failing a check whose reference fields don't
+> exist; the absence is already counted in the per-field null-field
+> score above.
+
+The "untestable" verdict avoids double-penalising — the absence is
+already scored once at the `character.personality` rubric (now under
+W4 null-field rules), so the behavior-guide rubric should not score it
+a second time.
+
+### Why W4 and W5 batch together
+
+Both wounds share the same root cause: **the rubric was written assuming
+fields would be populated and didn't define behaviour for absent
+fields**. Fixing them in one pass keeps the methodological reasoning
+coherent — the W4 null-field override is the prerequisite that makes
+the W5 untestable-verdict make sense (a Soul-fidelity check that
+depends on a 0–2 strict null score would be redundant and confusing).
+Splitting them across sessions would have re-loaded the same rubric
+file and the same reasoning surface twice.
+
+### Verification
+
+- Both edits localised to `skills/persona-evaluator/references/RUBRICS.md`.
+- No code changes — these are document-only methodological fixes, so no
+  test suite applies. The fix is verified by re-reading the rubric and
+  confirming that the entrepreneur-skill scoring scenario from Step 4
+  now has an explicit, unambiguous scoring path.
+- `persona-evaluator` bumped to **v0.3.2**, inline changelog records
+  both fixes with explicit pointers to the dogfooding evidence.
+
+### Deferred backlog (post-W4/W5)
+
+Only one item remains:
+
+- **Optional Step 4-extended**: re-run on `secondme-skill`
+  (framework-type subject, structurally distant from evaluator) to
+  verify generalisation across persona-type vs framework-type axes.
+  Not required for trust-chain closure. This stays deferred — different
+  reasoning surface (subject diversity, not rubric correctness), and
+  the trust-chain itself is closed at this point.
+
+### Trust-chain status
+
+All four trust-chain steps are now closed:
+
+1. ~~SKILL-RUBRIC v0.1.4 self-validates clean (commit `ee2aab6`)~~ ✓
+2. ~~Cold validation of Session-2 findings (commit `e55e4a7`)~~ ✓
+3. ~~`persona-evaluator` wound-fix pass (commits `e55e4a7`, `1b1282b`,
+   `2b823eb`, this commit)~~ ✓
+4. ~~Capability validation on `entrepreneur-skill` (commit `7591596`)~~ ✓
+
+The evaluator framework is now self-coherent, dogfooded against a real
+persona, and methodologically defensible against the null-field edge
+cases that real personas in the wild will exhibit.
