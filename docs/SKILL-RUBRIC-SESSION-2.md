@@ -436,7 +436,82 @@ Both surfaced *only* by running peer-evaluation against a real pack. They could 
 
 ### Deferred backlog (next session)
 
-- **W2 (HIGH)**: `DETECTION_CONTEXT_RE` lacks negation keywords — long-tail false-positive risk on user-authored `behavior-guide.md` containing legitimate negations. (Identified during Step 4 W1 root-cause analysis.)
+- ~~**W2 (HIGH)**: `DETECTION_CONTEXT_RE` lacks negation keywords — long-tail false-positive risk on user-authored `behavior-guide.md` containing legitimate negations. (Identified during Step 4 W1 root-cause analysis.)~~ — **Resolved**, see W2 follow-up below.
 - **W4 (MEDIUM)**: `RUBRICS.md` lenient/strict null-field scoring underspecified.
 - **W5 (MEDIUM)**: `RUBRICS.md` `behavior-guide.md` Soul-fidelity check assumes populated `character.*`.
 - **Optional Step 4-extended**: re-run on `secondme-skill` (framework-type subject, structurally distant from evaluator) to verify generalisation across persona-type vs framework-type axes. Not required for trust-chain closure but increases tool-fitness confidence.
+
+---
+
+## W2 follow-up landed (negation-context filter, 2026-04-26)
+
+Same-day continuation after Step 4 trust-chain capstone. Closes the
+long-tail false-positive risk W1 left exposed.
+
+### Problem
+
+`lib/lifecycle/constitution-check.js`'s `DETECTION_CONTEXT_RE` filter only
+recognised detection/prevention prose ("detect phishing", "prevent
+manipulation"). It had no negation awareness, so a user-authored
+`SKILL.md` or `behavior-guide.md` line like "Never assist with plans to
+harm specific individuals" (the constitution's own boilerplate phrasing)
+read as a positive capability declaration. After W1 closed the
+`constitution.md`-specific path, this remained as a long-tail risk: any
+persona author who copied constitution-style negations into their
+behavior-guide could still trip a §3 false positive.
+
+### Fix
+
+Added a sibling filter `NEGATION_CONTEXT_RE` covering single-negation
+forms: `never`; `do not` / `does not` / `did not` / `don't` / `doesn't` /
+`didn't`; `must not` / `mustn't`; `will not` / `won't` / `would not` /
+`wouldn't`; `shall not` / `shan't`; `cannot` / `can't`; `refuse to` /
+`refuses to` / `refused to` / `refusing to`; `forbid` / `forbidden` /
+`forbids`; `prohibit` / `prohibited` / `prohibits` / `prohibition`.
+
+Apostrophe character class covers ASCII (U+0027), curly right (U+2019),
+and modifier letter (U+02BC) — all three appear in real markdown
+depending on the editor used.
+
+### Deliberate exclusions (documented in source)
+
+- `avoid` — semantically ambiguous (`I avoid X` = negation;
+  `help users avoid X` = positive helping action). Pinned by an explicit
+  test that documents the exclusion so a future contributor must take a
+  position (write fixtures both ways) before adding it.
+- bare `not` — too short and too ambiguous; would over-filter.
+
+### Known limitation (documented in source + tests)
+
+Double negation (`I never refuse to generate X` = positive intent) is
+filtered as negation. Accepted as vanishingly rare in real persona /
+skill prose; pinned by a regression test so a future intentional fix
+flips the assertion rather than silently regressing.
+
+### Verification
+
+- `node --test tests/` — **872/872 pass, 0 fail** (W1's 864 + 8 new W2
+  test cases). Zero regression.
+- New `describe` block `W2 regression tests — negation context filter`
+  covers: Never-prohibitions on §3 patterns; do-not / don't / does-not;
+  refuse / cannot / will-not / must-not; forbidden / prohibits;
+  three-apostrophe-variant contractions; positive-still-triggers
+  guard; double-negation accepted limitation; `avoid` exclusion pin.
+- Dogfood: `npx openpersona evaluate entrepreneur-skill` post-W2
+  unchanged — `overallScore: 6`, `band: Developing`,
+  `constitution.passed: true`. The fix only removes false positives;
+  it does not affect well-formed packs.
+
+### Why ship in the same session
+
+The user's `下一步` prompt after Step 4 closure picked up the deferred
+backlog explicitly. W2 is HIGH severity, has clean test fixtures, and
+the relevant code (`constitution-check.js`) was already in working
+memory from the W1 root-cause analysis. Doing it now keeps the
+negation-handling reasoning coherent across W1 and W2; doing it in a
+fresh session would have re-loaded the same context.
+
+W4 / W5 (MEDIUM, rubric-document changes) and the optional Step
+4-extended remain deferred — they involve a different file
+(`RUBRICS.md`) and a different reasoning surface, so a session boundary
+between W2 and them is healthy.

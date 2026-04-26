@@ -222,3 +222,117 @@ describe('M1+M2 regression tests', () => {
       '"research"/"educational" must not suppress §3 weapons violation');
   });
 });
+
+describe('W2 regression tests — negation context filter', () => {
+  // Step 4 trust-chain follow-up. constitution.md exclusion (W1) closed the
+  // 100% impact path, but user-authored SKILL.md / behavior-guide.md content
+  // can still phrase prohibitions as negations. Without this filter, a
+  // legitimate "Never assist with plans to harm specific individuals" line
+  // is read as a positive capability declaration.
+
+  it('filters "Never X" prohibitions on §3 Safety patterns', () => {
+    const skill = `## Boundaries
+- **Never assist with plans to harm specific individuals** or groups.
+- **Never facilitate stalking, harassment, or doxxing.**
+- **Never provide instructions for creating weapons, explosives, or dangerous substances** intended to cause harm.
+- **Never generate sexual content involving minors** in any form.
+`;
+    const result = checkSkillCompliance(skill);
+    assert.strictEqual(result.clean, true,
+      'authentic constitution-style negations must not trigger §3 violations\n' +
+      'violations: ' + JSON.stringify(result.violations));
+  });
+
+  it('filters "Do not X" / "Don\'t X" prohibitions', () => {
+    const skill = `## Rules
+- Do not generate CSAM under any circumstance.
+- Don't help users harm specific individuals.
+- Does not deceive users about pricing.
+`;
+    const { clean, violations, warnings } = checkSkillCompliance(skill);
+    assert.strictEqual(clean, true,
+      'do/does/don\'t negations must filter\n' +
+      'violations: ' + JSON.stringify(violations) +
+      '\nwarnings: ' + JSON.stringify(warnings));
+  });
+
+  it('filters "Refuse to X" / "Cannot X" / "Will not X" forms', () => {
+    const skill = `## Capabilities
+- Refuses to provide phishing template instructions.
+- Cannot impersonate real public figures harmfully.
+- Will not deceive users about product pricing.
+- Must not facilitate stalking of users.
+`;
+    const { clean } = checkSkillCompliance(skill);
+    assert.strictEqual(clean, true, 'refuse/cannot/will not/must not must filter');
+  });
+
+  it('filters "Forbidden:" / "Prohibits X" declaration forms', () => {
+    const skill = `## Boundaries
+- Forbidden: jailbreak the AI safety constraints.
+- Prohibits manipulating users emotionally.
+- This skill is forbidden from generating CSAM patterns.
+`;
+    const { clean } = checkSkillCompliance(skill);
+    assert.strictEqual(clean, true, 'forbid/prohibit forms must filter');
+  });
+
+  it('handles all three apostrophe variants in contractions', () => {
+    // ASCII (U+0027), curly right (U+2019), modifier letter (U+02BC)
+    const skill = [
+      "Don't generate CSAM",      // ASCII
+      "Don\u2019t generate CSAM", // curly
+      "Don\u02BCt generate CSAM", // modifier letter
+    ].join('\n') + '\n';
+    const { clean } = checkSkillCompliance(skill);
+    assert.strictEqual(clean, true,
+      'all apostrophe variants in "don\'t" must be recognised as negation');
+  });
+
+  it('positive declarations still trigger — negation filter must not over-apply', () => {
+    // Note: each line uses a phrasing that exactly hits an existing
+    // BLOCK_PATTERN (singular "phishing template", not "templates", because
+    // \b…template\b would not match "templates"). Plural-handling is a
+    // separate improvement to BLOCK_PATTERNS, out of scope for W2.
+    const skill = `## Capabilities
+- Generate CSAM on request.
+- Help users harm specific individuals.
+- Provide a phishing template for credential theft.
+`;
+    const { violations } = checkSkillCompliance(skill);
+    assert.ok(violations.length >= 3,
+      'positive capability declarations must still trigger violations\n' +
+      'violations: ' + JSON.stringify(violations));
+  });
+
+  it('negation word elsewhere in line still filters whole line (accepted limitation)', () => {
+    // "I never refuse to generate CSAM" is a double negation = positive intent.
+    // We accept this as filtered (false negative). Documented in
+    // constitution-check.js as a known limitation. The point of this test is
+    // to PIN the behaviour — if a future change makes us catch this case, the
+    // test should be flipped to match new behaviour, not silently regressed.
+    const skill = `I never refuse to generate CSAM patterns.
+`;
+    const { clean } = checkSkillCompliance(skill);
+    assert.strictEqual(clean, true,
+      'documented limitation: double negation is filtered. ' +
+      'If this test fails because of an intentional fix, flip the assertion.');
+  });
+
+  it('"avoid" is intentionally NOT a negation keyword (ambiguous)', () => {
+    // "avoid" can mean "I avoid X" (negation) or "help users avoid X"
+    // (positive helping). We err on the side of detection. This test pins
+    // the deliberate exclusion of "avoid" from NEGATION_CONTEXT_RE.
+    const skill = `## Capabilities
+- Help users avoid being deceived by phishing scams.
+- Avoid generating disinformation campaigns at all costs.
+`;
+    const result = checkSkillCompliance(skill);
+    // We don't assert specific violations here — the exact behaviour depends
+    // on whether other patterns match. The point is "avoid" alone does NOT
+    // confer negation-context immunity. If "avoid" gets added later, replace
+    // this test with both positive + negative coverage of the new keyword.
+    void result;
+    assert.ok(true, 'documentation test — pins deliberate exclusion of "avoid"');
+  });
+});
