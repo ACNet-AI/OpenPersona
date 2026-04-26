@@ -439,7 +439,7 @@ Both surfaced *only* by running peer-evaluation against a real pack. They could 
 - ~~**W2 (HIGH)**: `DETECTION_CONTEXT_RE` lacks negation keywords — long-tail false-positive risk on user-authored `behavior-guide.md` containing legitimate negations. (Identified during Step 4 W1 root-cause analysis.)~~ — **Resolved**, see W2 follow-up below.
 - ~~**W4 (MEDIUM)**: `RUBRICS.md` lenient/strict null-field scoring underspecified.~~ — **Resolved**, see W4/W5 follow-up below.
 - ~~**W5 (MEDIUM)**: `RUBRICS.md` `behavior-guide.md` Soul-fidelity check assumes populated `character.*`.~~ — **Resolved**, see W4/W5 follow-up below.
-- **Optional Step 4-extended**: re-run on `secondme-skill` (framework-type subject, structurally distant from evaluator) to verify generalisation across persona-type vs framework-type axes. Not required for trust-chain closure but increases tool-fitness confidence.
+- **Optional Step 4-extended**: re-run on `persona-secondme-skill` (the generated pack at `skills/secondme-skill/generated/persona-secondme-skill/`, NOT the orchestrator skill itself) to verify the evaluator on a **machine-generated** persona vs the hand-authored `entrepreneur-skill` already covered. The axis here is generated-vs-authored, not "framework-type" — see "Category-error correction" below for why the original framing was wrong. Not required for trust-chain closure but increases tool-fitness confidence on the kind of personas secondme-skill's pipeline will produce in the wild.
 
 ---
 
@@ -605,12 +605,16 @@ file and the same reasoning surface twice.
 
 Only one item remains:
 
-- **Optional Step 4-extended**: re-run on `secondme-skill`
-  (framework-type subject, structurally distant from evaluator) to
-  verify generalisation across persona-type vs framework-type axes.
-  Not required for trust-chain closure. This stays deferred — different
-  reasoning surface (subject diversity, not rubric correctness), and
-  the trust-chain itself is closed at this point.
+- **Optional Step 4-extended**: re-run on `persona-secondme-skill`
+  (the generated pack at
+  `skills/secondme-skill/generated/persona-secondme-skill/`, NOT the
+  orchestrator skill itself). The axis is **generated-vs-authored**:
+  does the evaluator score machine-generated personas with the same
+  fairness/severity as hand-authored `entrepreneur-skill`? See
+  "Category-error correction" below for why the original
+  "framework-type axis" framing was wrong. Not required for
+  trust-chain closure — different reasoning surface (subject
+  diversity, not rubric correctness).
 
 ### Trust-chain status
 
@@ -625,3 +629,81 @@ All four trust-chain steps are now closed:
 The evaluator framework is now self-coherent, dogfooded against a real
 persona, and methodologically defensible against the null-field edge
 cases that real personas in the wild will exhibit.
+
+---
+
+## Category-error correction (2026-04-26)
+
+User-surfaced doc defect, post W4/W5 commit. Recording it here in
+audit-trail style rather than rewriting history because the mistake
+itself is a useful trust-chain artefact.
+
+### What was wrong
+
+The deferred backlog repeatedly proposed re-running `persona-evaluator`
+on `secondme-skill` as a "framework-type subject, structurally distant
+from evaluator". Both halves of that claim are wrong:
+
+1. **Subject mis-naming.** `secondme-skill` is an *orchestration
+   pipeline / persona-generator* (its own SKILL.md L14–16 calls it
+   "a complete pipeline for building your AI Second Me"). Its
+   *output* — `persona-secondme-skill`, located at
+   `skills/secondme-skill/generated/persona-secondme-skill/` with
+   real `persona.json`, `runtime`, `faculties`, `skills` — is what
+   `persona-evaluator` would actually evaluate. Running the
+   evaluator on `secondme-skill` itself is a category error: it is
+   not a persona pack, it is the thing that *creates* persona packs.
+
+2. **Axis mis-naming.** The "framework-type axis" framing collapsed two
+   distinct concepts: (a) whether a *skill* is a framework-class or
+   persona-class skill (a structural-evaluator concept that classifies
+   the SKILL.md document), and (b) the actual interesting axis for
+   Step 4-extended, which is **generated-vs-authored personas** —
+   does `persona-evaluator` score a machine-generated persona pack
+   with the same severity and fairness as a hand-authored one? The
+   original framing accidentally used "framework" in sense (a) when
+   it should have used "generated" in sense (b).
+
+### Where the error appeared
+
+| Line | Context | Status |
+| ---- | ------- | ------ |
+| L285 | Step 2 cold validation, "Updated next-step" candidate list | **Frozen** as historical audit (preserves the mis-thinking at that timestamp) |
+| L340 | Step 4 first-run finding, "now genuinely proceeds" plan note | **Frozen** as historical audit (same reason) |
+| L442 | Deferred backlog at end of W2 follow-up | **Corrected in place** (this is a living queue, mutated as items resolve) |
+| L608+ | Deferred backlog inside W4/W5 follow-up | **Corrected in place** (same reason) |
+
+The "frozen vs corrected in place" distinction follows the audit-trail
+principle: dated Step-N reasoning sections preserve what was thought at
+that point; living deferred-backlog sections track current state and
+get edited as items resolve or get re-scoped.
+
+### Corrected formulation
+
+If Step 4-extended ever runs, the right framing is:
+
+- **Subject:** `persona-secondme-skill` (the generated pack), **not**
+  `secondme-skill` (the orchestrator).
+- **Axis:** generated-vs-authored. The `entrepreneur-skill` Step 4
+  capstone covered hand-authored personas; running on
+  `persona-secondme-skill` would cover machine-generated ones.
+- **Why interesting:** `secondme-skill`'s pipeline is what creates the
+  personas the evaluator will see in the wild from secondme users. If
+  the evaluator systematically savages secondme-generated personas
+  because they're "too thin", that's a calibration question — and the
+  W4 null-field rules just landed (commit `643b5f6`) are the
+  prerequisite that lets such an evaluation produce a trustworthy
+  verdict instead of a false-defect.
+
+### Why this matters
+
+Two-step error: I propagated the mis-naming from `e55e4a7` (Step 2
+cold validation closer) into `643b5f6` (W4/W5 follow-up) by
+copy-pasting backlog text without re-checking the category. The
+user's correction caught it before any actual run wasted on the wrong
+subject. This is exactly the kind of catch the trust chain is
+supposed to surface: cold readers (the user, here) noticing
+collapses-of-meaning that a hot author (me) is too entangled with
+the work to see.
+
+The trust-chain framework is itself working as designed.
