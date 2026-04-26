@@ -3,10 +3,10 @@ name: persona-evaluator
 description: "Audit any OpenPersona (or peer LLM-agent) persona in three complementary modes: structural (CLI, deterministic, CI-friendly: 4 Layers × 5 Systemic Concepts × Constitution gate with role-aware severity), semantic white-box (LLM reads pack-content JSON and scores Soul-narrative quality via rubrics), and semantic black-box (LLM evaluates a remote agent it cannot read on disk, via A2A handshake / consent-probe / passive observation, with confidence caps). Produces quality reports with dimension scores, strengths, and actionable improvements. Use when asked to evaluate, audit, score, review, self-review, peer-review, or black-box review an agent."
 license: MIT
 compatibility: "Structural mode requires OpenPersona CLI (npx openpersona >= 0.2.0). Semantic white-box mode also requires CLI access to read --pack-content. Semantic black-box mode requires only an LLM host with the host's native conversational / messaging capability for A2A handshake and probe exchange — works against any remote agent, OpenPersona or not, without filesystem access."
-allowed-tools: "Bash(npx openpersona:*) Bash(node:*) Read"
+allowed-tools: "Bash(npx openpersona:*) Read"
 metadata:
   author: "acnlabs"
-  version: "0.3.0"
+  version: "0.3.1"
   repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona-evaluator, audit, quality, persona, openpersona, 4+5, self-evaluation, peer-evaluation, semantic, black-box, probe"
 ---
@@ -37,6 +37,23 @@ npx openpersona evaluate <slug> --output report.json
 # quality semantically — not just structurally
 npx openpersona evaluate <slug> --pack-content
 ```
+
+## Choosing a mode
+
+`persona-evaluator` runs in three complementary modes. Pick the mode based on what the user asks before reading the rest of this file.
+
+
+| User asks                                            | Mode                          | How                                                                  | Confidence                  |
+| ---------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------- | --------------------------- |
+| "CI / gate persona quality"                          | **structural**                | `npx openpersona evaluate <slug>`                                    | deterministic               |
+| "Polish review of my own pack"                       | **semantic white-box** (self) | `... evaluate <slug> --pack-content`, then apply rubric in self-mode | high                        |
+| "Peer-review a pack I have on disk"                  | **semantic white-box** (peer) | same command, peer-mode rubric                                       | high                        |
+| "Review agent X" where X is remote / non-OpenPersona | **semantic black-box**        | A2A handshake → consent + probe → passive, in that order             | mid (cap 8/10) or low (cap 6/10) |
+
+
+Structural is the default. Switch to semantic only when the user explicitly asks for narrative quality review (e.g. "evaluate me semantically", "self-review my pack", "qualitative audit"). Switch to black-box only when you cannot read the subject's `persona.json` on disk.
+
+Sections below cover each mode in depth: structural ([What Gets Scored](#what-gets-scored)), semantic white-box ([Semantic Evaluation](#semantic-evaluation-llm-driven)), and semantic black-box ([Black-box Semantic Evaluation](#black-box-semantic-evaluation)).
 
 ## What Gets Scored
 
@@ -175,16 +192,7 @@ Full mechanics — handshake schema, probe table, identity-coherence dimension, 
 
 The black-box report format is in **[references/REPORT-FORMAT.md](references/REPORT-FORMAT.md)** (`## Black-box format`).
 
-### Mode selection quick reference
-
-
-| User asks                                            | Mode                      | How                                                                  |
-| ---------------------------------------------------- | ------------------------- | -------------------------------------------------------------------- |
-| "CI / gate persona quality"                          | structural                | `npx openpersona evaluate <slug>`                                    |
-| "Polish review of my own pack"                       | semantic white-box (self) | `... evaluate <slug> --pack-content`, then apply rubric in self-mode |
-| "Peer-review pack I have access to"                  | semantic white-box (peer) | same command, peer-mode rubric                                       |
-| "Review agent X" where X is remote / non-OpenPersona | semantic **black-box**    | A2A handshake → probe → passive, in that order                       |
-
+(For the mode-selection decision table, see [Choosing a mode](#choosing-a-mode) at the top of this file.)
 
 ---
 
@@ -263,3 +271,19 @@ npx openpersona evaluate <slug>
 ```
 
 A standalone distributable (`acnlabs/persona-evaluator`) will be published to openpersona.co once a separate repository is created.
+
+---
+
+## Changelog
+
+- **0.3.0** (2026-04-26) — Initial release. Three modes shipped together as one coherent skill:
+  - **Structural** CLI (`npx openpersona evaluate <slug>`) — 4 Layers × 5 Systemic Concepts × Constitution gate, deterministic, CI-friendly.
+  - **Semantic white-box** (`--pack-content`) — per-field rubrics in [references/RUBRICS.md](references/RUBRICS.md), role-aware severity (`strict` / `normal` / `lenient`), self- and peer-mode bias counters.
+  - **Semantic black-box** — Tier 1/2/3 data sources, A2A handshake, 10-probe set, identity-coherence dimension, confidence caps. Mechanics in [references/BLACK-BOX.md](references/BLACK-BOX.md); report formats in [references/REPORT-FORMAT.md](references/REPORT-FORMAT.md).
+  - Note: the 0.3.0 starting version reflects shipping all three modes as one release rather than a series of accreted minor versions. Prior 0.1.x / 0.2.x versions do not exist in this repo's history. Future bumps will appear above this line.
+- **0.3.1** (2026-04-26) — Wound-fix pass driven by SKILL-RUBRIC v0.1.4 cold validation:
+  - Removed unjustified `Bash(node:*)` from `allowed-tools` (zero documented uses across SKILL.md, README.md, references/).
+  - Promoted mode-selection table from `### Mode selection quick reference` (buried under `## Black-box Semantic Evaluation` at H3) to a top-level `## Choosing a mode` section right after Quick Start, so a host LLM picks the correct mode within ~30 seconds of opening the file.
+  - Added this changelog (D5.3 versioning anchor — was previously vanity-bump-only).
+
+The deeper rubric and review trail for the wound-fix pass lives in [docs/SKILL-RUBRIC.md](../../docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](../../docs/SKILL-RUBRIC-SESSION-2.md).

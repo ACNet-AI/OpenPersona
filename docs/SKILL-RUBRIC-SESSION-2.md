@@ -185,9 +185,103 @@ concrete here.
 
 ---
 
+## Step 2 cold re-validation (rubric v0.1.4, same-day)
+
+After `SKILL-RUBRIC` shipped v0.1.3 (P0 patches) and v0.1.4 (self-dogfooding
+fix: archival split + anchor-stability rename), the user-mandated trust chain
+required cold validation of Session 2's verdicts before any wound-fixing.
+This section records the cold pass on `persona-evaluator` — row 1 of the
+per-skill table, the highest acute-wound concentration.
+
+**Method.** Independently re-read `skills/persona-evaluator/SKILL.md` +
+`README.md` + 3 `references/*.md` without consulting the Session 2 verdict.
+Score D-by-D using **v0.1.4** anchors (Session 2 used v0.1.2). Diff against
+Session 2 only after the cold score was final.
+
+**Reviewer-LLM:** Claude Sonnet 4.6 × 1 — D3.1 cap = 4/10 (same as Session 2).
+
+### Diff: Session 2 (v0.1.2) vs Cold (v0.1.4)
+
+| Dim     | Session 2 | Cold | Δ    | Cause                                                                                                                        |
+| ------- | --------- | ---- | ---- | ---------------------------------------------------------------------------------------------------------------------------- |
+| D1      | 7         | 7    | 0    | agree                                                                                                                        |
+| D2      | 6         | 5    | -1   | Session 2 lenient on `Bash(node:*)` (assumed benign use); cold grep across whole skill dir = **zero** `node ...` invocations |
+| D3      | 4         | 4    | 0    | agree (cap binds)                                                                                                            |
+| D4      | 8         | 8    | 0    | agree                                                                                                                        |
+| D5      | 7         | 7    | 0    | agree on score; cold found D5.3 changelog gap Session 2 missed, balanced by D5.4 standalone-plan strength                   |
+| Overall | 6.4       | 6.2  | -0.2 | absorbed by D2 delta                                                                                                         |
+
+The **0.2-point downward delta is exactly the self-bias correction Session 2's
+own limitations footer predicted**: "the 6.4 score on persona-evaluator should
+be treated as upper-bound — an outside reviewer is likely to score lower on D1
+... and D2 (`Bash(node:*)` over-broad)." Direction agreement: 100%. Magnitude
+agreement: 0.2 in line with self-bias prediction. **The honest-under-reporting
+caveat worked as designed.**
+
+### Cold-pass deepenings (extensions of existing wounds, not contradictions)
+
+**C1. `Bash(node:*)` is dead surface, not over-broad surface.**
+Session 2 (and v0.1.3 P0 patch evidence) recommended narrowing to
+`Bash(node scripts/...:*)`. Cold check: `grep -n "\bnode\b"` across SKILL.md
++ README.md + 3 references = 0 matches outside the `allowed-tools` declaration
+itself. Correct fix = **remove entirely**, not narrow.
+
+**C2. Mode-selection table is structurally misplaced, not just buried.**
+Session 2 said "buried at L178". Cold reading found the table was a
+`### Mode selection quick reference` H3 *inside* `## Black-box Semantic
+Evaluation` (H2). That structurally implies the mode table only governs
+black-box mode — worse than being late in the file. Correct fix = promote to
+H2 above-all-modes right after Quick Start.
+
+**C3. D5.3 versioning anchor: `metadata.version: 0.3.0` is a vanity bump.**
+`git log --all -- skills/persona-evaluator/SKILL.md` shows the file's only
+commits are dated 2026-04-26 — there is no real 0.1.x or 0.2.x history in
+the repo. The 0.3.0 starting version is honest about the feature set shipped
+(three modes) but dishonest about evolution. Session 2 missed this. Correct
+fix = inline `## Changelog` that records v0.3.0 as "initial release with all
+three modes shipped together," not pretending to multi-minor history.
+
+### Step 2 verdict
+
+**PASS, with refinements.** Session 2's verdict on `persona-evaluator` is
+substantively correct in direction — every wound is real, none invented. The
+0.2-point optimistic delta matches Session 2's own self-bias caveat exactly.
+This closes the Step 2 link of the user's trust chain (Step 1 = rubric
+integrity, Step 2 = Session 2 verdict validation, Step 3 = wound fixes,
+Step 4 = `persona-evaluator` capability check on another persona).
+
+---
+
+## Step 3 wound-fix landed (`persona-evaluator` v0.3.1, same-day)
+
+Same commit as this report append. Source diff in
+`skills/persona-evaluator/SKILL.md` — see its
+[inline changelog](../skills/persona-evaluator/SKILL.md#changelog) for
+canonical wording.
+
+| Wound                                      | Fix                                                                                                                                   | Source                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `Bash(node:*)` unjustified                 | Removed from `allowed-tools` (was: 3-tool list → now: 2-tool list)                                                                    | Session 2 row 1 + C1      |
+| Mode-selection table at H3 inside one mode | Promoted to H2 `## Choosing a mode` right after Quick Start; old H3 replaced by one-line back-pointer                                 | Session 2 row 1 + F6 + C2 |
+| D5.3 changelog gap + vanity version bump   | Added inline `## Changelog` honestly recording v0.3.0 = initial release with no real prior history; v0.3.1 records this wound-fix pass | C3                        |
+
+Predicted post-fix cold rescore: **6.8/10** (D2: 5→7, D5: 7→8, others
+unchanged). Crosses the 7-anchor "good" band fully only after Step 4 lands a
+real-invocation Self-eval Log addressing D1.3 (deferred to next session).
+
+---
+
 ## Next step
 
-`v0.1.3` (P0 patches 1 + 2) ships alongside this report in the same commit.
-`v0.2.0` (P1 changes 3–13) is a separate Session 3 task and requires:
-multi-LLM pass on at least 3 skills, calibration fixtures, and an explicit
-review of the D3 split.
+**Original Session 2 next-step (now historical):** v0.1.3 (P0 patches 1 + 2)
+ships alongside this report in the same commit. v0.2.0 (P1 changes 3–13) is a
+separate Session 3 task and requires multi-LLM pass on at least 3 skills,
+calibration fixtures, and an explicit review of the D3 split.
+
+**Updated next-step (post Step 1 / 2 / 3, 2026-04-26):** v0.1.3 + v0.1.4
+shipped. Step 2 cold validation closed (this section). Step 3 `persona-evaluator`
+v0.3.1 wound-fix landed (above). **Step 4 is next**: validate
+`persona-evaluator` v0.3.1's ability to evaluate a *different* persona it did
+not author — completing the trust chain. Candidate subjects: `secondme-skill`
+(framework type, structurally distant from evaluator) or `entrepreneur-skill`
+(persona type, lowest Session 2 score = clearest wound surface to detect).
