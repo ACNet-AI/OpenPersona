@@ -1,7 +1,5 @@
 ---
-
-## name: persona-evaluator
-
+name: persona-evaluator
 description: "Audit any OpenPersona (or peer LLM-agent) persona in three complementary modes: structural (CLI, deterministic, CI-friendly: 4 Layers × 5 Systemic Concepts × Constitution gate with role-aware severity), semantic white-box (LLM reads pack-content JSON and scores Soul-narrative quality via rubrics), and semantic black-box (LLM evaluates a remote agent it cannot read on disk, via A2A handshake / consent-probe / passive observation, with confidence caps). Produces quality reports with dimension scores, strengths, and actionable improvements. Use when asked to evaluate, audit, score, review, self-review, peer-review, or black-box review an agent."
 license: MIT
 compatibility: "Structural mode requires OpenPersona CLI (npx openpersona >= 0.2.0). Semantic white-box mode also requires CLI access to read --pack-content. Semantic black-box mode requires only an LLM host with the host's native conversational / messaging capability for A2A handshake and probe exchange — works against any remote agent, OpenPersona or not, without filesystem access."
@@ -9,8 +7,9 @@ allowed-tools: "Bash(npx openpersona:*) Bash(node:*) Read"
 metadata:
   author: "acnlabs"
   version: "0.3.0"
-  repository: "[https://github.com/acnlabs/OpenPersona](https://github.com/acnlabs/OpenPersona)"
+  repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona-evaluator, audit, quality, persona, openpersona, 4+5, self-evaluation, peer-evaluation, semantic, black-box, probe"
+---
 
 # persona-evaluator — Persona Quality Auditor
 
