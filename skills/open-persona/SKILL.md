@@ -1,32 +1,20 @@
 ---
-
 name: open-persona
-version: "0.21.1"
-description: >
-  Meta-skill for building and managing agent persona skill packs (instruction-only;
-  no bundled installer or auto-downloaded binaries). Credentials are never written
-  into generated packs by the framework; publish/ACN/register require explicit user CLI.
-  Use when the user wants to create a new agent persona, install/manage
-  existing personas, or publish persona skill packs to OpenPersona.
+description: "Meta-skill for building and managing agent persona skill packs (instruction-only; no bundled installer or auto-downloaded binaries). Credentials are never written into generated packs by the framework; publish/ACN/register require explicit user CLI. Use when the user wants to create a new agent persona, install/manage existing personas, or publish persona skill packs to OpenPersona."
 license: MIT
-compatibility: Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) defaults to OpenClaw.
-allowed-tools: Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch
+compatibility: "Generated skill packs work with any SKILL.md-compatible agent. CLI management (install/switch) defaults to OpenClaw."
+allowed-tools: "Bash(npx openpersona:*) Bash(npx clawhub@latest:*) Bash(openclaw:*) Bash(gh:*) Read Write WebFetch"
 metadata:
-  author: openpersona
+  author: "openpersona"
+  version: "0.21.1"
   repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona, agent, skill-pack, meta-skill, agent-agnostic, openclaw"
-
-# Marketplace / automated review: explicit non-behavior (reduces false "suspicious" flags)
-
-  installSurface: instruction-only
-  networkAccess: user-initiated-cli-only
-  secretsPolicy: never-embedded-in-generated-packs-by-framework
-  clawdbot:
-    emoji: "🧑"
-    requires:
-      env: []
-files: []
-
+  installSurface: "instruction-only"
+  networkAccess: "user-initiated-cli-only"
+  secretsPolicy: "never-embedded-in-generated-packs-by-framework"
+  clawdbotEmoji: "🧑"
+  clawdbotRequiresEnv: "[]"
+  clawdbotFiles: "[]"
 ---
 
 # OpenPersona — Build & Manage Persona Skill Packs
@@ -536,7 +524,7 @@ For detailed reference material, see the `references/` directory:
 
 | Skill                                                                       | Install                                        | Purpose                                                                                                                    |
 | --------------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `[evaluator-skill](https://github.com/acnlabs/evaluator-skill)`             | `openpersona skill install acnlabs/evaluator-skill`       | Score any persona pack across 4 Layers + 5 Systemic Concepts — 9-dimension quality audit, constitution compliance gate, and actionable improvement recommendations (`npx openpersona evaluate <slug>`) |
+| `[persona-evaluator](https://github.com/acnlabs/persona-evaluator)`         | `openpersona skill install acnlabs/persona-evaluator`     | Score any persona pack across 4 Layers + 5 Systemic Concepts — 9-dimension quality audit, constitution compliance gate, and actionable improvement recommendations (`npx openpersona evaluate <slug>`) |
 | `[anyone-skill](https://github.com/acnlabs/anyone-skill)`                   | `openpersona skill install acnlabs/anyone-skill`          | Distill any person or character (self, personal, public, historical, fictional, archetype) into a persona skill pack       |
 | `[brand-persona-skill](https://github.com/acnlabs/brand-persona-skill)` | `openpersona skill install acnlabs/brand-persona-skill` | Turn any commercial entity (shop, clinic, studio, chain) into a brand agent — soul distillation or declaration from scratch, service skills, A2A discoverability, and a service contract |
 | `[persona-model-trainer](https://github.com/acnlabs/persona-model-trainer)` | `openpersona skill install acnlabs/persona-model-trainer` | Fine-tune Gemma-4 (E2B/E4B) locally on distilled data — self-contained model for phones and laptops via Ollama/llama.cpp. Use `--preset gemma4` for one-command optimised training (lora-rank=16, alpha=rank, lora-layers=16, warmup=0.1). |

@@ -653,15 +653,15 @@ describe('version consistency', () => {
     );
   });
 
-  it('skills/open-persona/SKILL.md frontmatter version matches package.json', () => {
+  it('skills/open-persona/SKILL.md frontmatter metadata.version matches package.json', () => {
     const pkg = require('../package.json');
     const skillMd = fs.readFileSync(path.join(__dirname, '..', 'skills', 'open-persona', 'SKILL.md'), 'utf-8');
-    const match = skillMd.match(/^version:\s*["']?([^"'\s]+)["']?/m);
-    assert.ok(match, 'skills/open-persona/SKILL.md must have a version: field in frontmatter');
+    const match = skillMd.match(/^\s+version:\s*["']?([^"'\s]+)["']?/m);
+    assert.ok(match, 'skills/open-persona/SKILL.md must have a metadata.version field in frontmatter (per agentskills.io spec — top-level version is not allowed)');
     assert.strictEqual(
       match[1],
       pkg.version,
-      `skills/open-persona/SKILL.md version (${match[1]}) must match package.json (${pkg.version})`
+      `skills/open-persona/SKILL.md metadata.version (${match[1]}) must match package.json (${pkg.version})`
     );
   });
 });
