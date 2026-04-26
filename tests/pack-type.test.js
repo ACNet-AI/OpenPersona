@@ -547,3 +547,118 @@ test('curator: enforces multi threshold after excluding root SKILL.md', () => {
     'curator should report post-filter multi threshold failure clearly'
   );
 });
+
+// ── 9. curator: nested metadata frontmatter parsing (W7 fix) ────────────────
+
+const { parseSkillMdFrontmatter } = require(path.join(ROOT, 'lib', 'remote', 'curator'));
+
+test('parseSkillMdFrontmatter: nested metadata.version is exposed as dotted key', () => {
+  const skillMd = [
+    '---',
+    'name: persona-evaluator',
+    'description: "An evaluator"',
+    'metadata:',
+    '  author: "acnlabs"',
+    '  version: "0.3.3"',
+    '  repository: "https://github.com/acnlabs/OpenPersona"',
+    '---',
+    '',
+    '# body',
+    '',
+  ].join('\n');
+  const fm = parseSkillMdFrontmatter(skillMd);
+  assert.strictEqual(fm['metadata.version'], '0.3.3', 'nested metadata.version must be exposed');
+  assert.strictEqual(fm['metadata.author'], 'acnlabs', 'nested metadata.author must be exposed');
+  assert.strictEqual(fm['metadata.repository'], 'https://github.com/acnlabs/OpenPersona');
+  assert.strictEqual(fm.name, 'persona-evaluator', 'top-level keys still parsed');
+  assert.strictEqual(fm.description, 'An evaluator', 'description still parsed');
+});
+
+test('parseSkillMdFrontmatter: version-after-author still resolves (lazy ordering bug repro)', () => {
+  const skillMd = [
+    '---',
+    'name: x',
+    'metadata:',
+    '  author: "acnlabs"',
+    '  version: "0.3.3"',
+    '---',
+  ].join('\n');
+  const fm = parseSkillMdFrontmatter(skillMd);
+  assert.strictEqual(
+    fm['metadata.version'],
+    '0.3.3',
+    'version listed after author must still be parsed (regression: prior parser only kept the joined string)'
+  );
+});
+
+test('parseSkillMdFrontmatter: keeps backward-compatible joined string for fm.metadata', () => {
+  const skillMd = [
+    '---',
+    'name: x',
+    'metadata:',
+    '  version: "1.0.0"',
+    '  author: "alice"',
+    '---',
+  ].join('\n');
+  const fm = parseSkillMdFrontmatter(skillMd);
+  // Old behaviour preserved — existing callers that read fm.metadata as joined string still work.
+  assert.ok(
+    typeof fm.metadata === 'string' && fm.metadata.includes('version:') && fm.metadata.includes('author:'),
+    'fm.metadata joined-string fallback must be preserved for back-compat'
+  );
+});
+
+test('parseSkillMdFrontmatter: top-level version takes precedence (no nested)', () => {
+  const skillMd = [
+    '---',
+    'name: x',
+    'version: "0.5.0"',
+    'description: "desc"',
+    '---',
+  ].join('\n');
+  const fm = parseSkillMdFrontmatter(skillMd);
+  assert.strictEqual(fm.version, '0.5.0');
+});
+
+test('parseSkillMdFrontmatter: nested mapping with no quotes still parsed', () => {
+  const skillMd = [
+    '---',
+    'name: x',
+    'metadata:',
+    '  version: 0.4.2',
+    '  author: bob',
+    '---',
+  ].join('\n');
+  const fm = parseSkillMdFrontmatter(skillMd);
+  assert.strictEqual(fm['metadata.version'], '0.4.2');
+  assert.strictEqual(fm['metadata.author'], 'bob');
+});
+
+test('curator: payload version is null (not a placeholder string) when source has no version', () => {
+  const curatorSrc = require('node:fs').readFileSync(
+    path.join(ROOT, 'lib', 'remote', 'curator.js'),
+    'utf-8'
+  );
+  // Regression guard for the `vunversioned` sidebar bug:
+  // Earlier, reportCurate sent a literal "unversioned" sentinel when version
+  // was missing. The `/api/curate` route does
+  //   `const version = meta?.version ?? await fetchRepoVersion(...)`,
+  // so a literal sentinel short-circuited the server-side fetchRepoVersion
+  // fallback and poisoned the KV with the string "unversioned" — which the
+  // frontend then prefixed as "vunversioned" in the sidebar Version label.
+  // The fix sends `null` instead so the API can resolve the version itself.
+  assert.ok(
+    curatorSrc.includes('version: version || null'),
+    'curator meta.version must default to null (not a placeholder string) so the API server-side fallback (fetchRepoVersion) is not short-circuited'
+  );
+  assert.ok(
+    curatorSrc.includes('version: s && s.version ? s.version : null'),
+    'curator skills[].version must default to null for the same reason'
+  );
+  const curator = require(path.join(ROOT, 'lib', 'remote', 'curator'));
+  assert.strictEqual(
+    curator.DEFAULT_VERSION_PLACEHOLDER,
+    undefined,
+    'curator must not export a DEFAULT_VERSION_PLACEHOLDER sentinel — its presence as public API invites callers to short-circuit server-side fallbacks'
+  );
+});
