@@ -707,3 +707,232 @@ collapses-of-meaning that a hot author (me) is too entangled with
 the work to see.
 
 The trust-chain framework is itself working as designed.
+
+---
+
+## W6 (CRITICAL) — schema bifurcation root cause (2026-04-26)
+
+Discovered during Step 4-extended on `persona-secondme-skill`. After fixing
+the category-error for the subject (`secondme-skill` orchestrator → real
+persona pack `persona-secondme-skill`), the very first structural eval run
+revealed something far worse than W4 / W5: **the evaluator was never reading
+real persona-pack contents at all**.
+
+### Trigger / how it surfaced
+
+`npx openpersona evaluate persona-secondme-skill --pack-content --json`
+returned all `character.*` / `identity.*` / `aesthetic.*` fields as `null`
+and `role: None`, despite the persona.json on disk having every one of
+those fields populated at the top level (e.g. `"personaName": "secondme-skill"`,
+`"personality": "structured, evidence-oriented, ..."`). Cross-checking
+`persona-entrepreneur-skill` (the Step 4 capstone subject) reproduced the
+exact same null-extraction → confirming this is not specific to generated
+packs but affects 100 % of personas.
+
+### Root cause — schema bifurcation
+
+The OpenPersona codebase carries two soul-schema layouts in production:
+
+| Layer | Format | Authoritative file | Who reads it |
+| ----- | ------ | ------------------ | ------------ |
+| Creator-facing INPUT (v0.17+) | **Nested** under `soul.{identity, character, aesthetic}` | `schemas/persona.input.schema.json` | `lib/generator/validate.js` (validates raw input) |
+| On-disk persona.json (post-normalise) | **FLAT** top-level fields, no `soul` key | `schemas/legacy/persona.schema.json` (DEPRECATED label, but actually describes the wire format correctly) | `lib/lifecycle/installer.js`, `lib/lifecycle/refine.js`, agent runtime |
+
+The flattening happens in `lib/generator/index.js`:
+
+```javascript
+function normalizeSoulInput(persona) {
+  if (!persona.soul) return;
+  const { identity = {}, aesthetic = {}, character = {} } = persona.soul;
+  Object.assign(persona, identity, aesthetic, character);
+  delete persona.soul;          // <-- L63: soul key is REMOVED before write
+}
+```
+
+So every real on-disk pack has top-level `personaName`, `personality`, etc.
+and zero `soul` key.
+
+`lib/lifecycle/evaluator.js` was reading the *input* schema (nested) instead
+of the *on-disk* schema (flat) at five sites:
+
+- `scoreSoul()` L128-130 — soul / identity / character objects
+- `scoreSoul()` L173 — `soul.aesthetic.emoji || soul.aesthetic.creature`
+- `scoreSoul()` L180-186 — error messages referencing `soul.aesthetic`, `soul.identity.role`
+- `extractEvaluableContent()` L680-710 — the entire evaluable-content JSON the white-box semantic mode reads
+- `evaluatePersona()` L767 — `role` lookup that drives all severity profiles
+
+Consequence: every dimension that depends on a soul field, every
+severity-aware adjustment that depends on `role`, and every white-box
+semantic eval (`--pack-content`) ran against null inputs.
+
+### Smoking gun — the unit-test gap
+
+`tests/evaluator.test.js` defines `FULL_PERSONA` using the **nested** input
+schema (L43-53):
+
+```javascript
+const FULL_PERSONA = {
+  soul: {
+    identity: { personaName: 'Test', slug: 'test', bio: '...', role: 'assistant' },
+    character: { personality: 'helpful, curious', speakingStyle: '...', ... },
+    aesthetic: { emoji: '🤖', creature: 'robot', vibe: 'calm' },
+  },
+  ...
+};
+```
+
+Tests passed because they fed nested fixtures to a nested-reading evaluator.
+**No test ever exercised a flat (real on-disk) persona.** Integration
+coverage was effectively zero for the schema the evaluator was supposed to
+handle in production.
+
+This is the second-most-important finding of this entire trust chain
+(after the trust chain itself surfacing W6): the unit test surface gave
+872 / 872 green for code that returned null for every real-world input.
+
+### Impact on prior trust-chain work
+
+- **Step 4 capstone (commit `7591596`, entrepreneur-skill 6 / 10) is invalid
+  as a substantive verdict.** The 6 / 10 was scoring null content with
+  `role: null` falling to `_default` severity profile. It tells us the
+  evaluator does not crash on real input; it does not tell us anything
+  about entrepreneur-skill's quality.
+- **W4 / W5 fixes (commit `643b5f6`) are still correct but their scope is
+  smaller than I thought.** They handle genuine null-field cases (e.g. a
+  persona that legitimately has no `character.background` like both
+  entrepreneur-skill and persona-secondme-skill); they don't paper over
+  W6 because W6 is now fixed at the source.
+- **Steps 1, 2, 3 are unaffected** — they validated the SKILL.md document,
+  static heuristic detector, and rubric methodology, none of which
+  depend on `extractEvaluableContent`'s output.
+
+### Fix
+
+Introduced `getSoulView(p)` helper at `lib/lifecycle/evaluator.js` L36-95
+using **nested-first / flat-fallback** — same pattern already used in
+`lib/lifecycle/refine.js` L86-89 (the convention was established
+elsewhere; the evaluator was an outlier):
+
+```javascript
+function getSoulView(p) {
+  const soul = p.soul || {};
+  const identity  = soul.identity  || {};
+  const character = soul.character || {};
+  const aesthetic = soul.aesthetic || {};
+  return {
+    identity: {
+      personaName: identity.personaName || p.personaName || null,
+      // ... slug, bio, role
+    },
+    character: {
+      personality: character.personality || p.personality || null,
+      // ... speakingStyle, background, boundaries
+    },
+    aesthetic: {
+      emoji: aesthetic.emoji || p.emoji || null,
+      // ... creature, vibe
+    },
+  };
+}
+```
+
+Refactored all 5 nested-reading sites to use the helper. Updated
+user-facing error messages to refer to fields by name without committing
+to a path (`soul.aesthetic missing` → `Aesthetic identity (emoji/creature/vibe) missing`).
+
+### Test surface
+
+Added a new `describe('W6 regression — flat on-disk schema')` block in
+`tests/evaluator.test.js` with 7 tests:
+
+1. extractEvaluableContent reads identity from flat top-level
+2. extractEvaluableContent reads character from flat top-level
+3. extractEvaluableContent reads aesthetic from flat top-level
+4. evaluatePersona's role lookup reads from flat top-level (severity
+   profile applies correctly)
+5. **Parity check**: flat fixture and nested fixture of the *same*
+   persona produce identical `overallScore` and `Soul` dimension score
+6. **Defensive**: nested takes precedence when both are present
+   (matches refine.js convention)
+7. Soul scoring on flat fixture without aesthetic surfaces same
+   suggestion as nested
+
+All 7 pass on first run. Full suite: **879 / 879 pass** (was 872 + 7
+new), **131 suites**, **8 / 8 skills pass spec**.
+
+### Re-validation
+
+| Subject | Pre-W6 (broken) | Post-W6 (correct) |
+| ------- | --------------- | ----------------- |
+| `entrepreneur-skill` (authored) | role=None, all soul fields null, **6/10 Developing** | role=`founder`, all soul fields populated, **7/10 Good** |
+| `persona-secondme-skill` (generated) | same null pattern, **6/10 Developing** | role=`collaborator` (skill: strict applied), **7/10 Good** |
+
+Both subjects exhibit the same dimensional pattern post-fix:
+
+```
+Soul       8/10
+Body       7/10
+Faculty    6/10
+Skill      8/10
+Evolution  9/10
+Economy    5/10
+Vitality   5/10
+Social     8/10
+Rhythm     5/10
+character.background: null  (genuine null — W4 territory, not W6)
+```
+
+### Generated-vs-authored axis verdict
+
+This is what Step 4-extended was designed to answer, only now
+answerable at all because of W6: **the secondme-skill pipeline produces
+persona packs at score parity with hand-crafted ones** (both at 7/10
+Good band, identical dimensional profile). The single shared weakness
+(`character.background` null) is a content choice, not a generator
+defect.
+
+### Trust-chain status — re-opened then re-closed
+
+The previous "all four steps closed" status (asserted in the W4/W5
+follow-up) was premature: Step 4 capstone's substance was null. After
+the W6 fix:
+
+1. SKILL-RUBRIC v0.1.4 self-validates clean — unaffected by W6 — ✓
+2. Cold validation of Session-2 findings — unaffected by W6 — ✓
+3. `persona-evaluator` wound-fix pass — now includes W6 (commit
+   pending: this commit) — ✓
+4. **Capability validation re-done post-W6** — entrepreneur-skill
+   actually scores 7/10 Good; secondme-skill (generated) ditto — ✓
+5. **Step 4-extended also done post-W6** — generated-vs-authored
+   parity established — ✓ (originally optional; now part of the closure
+   because W6 was discovered during it)
+
+The trust chain is *now* genuinely closed. The previous closure was a
+ratification of broken machinery; this closure ratifies a re-validated
+tool.
+
+### What this teaches about the trust-chain methodology
+
+The trust chain has now surfaced two layers of defect that the unit
+test suite could not:
+
+1. **W1, W2** (constitution-check false positives) — surface-level
+   logic bugs that triggered on real persona content. Unit tests
+   covered the detector's logic but not against real soul/constitution.md.
+2. **W6** (schema bifurcation) — a deeper integration-vs-unit gap
+   where the unit fixture matched the wrong schema layer, so the
+   tested code was structurally incompatible with production data
+   despite being internally consistent.
+
+Both layers were invisible to traditional code review; both became
+visible only when the evaluator was pointed at a real persona it had
+not seen before. This is the core argument for the trust-chain
+methodology: cold validation against real subjects surfaces failure
+modes that hot authoring + unit testing systematically miss.
+
+### Deferred backlog (post-W6)
+
+None. The previously-listed "Optional Step 4-extended on
+persona-secondme-skill" is now complete (it was the discovery vehicle
+for W6). All trust-chain steps have been closed against a corrected
+evaluator.

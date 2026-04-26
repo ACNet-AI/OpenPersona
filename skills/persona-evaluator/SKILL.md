@@ -6,7 +6,7 @@ compatibility: "Structural mode requires OpenPersona CLI (npx openpersona >= 0.2
 allowed-tools: "Bash(npx openpersona:*) Read"
 metadata:
   author: "acnlabs"
-  version: "0.3.2"
+  version: "0.3.3"
   repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona-evaluator, audit, quality, persona, openpersona, 4+5, self-evaluation, peer-evaluation, semantic, black-box, probe"
 ---
@@ -289,5 +289,12 @@ A standalone distributable (`acnlabs/persona-evaluator`) will be published to op
   - **W4 fix:** [references/RUBRICS.md](references/RUBRICS.md) now specifies null-field scoring (strict/normal: 0–2; lenient: 3–4) as an override on top of severity-aware scoring, with explicit rationale-required clause. The previous lenient-floor-of-≥6 was written for terse-but-present content and was incorrectly applied to absent fields.
   - **W5 fix:** `behavior-guide.md` Soul-fidelity check now requires `character.personality` and/or `character.speakingStyle` to be populated; if both are null, the check is marked **untestable** rather than failed. Avoids double-penalising a behavior-guide for failing a check whose reference fields don't exist.
   - Both wounds were surfaced by dogfooding `persona-evaluator` on a real persona where Soul fields were null — the rubric scored the persona harshly using checks that were structurally inapplicable.
+- **0.3.3** (2026-04-26) — **Critical W6 fix**: schema-bifurcation root cause uncovered during Step 4-extended validation on `persona-secondme-skill`:
+  - `lib/lifecycle/evaluator.js` was reading `p.soul.identity.*`, `p.soul.character.*`, `p.soul.aesthetic.*` (the v0.17+ creator-facing INPUT schema, nested grouped format).
+  - But all on-disk persona packs use the FLAT schema produced by `lib/generator/index.js:normalizeSoulInput()` which lifts soul.* sub-fields to top level and `delete persona.soul` before writing.
+  - Net effect: every real persona evaluated with the previous evaluator read all soul fields as `null` and all roles as `null`, falling to `_default` severity profile. The 0.3.2 W4/W5 null-field rules were partly addressing the *symptom* of W6 rather than genuinely-null content. **Step 4 capstone (entrepreneur-skill 6/10) was evaluated against null inputs and is therefore invalid as a substantive verdict.**
+  - **Fix:** introduced `getSoulView(p)` helper using nested-first / flat-fallback (mirrors `lib/lifecycle/refine.js` L86-89). Refactored 5 sites: `scoreSoul` (lines 128-130, 173, 180-186), `extractEvaluableContent` (lines 680-710), `evaluatePersona` role lookup (line 767). 7 W6 regression tests added (`tests/evaluator.test.js`), including a parity check that flat and nested fixtures of the same persona produce identical scores.
+  - **Re-validation:** entrepreneur-skill (authored) scores **7/10 Good** post-fix (was 6 phantom); persona-secondme-skill (generated) scores **7/10 Good**. Both share `character.background: null` as the genuine null field — this is W4's actual scope (a real null, not a W6 phantom). Generated-vs-authored parity at 7/10 establishes the secondme pipeline produces packs comparable to hand-crafted personas.
+  - Test surface: 879 tests pass (was 872 pre-fix), 131 suites, 8/8 skills pass spec.
 
 The deeper rubric and review trail for the wound-fix pass lives in [docs/SKILL-RUBRIC.md](../../docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](../../docs/SKILL-RUBRIC-SESSION-2.md).

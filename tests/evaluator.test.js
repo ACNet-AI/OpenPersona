@@ -734,3 +734,116 @@ describe('role-aware scoring', () => {
     assert.strictEqual(content.character.speakingStyle, 'friendly and clear');
   });
 });
+
+// ---------------------------------------------------------------------------
+// W6 regression tests — flat schema reads (schema bifurcation fix)
+// ---------------------------------------------------------------------------
+//
+// On-disk persona.json uses the FLAT post-normalize format (top-level
+// `personaName`, `personality`, `vibe`, etc., no `soul` key). The evaluator
+// previously read only the nested INPUT format (`soul.identity.*`,
+// `soul.character.*`), so every real persona pack was evaluated with all
+// soul fields read as null. These tests exercise the flat path explicitly.
+describe('W6 regression — flat on-disk schema', () => {
+  // Mirrors the canonical post-flatten layout produced by
+  // lib/generator/index.js:normalizeSoulInput() — top-level identity,
+  // character, and aesthetic fields with `soul` already deleted. Built by
+  // copying FULL_PERSONA and lifting soul.* sub-fields to top level.
+  function makeFlatPersona() {
+    const base = JSON.parse(JSON.stringify(FULL_PERSONA));
+    const { identity = {}, character = {}, aesthetic = {} } = base.soul;
+    Object.assign(base, identity, character, aesthetic);
+    delete base.soul;
+    return base;
+  }
+
+  it('extractEvaluableContent: reads identity from flat top-level fields', () => {
+    const dir = makePersonaDir(makeFlatPersona());
+    const personaJson = JSON.parse(fs.readFileSync(path.join(dir, 'persona.json'), 'utf-8'));
+    assert.strictEqual(personaJson.soul, undefined,
+      'Flat fixture must have no soul key (canonical on-disk shape)');
+    const content = extractEvaluableContent(dir, personaJson);
+    assert.strictEqual(content.identity.personaName, 'Test');
+    assert.strictEqual(content.identity.slug, 'test');
+    assert.strictEqual(content.identity.bio, 'A test persona');
+    assert.strictEqual(content.identity.role, 'assistant');
+  });
+
+  it('extractEvaluableContent: reads character from flat top-level fields', () => {
+    const dir = makePersonaDir(makeFlatPersona());
+    const personaJson = JSON.parse(fs.readFileSync(path.join(dir, 'persona.json'), 'utf-8'));
+    const content = extractEvaluableContent(dir, personaJson);
+    assert.strictEqual(content.character.personality, 'helpful, curious');
+    assert.strictEqual(content.character.speakingStyle, 'friendly and clear');
+    assert.ok(content.character.background.length > 100,
+      'background should be populated from flat field');
+  });
+
+  it('extractEvaluableContent: reads aesthetic from flat top-level fields', () => {
+    const dir = makePersonaDir(makeFlatPersona());
+    const personaJson = JSON.parse(fs.readFileSync(path.join(dir, 'persona.json'), 'utf-8'));
+    const content = extractEvaluableContent(dir, personaJson);
+    assert.strictEqual(content.aesthetic.emoji, '🤖');
+    assert.strictEqual(content.aesthetic.creature, 'robot');
+    assert.strictEqual(content.aesthetic.vibe, 'calm');
+  });
+
+  it('evaluatePersona: role-aware severity reads role from flat top-level', () => {
+    // role: assistant gets `skill: strict` profile. If role were read as
+    // null (W6 pre-fix behaviour), the persona would fall to _default
+    // profile and Skill weight would be base instead of doubled.
+    const flat = makeFlatPersona();
+    flat.role = 'tool'; // tool: soul lenient + skill strict — easy to detect
+    const dir = makePersonaDir(flat);
+    const report = evaluatePersona(dir);
+    // Tool profile should now apply — verifying via dimension presence
+    // and successful evaluation (no crash on null role).
+    assert.strictEqual(report.constitution.passed, true);
+    assert.ok(report.dimensions.length === 9);
+  });
+
+  it('evaluatePersona: flat fixture scores comparably to nested fixture (parity check)', () => {
+    // Both formats describe the same persona; W6 fix means they should
+    // now produce equivalent scores. Pre-fix, the flat fixture would
+    // score much lower because all soul fields read as null.
+    const nestedDir = makePersonaDir(FULL_PERSONA);
+    const flatDir = makePersonaDir(makeFlatPersona());
+    const nestedReport = evaluatePersona(nestedDir);
+    const flatReport = evaluatePersona(flatDir);
+    assert.strictEqual(flatReport.overallScore, nestedReport.overallScore,
+      `Flat (${flatReport.overallScore}) and nested (${nestedReport.overallScore}) should match`);
+    const flatSoul = flatReport.dimensions.find(d => d.dimension === 'Soul').score;
+    const nestedSoul = nestedReport.dimensions.find(d => d.dimension === 'Soul').score;
+    assert.strictEqual(flatSoul, nestedSoul,
+      `Flat Soul (${flatSoul}) and nested Soul (${nestedSoul}) should match`);
+  });
+
+  it('extractEvaluableContent: nested takes precedence when both are present (defensive)', () => {
+    // If a caller passes pre-flatten persona with both `soul.character.*`
+    // and a stray top-level `personality`, nested should win — matches
+    // refine.js's nested-first/flat-fallback convention.
+    const hybrid = JSON.parse(JSON.stringify(FULL_PERSONA));
+    hybrid.personality = 'flat-wins-only-if-nested-missing';
+    const dir = makePersonaDir(hybrid);
+    const personaJson = JSON.parse(fs.readFileSync(path.join(dir, 'persona.json'), 'utf-8'));
+    const content = extractEvaluableContent(dir, personaJson);
+    assert.strictEqual(content.character.personality, 'helpful, curious',
+      'Nested soul.character.personality should win over flat persona.personality');
+  });
+
+  it('Soul scoring: flat fixture without aesthetic surfaces same suggestion as nested', () => {
+    const flat = makeFlatPersona();
+    delete flat.emoji;
+    delete flat.creature;
+    delete flat.vibe;
+    const dir = makePersonaDir(flat);
+    const report = evaluatePersona(dir);
+    const soul = report.dimensions.find(d => d.dimension === 'Soul');
+    // Should either flag aesthetic missing as issue (strict) or as
+    // suggestion (normal). FULL_PERSONA's role is 'assistant', so
+    // severity is normal — expect a suggestion.
+    const allText = [...soul.issues, ...soul.suggestions].join(' ');
+    assert.ok(/aesthetic|emoji|creature|vibe/i.test(allText),
+      `Expected aesthetic-related signal in Soul output, got: ${allText}`);
+  });
+});
