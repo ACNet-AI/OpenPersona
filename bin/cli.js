@@ -922,11 +922,12 @@ program
   .description('Score a persona pack across 4 Layers + 5 Systemic Concepts (4+5 quality audit)')
   .option('--json', 'Output raw JSON report')
   .option('--output <file>', 'Write JSON report to <file>')
+  .option('--pack-content', 'Embed evaluable persona content (soul/character/behavior-guide) in the JSON report — for LLM-driven semantic evaluation')
   .action((slug, options) => {
     const { evaluatePersona } = require('../lib/lifecycle/evaluator');
     let report;
     try {
-      report = evaluatePersona(slug);
+      report = evaluatePersona(slug, { includeContent: !!options.packContent });
     } catch (err) {
       printError(`evaluate: ${err.message}`);
       process.exit(1);
@@ -938,7 +939,9 @@ program
       return;
     }
 
-    if (options.json) {
+    // --pack-content implies --json: the embedded content has no human-friendly
+    // pretty-print, it's machine fodder for an LLM evaluator.
+    if (options.json || options.packContent) {
       process.stdout.write(JSON.stringify(report, null, 2) + '\n');
       return;
     }
@@ -952,6 +955,17 @@ program
     console.log('');
     console.log(`  ┌─ OpenPersona Evaluation: ${report.slug} ${'─'.repeat(Math.max(0, 40 - report.slug.length))}`);
     console.log(`  │  Overall Score: ${report.overallScore}/10  [${report.band}]`);
+    if (report.role) {
+      const strictDims = report.dimensions.filter(d => d.severity === 'strict').map(d => d.dimension);
+      const lenientDims = report.dimensions.filter(d => d.severity === 'lenient').map(d => d.dimension);
+      const hint = [
+        strictDims.length ? `strict: ${strictDims.join(', ')}`  : null,
+        lenientDims.length ? `lenient: ${lenientDims.join(', ')}` : null,
+      ].filter(Boolean).join(' · ');
+      console.log(`  │  Role: ${report.role}${hint ? `  (${hint})` : ''}`);
+    } else {
+      console.log(`  │  Role: (not declared — using default profile)`);
+    }
     if (!report.constitution.passed) {
       printWarning(`  │  ⚠ Constitution: FAILED (${report.constitution.violations.length} violation(s))`);
     } else {
@@ -960,10 +974,16 @@ program
     console.log(`  └${'─'.repeat(52)}`);
     console.log('');
 
+    const severityTag = (sev) => {
+      if (sev === 'strict')  return ' \x1b[33m[strict]\x1b[0m';
+      if (sev === 'lenient') return ' \x1b[90m[lenient]\x1b[0m';
+      return '';
+    };
+
     for (const d of report.dimensions) {
       const label = (d.dimension + ':').padEnd(12);
       const neutral = d.neutral ? ' (not declared)' : '';
-      console.log(`  ${label} ${scoreBar(d.score)}${neutral}`);
+      console.log(`  ${label} ${scoreBar(d.score)}${neutral}${severityTag(d.severity)}`);
       for (const issue of (d.issues || [])) {
         printWarning(`             ✗ ${issue}`);
       }

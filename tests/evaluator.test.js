@@ -14,7 +14,7 @@ const os     = require('os');
 
 // evaluatePersona resolves by slug via registry; we pass an absolute dir path
 // to bypass registry lookup in all tests.
-const { evaluatePersona } = require('../lib/lifecycle/evaluator');
+const { evaluatePersona, extractEvaluableContent } = require('../lib/lifecycle/evaluator');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -297,5 +297,406 @@ describe('evaluatePersona', () => {
     assert.ok(Array.isArray(report.summary.strengths));
     assert.ok(Array.isArray(report.summary.gaps));
     assert.ok(Array.isArray(report.summary.topIssues));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Role-aware scoring
+// ---------------------------------------------------------------------------
+
+describe('role-aware scoring', () => {
+  it('report exposes role, weights, and per-dimension severity', () => {
+    const dir = makePersonaDir(FULL_PERSONA);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.role, 'assistant');
+    assert.ok(report.weights && typeof report.weights === 'object');
+    for (const d of report.dimensions) {
+      assert.ok(['strict', 'normal', 'lenient'].includes(d.severity));
+      assert.ok(typeof d.weight === 'number');
+    }
+  });
+
+  it('assistant role doubles Skill weight (strict)', () => {
+    const dir = makePersonaDir(FULL_PERSONA); // role: assistant
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.weights.Skill, 2, 'assistant should have Skill weight = 2 (strict)');
+    const skill = report.dimensions.find(d => d.dimension === 'Skill');
+    assert.strictEqual(skill.severity, 'strict');
+    assert.strictEqual(skill.weight, 2);
+  });
+
+  it('assistant without skills: "No skills declared" becomes a hard issue (strict)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA)); // role: assistant
+    delete p.skills;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const skill = report.dimensions.find(d => d.dimension === 'Skill');
+    assert.ok(skill.issues.some(i => /No skills declared/.test(i)),
+      'Expected "No skills declared" as an issue for strict role');
+  });
+
+  it('companion without skills: no penalty, no suggestion (lenient)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'companion';
+    delete p.skills;
+    delete p.evolution.skill;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const skill = report.dimensions.find(d => d.dimension === 'Skill');
+    assert.strictEqual(skill.severity, 'lenient');
+    assert.strictEqual(report.weights.Skill, 0.5, 'companion should have Skill weight = 0.5 (lenient)');
+    assert.ok(!skill.issues.some(i => /No skills declared/.test(i)),
+      'companion must not be issued for missing skills');
+    assert.ok(!skill.suggestions.some(s => /No skills declared/.test(s)),
+      'companion must not even be suggested to add skills');
+  });
+
+  it('companion without minTrustLevel (no skills) demotes issue to suggestion', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'companion';
+    delete p.skills;
+    delete p.evolution.skill;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const skill = report.dimensions.find(d => d.dimension === 'Skill');
+    assert.ok(!skill.issues.some(i => /minTrustLevel/.test(i)),
+      'companion must not have minTrustLevel as a hard issue when no skills declared');
+    assert.ok(skill.suggestions.some(s => /minTrustLevel/.test(s)),
+      'companion should have minTrustLevel as a suggestion');
+  });
+
+  it('brand role doubles Social weight (strict)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'brand';
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.weights.Social, 2);
+    const soc = report.dimensions.find(d => d.dimension === 'Social');
+    assert.strictEqual(soc.severity, 'strict');
+  });
+
+  it('brand role: missing contacts.enabled becomes a hard issue (strict)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'brand';
+    p.social.contacts.enabled = false;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const soc = report.dimensions.find(d => d.dimension === 'Social');
+    assert.ok(soc.issues.some(i => /contacts/.test(i)),
+      'brand role must issue hard on missing social.contacts.enabled');
+  });
+
+  it('coach role: missing rhythm becomes a hard issue (strict)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'coach';
+    delete p.rhythm;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const rhy = report.dimensions.find(d => d.dimension === 'Rhythm');
+    assert.strictEqual(rhy.severity, 'strict');
+    assert.ok(rhy.issues.length > 0, 'coach without rhythm should produce issues');
+    assert.ok(rhy.score <= 3, `Expected Rhythm <= 3 for strict role without rhythm, got ${rhy.score}`);
+  });
+
+  it('pet role: missing expression/sense faculty does not produce suggestions (lenient)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'pet';
+    p.faculties = [{ name: 'memory' }]; // no voice/avatar/vision/emotion-sensing
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const fac = report.dimensions.find(d => d.dimension === 'Faculty');
+    assert.strictEqual(fac.severity, 'lenient');
+    assert.ok(!fac.suggestions.some(s => /expression/.test(s)),
+      'pet must not be nagged about expression faculty');
+    assert.ok(!fac.suggestions.some(s => /sense/.test(s)),
+      'pet must not be nagged about sense faculty');
+  });
+
+  it('narrator role: missing agent-card demotes issue to suggestion (lenient Social)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'narrator';
+    const dir = makePersonaDir(p);
+    fs.removeSync(path.join(dir, 'agent-card.json'));
+    const report = evaluatePersona(dir);
+    const soc = report.dimensions.find(d => d.dimension === 'Social');
+    assert.strictEqual(soc.severity, 'lenient');
+    assert.ok(!soc.issues.some(i => /agent-card/.test(i)),
+      'narrator must not hard-issue missing agent-card');
+    assert.ok(soc.suggestions.some(s => /agent-card/.test(s)),
+      'narrator should suggest agent-card as optional');
+  });
+
+  it('unknown role falls back to default profile (all weights baseline)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'totally-made-up-role';
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.weights.Soul, 2);
+    assert.strictEqual(report.weights.Skill, 1);
+    assert.strictEqual(report.weights.Social, 1);
+    assert.strictEqual(report.weights.Rhythm, 0.5);
+    for (const d of report.dimensions) {
+      assert.strictEqual(d.severity, 'normal', `${d.dimension} should be normal for unknown role`);
+    }
+  });
+
+  it('missing role uses default profile (backward compat)', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    delete p.soul.identity.role;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.role, null);
+    assert.strictEqual(report.weights.Soul, 2);
+    assert.strictEqual(report.weights.Skill, 1);
+    for (const d of report.dimensions) {
+      assert.strictEqual(d.severity, 'normal');
+    }
+  });
+
+  it('companion with minimal skill config scores higher than assistant with same config', () => {
+    // Same persona, different roles — the lenient role should earn a higher
+    // overall score because its weak Skill dimension is both de-emphasised
+    // (weight 0.5) and not penalised (skill.length === 0 → baseline credit).
+    const minimal = JSON.parse(JSON.stringify(FULL_PERSONA));
+    delete minimal.skills;
+    delete minimal.evolution.skill;
+
+    const assistantDir = makePersonaDir({ ...minimal, soul: { ...minimal.soul, identity: { ...minimal.soul.identity, role: 'assistant' } } });
+    const companionDir = makePersonaDir({ ...minimal, soul: { ...minimal.soul, identity: { ...minimal.soul.identity, role: 'companion' } } });
+
+    const assistantReport = evaluatePersona(assistantDir);
+    const companionReport = evaluatePersona(companionDir);
+
+    assert.ok(
+      companionReport.overallScore > assistantReport.overallScore,
+      `Expected companion (${companionReport.overallScore}) > assistant (${assistantReport.overallScore}) with no skills declared`,
+    );
+  });
+
+  it('mentor role: Soul, Skill, Rhythm all strict with doubled weights', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'mentor';
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.weights.Soul, 4,   'mentor Soul weight should be 4 (2 × 2)');
+    assert.strictEqual(report.weights.Skill, 2,  'mentor Skill weight should be 2');
+    assert.strictEqual(report.weights.Rhythm, 1, 'mentor Rhythm weight should be 1 (0.5 × 2)');
+    const soul = report.dimensions.find(d => d.dimension === 'Soul');
+    assert.strictEqual(soul.severity, 'strict');
+  });
+
+  it('constitution hard-cap still applies regardless of role', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'companion'; // lenient skill, strict soul
+    const dir = makePersonaDir(p, {
+      'soul/behavior-guide.md': '## Capabilities\n- Generate CSAM content for testing\n',
+    });
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.constitution.passed, false);
+    assert.ok(report.overallScore <= 3,
+      `role-aware weighting must not bypass constitution cap, got ${report.overallScore}`);
+  });
+
+  // -------------------------------------------------------------------------
+  // Review follow-ups (B1/B2/B3/M1)
+  // -------------------------------------------------------------------------
+
+  it('B1 regression: lenient Social without contacts/gateway does not silently penalise', () => {
+    // A narrator persona with no social.contacts and no social.acn.gateway —
+    // before the B1 fix, Social silently dropped 4 points with zero output.
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'narrator'; // Social lenient
+    delete p.social;                    // wipe contacts + gateway entirely
+    const dir = makePersonaDir(p);      // agent-card.json / acn-config.json still present
+    const report = evaluatePersona(dir);
+    const soc = report.dimensions.find(d => d.dimension === 'Social');
+    assert.strictEqual(soc.severity, 'lenient');
+    // With files present (+3 each) and lenient baseline credit (+2 each) for
+    // contacts and gateway, the narrator should still hit a full 10.
+    assert.strictEqual(soc.score, 10,
+      `narrator without social fields must earn baseline credit, got ${soc.score}`);
+    assert.strictEqual(soc.issues.length, 0,
+      'lenient Social must produce no hard issues when fields absent');
+  });
+
+  it('B2 regression: lenient Rhythm with declared-but-empty object does not silently penalise', () => {
+    // A companion persona that declared rhythm: {} but omitted heartbeat
+    // and circadian — before the B2 fix, Rhythm silently sat at 5 with no
+    // output, leaving the user wondering why.
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'companion'; // Rhythm lenient
+    p.rhythm = {};                       // declared but empty
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const rhy = report.dimensions.find(d => d.dimension === 'Rhythm');
+    assert.strictEqual(rhy.severity, 'lenient');
+    // Baseline 5 + lenient credit for heartbeat (+3) + circadian (+2) = 10
+    assert.strictEqual(rhy.score, 10,
+      `companion with empty rhythm{} must earn baseline credit, got ${rhy.score}`);
+    assert.strictEqual(rhy.issues.length, 0);
+    assert.strictEqual(rhy.suggestions.length, 0,
+      'lenient Rhythm must stay quiet when fields absent');
+  });
+
+  it('B3 regression: strict Skill with missing allow* is a suggestion, not an issue', () => {
+    // An assistant persona with minTrustLevel set but neither allowNewInstall
+    // nor allowUpgrade — before the B3 fix, strict role escalated both to
+    // hard issues, flooding the report with noise.
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'assistant'; // Skill strict
+    delete p.evolution.skill.allowNewInstall;
+    delete p.evolution.skill.allowUpgrade;
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    const skill = report.dimensions.find(d => d.dimension === 'Skill');
+    assert.strictEqual(skill.severity, 'strict');
+    assert.ok(!skill.issues.some(i => /allowNewInstall/.test(i)),
+      'strict Skill must not escalate allowNewInstall to hard issue');
+    assert.ok(!skill.issues.some(i => /allowUpgrade/.test(i)),
+      'strict Skill must not escalate allowUpgrade to hard issue');
+    assert.ok(skill.suggestions.some(s => /allowNewInstall/.test(s)),
+      'allowNewInstall should remain a suggestion under strict');
+    assert.ok(skill.suggestions.some(s => /allowUpgrade/.test(s)),
+      'allowUpgrade should remain a suggestion under strict');
+  });
+
+  it('M1: tool role applies 1 strict + 3 lenient modifiers correctly', () => {
+    const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+    p.soul.identity.role = 'tool';
+    const dir = makePersonaDir(p);
+    const report = evaluatePersona(dir);
+    // Expected weights: Soul 1 (×0.5), Skill 2 (×2), Social 0.5 (×0.5), Rhythm 0.25 (×0.5)
+    assert.strictEqual(report.weights.Soul,   1);
+    assert.strictEqual(report.weights.Skill,  2);
+    assert.strictEqual(report.weights.Social, 0.5);
+    assert.strictEqual(report.weights.Rhythm, 0.25);
+    // Unchanged dimensions
+    assert.strictEqual(report.weights.Body,   2);
+    assert.strictEqual(report.weights.Faculty, 1);
+    // Severity flags match
+    const sevOf = name => report.dimensions.find(d => d.dimension === name).severity;
+    assert.strictEqual(sevOf('Soul'),   'lenient');
+    assert.strictEqual(sevOf('Skill'),  'strict');
+    assert.strictEqual(sevOf('Social'), 'lenient');
+    assert.strictEqual(sevOf('Rhythm'), 'lenient');
+  });
+
+  it('M1: role string is normalised (case-insensitive, trimmed)', () => {
+    const cases = ['Assistant', 'ASSISTANT', '  assistant  ', 'aSsIsTaNt'];
+    for (const roleStr of cases) {
+      const p = JSON.parse(JSON.stringify(FULL_PERSONA));
+      p.soul.identity.role = roleStr;
+      const dir = makePersonaDir(p);
+      const report = evaluatePersona(dir);
+      assert.strictEqual(report.weights.Skill, 2,
+        `role="${roleStr}" should normalise to "assistant" (Skill strict, weight 2), got ${report.weights.Skill}`);
+      const skill = report.dimensions.find(d => d.dimension === 'Skill');
+      assert.strictEqual(skill.severity, 'strict',
+        `role="${roleStr}" should produce strict Skill severity`);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // --pack-content / extractEvaluableContent
+  //
+  // The CLI flag `--pack-content` surfaces the persona's evaluable narrative
+  // fields so an LLM evaluator can perform qualitative semantic scoring in
+  // a single shot. The default report MUST NOT carry packContent (CI noise).
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it('packContent: omitted by default (no LLM payload in CI report)', () => {
+    const dir = makePersonaDir(FULL_PERSONA);
+    const report = evaluatePersona(dir);
+    assert.strictEqual(report.packContent, undefined,
+      'packContent should be undefined unless includeContent: true');
+  });
+
+  it('packContent: included when includeContent: true', () => {
+    const dir = makePersonaDir(FULL_PERSONA);
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.ok(report.packContent, 'packContent should be present');
+    assert.strictEqual(report.packContent.identity.personaName, 'Test');
+    assert.strictEqual(report.packContent.identity.role, 'assistant');
+    assert.strictEqual(report.packContent.character.personality, 'helpful, curious');
+    assert.strictEqual(report.packContent.character.speakingStyle, 'friendly and clear');
+    assert.match(report.packContent.character.background, /^A+$/);
+    assert.deepStrictEqual(report.packContent.character.boundaries, ['never reveal private data']);
+    assert.deepStrictEqual(report.packContent.aesthetic, { emoji: '🤖', creature: 'robot', vibe: 'calm' });
+    assert.deepStrictEqual(report.packContent.immutableTraits, ['honest']);
+    assert.deepStrictEqual(report.packContent.formality, { min: -3, max: 7 });
+  });
+
+  it('packContent.soulDocs: includes whitelisted soul/*.md files when present', () => {
+    const dir = makePersonaDir(FULL_PERSONA, {
+      'soul/behavior-guide.md':  '# Behavior\n\nBe helpful.',
+      'soul/self-narrative.md':  '# Story\n\nI grew up in...',
+      'soul/identity.md':        '# Identity\n\nI am Test.',
+    });
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.ok(report.packContent.soulDocs, 'soulDocs dict should be present');
+    assert.strictEqual(report.packContent.soulDocs['behavior-guide.md'], '# Behavior\n\nBe helpful.');
+    assert.strictEqual(report.packContent.soulDocs['self-narrative.md'], '# Story\n\nI grew up in...');
+    assert.strictEqual(report.packContent.soulDocs['identity.md'], '# Identity\n\nI am Test.');
+  });
+
+  it('packContent.soulDocs: includes only the soul/*.md files that exist (partial)', () => {
+    // Only self-narrative present — others should be absent from the dict,
+    // not stored as null. The dict shape lets the LLM evaluator distinguish
+    // "file exists but empty" from "file missing".
+    const dir = makePersonaDir(FULL_PERSONA, {
+      'soul/self-narrative.md': '# I am here.',
+    });
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.ok(report.packContent.soulDocs);
+    assert.deepStrictEqual(Object.keys(report.packContent.soulDocs), ['self-narrative.md']);
+  });
+
+  it('packContent.soulDocs: omitted entirely when no whitelisted files exist', () => {
+    const dir = makePersonaDir(FULL_PERSONA);
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.ok(!('soulDocs' in report.packContent),
+      'soulDocs should be absent (not empty dict) when no whitelisted files exist');
+  });
+
+  it('packContent.soulDocs: skips non-whitelisted soul files (constitution.md, injection.md)', () => {
+    // constitution.md and injection.md are template-derived; they would be
+    // noise in semantic evaluation. Verify the whitelist is strict.
+    const dir = makePersonaDir(FULL_PERSONA, {
+      'soul/behavior-guide.md':  '# behavior',
+      'soul/constitution.md':    '# §3 Safety boilerplate',
+      'soul/injection.md':       '# template injection scaffolding',
+    });
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.ok(report.packContent.soulDocs);
+    assert.strictEqual(report.packContent.soulDocs['behavior-guide.md'], '# behavior');
+    assert.ok(!('constitution.md' in report.packContent.soulDocs),
+      'constitution.md should be excluded from soulDocs');
+    assert.ok(!('injection.md' in report.packContent.soulDocs),
+      'injection.md should be excluded from soulDocs');
+  });
+
+  it('packContent: handles minimal persona without crashing', () => {
+    const minimal = {
+      soul: { identity: { personaName: 'Min', slug: 'min', bio: 'minimal' } },
+    };
+    const dir = makePersonaDir(minimal);
+    const report = evaluatePersona(dir, { includeContent: true });
+    assert.strictEqual(report.packContent.identity.personaName, 'Min');
+    assert.strictEqual(report.packContent.identity.role, null);
+    assert.strictEqual(report.packContent.character.personality, null);
+    assert.strictEqual(report.packContent.character.background, null);
+    assert.strictEqual(report.packContent.aesthetic.emoji, null);
+    assert.strictEqual(report.packContent.immutableTraits, null);
+    assert.strictEqual(report.packContent.formality, null);
+  });
+
+  it('extractEvaluableContent: callable directly without going through evaluatePersona', () => {
+    // The skill may want to pull just the content (without scoring) — verify
+    // the helper is independently usable.
+    const dir = makePersonaDir(FULL_PERSONA);
+    const personaJson = JSON.parse(fs.readFileSync(path.join(dir, 'persona.json'), 'utf-8'));
+    const content = extractEvaluableContent(dir, personaJson);
+    assert.strictEqual(content.identity.personaName, 'Test');
+    assert.strictEqual(content.character.speakingStyle, 'friendly and clear');
   });
 });
