@@ -351,3 +351,92 @@ The chain caught a 100%-impact functional bug *before* any of the verdicts
 in Session 2 had been used to make a meaningful capability judgement —
 which is exactly the failure mode "validate the validator before trusting
 its outputs" exists to prevent.
+
+---
+
+## Step 4 capability validation — entrepreneur-skill (peer-mode white-box, 2026-04-26)
+
+W1 fix shipped (commit `1b1282b`). Re-running
+`npx openpersona evaluate entrepreneur-skill --pack-content` on the fixed
+evaluator now produces meaningful output. Below is the actual white-box
+peer-evaluation report (per `references/REPORT-FORMAT.md`), produced by the
+trust-chain reviewer (Cursor host LLM) acting through `persona-evaluator`
+v0.3.1 against entrepreneur-skill — a persona it did not author.
+
+### Semantic Evaluation Report
+
+**Mode:** peer
+**Reviewer:** Cursor host LLM (no declared persona role)
+**Subject:** entrepreneur-skill (role: `null` → all-normal severity per structural evaluator)
+
+#### Static anchor (from `openpersona evaluate entrepreneur-skill --pack-content`)
+- Overall: **6/10** [Developing]
+- Constitution: **PASSED** (0 violations, 0 warnings) — W1 fix held
+- Strict dimensions: none (role null → all dimensions report `severity: normal`)
+- Lenient dimensions: none
+
+#### Per-field semantic scores
+- **background — 0/10** (`packContent.character.background`) — Null. No rubric question applicable. Fix: write a multi-paragraph background with a concrete causal moment (a failed product, a forced pivot) that explains the entrepreneur's current operating worldview.
+- **personality — 0/10** (`packContent.character.personality`) — Null. Cannot apply adjective-vs-trait, tradeoff-visibility, or register-coverage tests. Fix: declare 3–5 consequence-bearing traits (e.g., "interrupts when sensing a strategic shortcut", "defers on deep technical questions").
+- **speakingStyle — 0/10** (`packContent.character.speakingStyle`) — Null. Tone-vs-rule, predictability, distinctiveness tests inapplicable. Fix: at least one executable rule + one tone descriptor.
+- **boundaries — 0/10** (`packContent.character.boundaries`) — Null. `immutableTraits` partially substitutes (see below) but does not satisfy the rubric (hard limits + enforceability). Fix: declare boundaries for legal/equity/financial-advice topics — exactly the area `behavior-guide.md`'s "Human approval gate" hand-waves about.
+- **immutableTraits — 6/10** (`packContent.immutableTraits`) — 3 traits declared. "Truthfulness about evidence" and "human approval for irreversible decisions" are genuinely identity-defining and align with `behavior-guide.md`'s "Evidence over intuition" / "Human approval gate". "Respect for legal and ethical boundaries" is generic and low-signal. Fix: replace #2 with an entrepreneur-specific trait like "bias toward shipping over polishing".
+- **aesthetic — 2/10** (`packContent.aesthetic`) — emoji/creature/vibe all null. Mutual-coherence and distinctiveness checks inapplicable; not zero only because the field is *consistent in its emptiness* (no contradiction). Fix: a coherent triple (e.g., 🧭 / "compass" / "deliberate, future-oriented").
+- **soulDocs[behavior-guide.md] — 7/10** — Operationalisation strong ("Convert strategy into 7-day experiment cards with acceptance criteria", "Speed over perfection", "Revenue and retention over vanity metrics"). Distinctively entrepreneurial framing — would actually change LLM output, not generic chatbot drift. Soul-fidelity check **untestable** because `character.personality` and `character.speakingStyle` are null — flag, do not penalise. Fix: lift these decision principles up into `character.personality` so the structural Soul scaffolding catches up to the behavior-guide content.
+- **soulDocs[self-narrative.md] — 1/10** — Contains only template metadata ("Written and maintained by Atlas Founder. Each entry captures…"), no actual entries. Voice fidelity untestable. Specificity zero. Fix: write at least one first-person entry, or remove the file until populated.
+
+#### Cross-cutting observations
+1. **Identity-name leak**: "Atlas Founder" appears only in `self-narrative.md`'s template header — not in `persona.json.soul.identity.personaName`. The persona has a name in prose scaffolding but not in canonical metadata. Pack is internally inconsistent.
+2. **Role mismatch**: `role: null` defaults the structural evaluator to `assistant`, but `behavior-guide.md` reads unambiguously as a `coach` / `mentor` (north-star target, decision principles, gated advice). Declare explicitly.
+3. **Inverted centre of gravity**: `persona.json` Soul block is empty; `behavior-guide.md` carries the entire persona's substance. This is the polar opposite of the typical OpenPersona shape ("spec heavy / behavior thin"). Either backfill `persona.json` or document the inversion deliberately.
+
+#### Overall semantic judgement
+- **3/10.** Every `character.*` and `aesthetic.*` field is null — catastrophic for semantic quality despite a genuinely good `behavior-guide.md`. Single highest-leverage improvement: **fill `character.personality`, `character.speakingStyle`, and `character.background`** by lifting and elaborating the operating principles already implicit in `behavior-guide.md`.
+
+#### How this relates to the structural score
+- Structural: **6/10** (CI signal, deterministic). Lifted by Body/Skill/Evolution/Social all 7+; pulled down by Soul=2.
+- Semantic: **3/10** (design-review signal, this report). Driven down by uniformly-null character fields.
+- The two are reported separately by design — never averaged. The 3-point gap is itself diagnostic: structural over-rewards file-existence and field-presence across many dimensions; semantic penalises specifically that the *meaning-bearing* Soul fields are empty. Both numbers are honest within their lens. The gap is the headline finding.
+
+### Triangulation: structural vs semantic
+
+| Lens         | Score | What it noticed                                                                            | What it missed                                                            |
+| ------------ | ----- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Structural   | 6/10  | Soul=2 (null fields), Body/Skill/Evolution/Social all healthy, Constitution clean post-W1  | "Atlas Founder" name leak, role-tone mismatch, behavior-guide-quality gap |
+| Semantic     | 3/10  | Behavior-guide is genuinely entrepreneurial; self-narrative is empty stub; name leak       | Cross-dimensional file-presence checks (Body channels, Skill trust)       |
+
+**Direction agreement: 100%.** Both lenses converge on "Soul scaffolding empty, behavior layer real". Semantic adds three findings structural cannot reach (name leak, role-tone mismatch, soul-fidelity untestability). Structural adds breadth across 9 dimensions.
+
+This is the canonical pattern the dual-lens design intends: **structural** for CI gating and surface coverage; **semantic** for content quality and cross-field coherence. Step 4 confirms the pair works end-to-end.
+
+### New methodological wounds discovered (rubric-level, deferred)
+
+These are NEW wounds in `persona-evaluator`'s rubric — not bugs in the persona under test, and not duplicates of the SKILL.md wounds Session 2 / Step 3 already addressed.
+
+**W4 (MEDIUM): RUBRICS.md `severity-aware scoring` underspecifies null fields.**
+The `lenient` floor rule says "lenient field that is merely terse-but-consistent should still score ≥ 6". This was written for thin-but-present (`tool` persona's one-line background). It is silent on what to score when the field is *null*. During this evaluation I scored null `aesthetic` at 2/10 (emptiness consistent with itself) — but a different reviewer could honestly score 0 ("nothing to evaluate") or 6 ("lenient floor"). The rubric needs an explicit clause: "null on lenient = floor of 4; null on strict/normal = 0–2 with rationale".
+
+**W5 (MEDIUM): RUBRICS.md `behavior-guide.md` rubric assumes `character.*` fields are populated.**
+The `Soul-fidelity` check ("Do the dos/don'ts reflect *this persona's* `personality` and `boundaries`?") becomes untestable when those fields are null. The rubric should say: "If `character.personality` / `character.speakingStyle` are null, score the file on (1) operationalisation and (2) distinctiveness only; flag fidelity as `untestable`, not `failed`." Otherwise a half-finished pack — empty Soul + decent behavior-guide — is incorrectly punished twice (once for empty Soul, once for "unfaithful" behavior-guide).
+
+Both surfaced *only* by running peer-evaluation against a real pack. They could not have been surfaced by Steps 1–3 (document-level review of `persona-evaluator` itself).
+
+### Step 4 verdict
+
+**PASS-with-wounds.** The trust chain is closed:
+
+| Step | Question | Status |
+| ---- | -------- | ------ |
+| 1    | Is SKILL-RUBRIC.md itself sound?                                  | ✅ v0.1.4 (commit `ee2aab6`)               |
+| 2    | Are SKILL-RUBRIC's verdicts on `persona-evaluator` correct?       | ✅ Cold-pass confirms (commit `e55e4a7`)   |
+| 3    | Are `persona-evaluator`'s wounds fixed?                           | ✅ v0.3.1 SKILL.md + W1 evaluator.js (`e55e4a7`, `1b1282b`) |
+| 4    | Can `persona-evaluator` deliver real diagnostic value on a persona it did not author? | ✅ This section — diagnoses entrepreneur-skill correctly, triangulates with structural, surfaces actionable fixes, no false-positives |
+
+**Tool fitness verdict.** `persona-evaluator` v0.3.1 (post-W1) is fit for production peer-evaluation use. Its findings on entrepreneur-skill are accurate, its dual-lens output composes cleanly, and the failure mode that made it useless (W1 false positives) is closed.
+
+### Deferred backlog (next session)
+
+- **W2 (HIGH)**: `DETECTION_CONTEXT_RE` lacks negation keywords — long-tail false-positive risk on user-authored `behavior-guide.md` containing legitimate negations. (Identified during Step 4 W1 root-cause analysis.)
+- **W4 (MEDIUM)**: `RUBRICS.md` lenient/strict null-field scoring underspecified.
+- **W5 (MEDIUM)**: `RUBRICS.md` `behavior-guide.md` Soul-fidelity check assumes populated `character.*`.
+- **Optional Step 4-extended**: re-run on `secondme-skill` (framework-type subject, structurally distant from evaluator) to verify generalisation across persona-type vs framework-type axes. Not required for trust-chain closure but increases tool-fitness confidence.
