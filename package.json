@@ -7,9 +7,10 @@
     "openpersona": "./bin/cli.js"
   },
   "scripts": {
-    "test": "node scripts/run-tests.js",
+    "test": "node scripts/run-tests.js && node scripts/validate-skills.mjs",
     "test:canvas": "node --test tests/living-canvas.smoke.test.js",
     "test:all": "npm test && npm run test:canvas",
+    "validate:skills": "node scripts/validate-skills.mjs",
     "acceptance": "bash demo/acceptance.sh",
     "curation:dedupe-report": "node scripts/curation-dedupe-report.js"
   },
