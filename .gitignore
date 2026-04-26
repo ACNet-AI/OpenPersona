@@ -8,7 +8,7 @@ frontend/
 .cursor/
 docs/*
 !docs/SKILL-RUBRIC.md
-!docs/SKILL-RUBRIC-SESSION-*.md
+!docs/SKILL-RUBRIC-*.md
 .env
 .env.*
 !.env.example

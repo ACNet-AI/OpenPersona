@@ -1,22 +1,25 @@
 # SKILL-RUBRIC
 
 > **A draft rubric for evaluating Agent Skill design quality.**
-> v0.1.3 — markdown-only spec, deliberately not yet a skill.
+> v0.1.4 — markdown-only spec, deliberately not yet a skill.
 
 ---
 
 ## Status
 
-- **v0.1.3 (draft)** — derived by collapsing an 8-dimension framework used in
-  a one-off review of `persona-evaluator 0.3.0`. v0.1.3 folds in two P0
-  patches from the Session 2 multi-skill pass
-  ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)); see Provenance
-  for the full changelog.
+- **v0.1.4 (draft)** — Step 1 of a 4-step trust-chain integrity pass:
+  fixed Output-Format anchor bug, split historical content to
+  [SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md), restored D2.3
+  body-length compliance. v0.1.3's two P0 patches from the Session 2
+  multi-skill pass ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md))
+  are still in effect. See [Provenance](#provenance) for the recent
+  changelog and [SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md) for
+  the full version history.
 - **Not yet a skill.** This file is a markdown standard intended for community
   review. It will graduate to a skill (`skill-evaluator`) only after Session 3
   (multi-LLM pass on ≥ 3 skills, measuring inter-rater variance) demonstrates
   acceptable reproducibility.
-- **Single-author, single-LLM origin.** See [Open Issues](#open-issues--known-limitations-v013).
+- **Single-author, single-LLM origin.** See [Open Issues](#open-issues--known-limitations).
 
 ---
 
@@ -295,14 +298,14 @@ These are the same shape `persona-evaluator` uses, adapted for skill design.
 - **Lean lower under uncertainty.** A rounded-up 7 is more harmful than an
   honest 5. The 5 prompts a fix; the 7 blesses status quo.
 - **Note v0.1.x's known limitations** in every report. See
-  [Open Issues](#open-issues--known-limitations-v012).
+  [Open Issues](#open-issues--known-limitations).
 
 ---
 
 ## Output Format
 
 ```markdown
-## Skill Design Review (SKILL-RUBRIC v0.1.3)
+## Skill Design Review (SKILL-RUBRIC v0.1.4)
 
 **Subject:** <skill-slug or spec-path>
 **Type (declared / inferred):** tool | persona | framework | meta | spec
@@ -340,7 +343,7 @@ These are the same shape `persona-evaluator` uses, adapted for skill design.
 
 ---
 
-## Open Issues / Known Limitations (v0.1.3)
+## Open Issues / Known Limitations
 
 These are tracked here so the next rubric iteration knows what to fix.
 **This is the canonical list — other sections that mention "known limitations"
@@ -369,16 +372,16 @@ should link here rather than duplicate.**
 7. **No CI integration yet.** Spec gate is automated (`validate-skills.mjs`);
    the five dimensions require an LLM. A future `skill-evaluator` skill would
    close this gap.
-8. **Body length now past the 500-line spec warning ceiling.** v0.1.3
-   self-applies its own D2.3 anchor honestly: this file crossed the spec's
-   500-line ceiling in v0.1.3 (now ~540 lines, up from v0.1.2's 495). The
-   spec validator would emit a non-blocking warning if the rubric were a
-   skill — it is not, so the warning is recorded here instead.
-   `validate-skills.mjs` already emits the analogous warning for
-   `open-persona` (532) and `persona-model-trainer` (724). The rubric now
-   sits between those two. Splitting into `references/DIMENSIONS.md` and
-   `references/WEIGHTING.md` is **overdue** and elevated from v0.2-track
-   to v0.2.0-blocking.
+8. **Body length: archival split done in v0.1.4; structural split still
+   pending v0.2.0.** v0.1.3 had this file at 546 lines, breaking its own
+   500-line anchor. v0.1.4 moved Self-eval Log + full Changelog to
+   [SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md), bringing the
+   spec back under 500. The remaining v0.2.0 work is the **structural**
+   split — `references/DIMENSIONS.md` (D1–D5) + `references/WEIGHTING.md`
+   (type-aware weighting + Hard Rules) — which is a different cleavage
+   from the v0.1.4 archival split, and which the rubric needs in order
+   for the spec body itself (vs its history) to stay under the ceiling
+   long-term as more dimensions / examples are added.
 9. **`spec` type has only one example so far** (this file itself). Whether
    the strict/lenient profile generalises will be tested when more
    `spec`-type documents emerge in this repo.
@@ -428,119 +431,52 @@ Don't.
 
 ## Self-eval Log
 
-Evidence-of-use record for D1.3 ("Evidence of use"). Each row is one real
-invocation of this rubric, including invocations against itself.
+Evidence-of-use record for D1.3. Each row is one real invocation of this
+rubric. **Full narratives + cross-cutting findings live in
+[SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md#self-eval-log).**
 
-| Version | Date       | Subject                | Reviewer            | Overall          | Findings driving next bump            |
-| ------- | ---------- | ---------------------- | ------------------- | ---------------- | ------------------------------------- |
-| v0.1.1  | 2026-04-26 | `SKILL-RUBRIC`         | human + Claude 4.6  | 6.6/10           | C1–C4 → folded into v0.1.2            |
-| v0.1.2  | 2026-04-26 | 8 in-repo skills       | human + Claude 4.6  | median 6.2/10    | F1–F10 → P0 in v0.1.3, P1 in v0.2.0   |
-
-### v0.1.1 self-eval (2026-04-26) — 6.6/10
-
-Single-LLM, single-pass self-eval driving v0.1.2. D-by-D summary:
-
-- **D1 Problem-fit — 6/10** — concrete user named (reviewer judging design
-  quality), counterfactual honest, but zero evidence of use at the time of
-  review. `meta`-lenient floor applied. *Sharpening that became v0.1.2:*
-  introduce a Self-eval Log so D1.3 has at least one entry from the start.
-- **D2 Architecture — 7/10** — single-purpose, clean section flow, but
-  405 lines single file already past the 250 soft anchor. *Sharpening:* split
-  into `references/` on the v0.2 track (now Open Issues 8).
-- **D3 Reliability — 4/10** — D3.1 calibration ladder capped the score at
-  the single-LLM ceiling. *Sharpening that became v0.1.2:* state explicitly
-  that D3.1 is a hard cap on D3 overall (was ambiguous in v0.1.1 — see C3).
-- **D4 Output-fit — 8/10** — strongest dimension; "cite verbatim" rule and
-  "concrete sharpening" requirement directly enforce grounding and
-  actionability. *Sharpening that became v0.1.2:* make the reviewer-LLM
-  declaration a required header field, not a parenthetical (C4).
-- **D5 Lifecycle-fit — 8/10** — Scope table is the canonical example for
-  D5.1; changelog and rollout plan are explicit. *Sharpening:* future v0.2
-  may add a structured (JSON) report-emission alongside markdown, lifting
-  D5.2 (handoff cleanliness).
-
-Cross-cutting findings driven into v0.1.2:
-
-- **C1** — Type system had no slot for non-skill specifications → added
-  `spec` as 5th type.
-- **C2** — Spec gate had no N/A path for non-skill subjects → added explicit
-  N/A branch.
-- **C3** — D3.1's relationship to the rest of D3 was ambiguous (cap vs
-  sub-anchor) → declared explicitly as a hard cap.
-- **C4** — Output Format header treated reviewer-LLM as parenthetical even
-  though D3.1 needs it as primary input → made it a required header field.
+| Version | Date       | Subject              | Reviewer            | Overall          | Findings driving next bump            |
+| ------- | ---------- | -------------------- | ------------------- | ---------------- | ------------------------------------- |
+| v0.1.1  | 2026-04-26 | `SKILL-RUBRIC`       | human + Claude 4.6  | 6.6/10           | C1–C4 → folded into v0.1.2            |
+| v0.1.2  | 2026-04-26 | 8 in-repo skills     | human + Claude 4.6  | median 6.2/10    | F1–F10 → P0 in v0.1.3, P1 in v0.2.0   |
+| v0.1.3  | 2026-04-26 | `SKILL-RUBRIC`       | human + Claude 4.6  | 6.6/10           | C5 (D1 ↑ / D2 ↓ wound shift) + C6 (L298 anchor) → v0.1.4 |
 
 ---
 
 ## Provenance
 
 This rubric was synthesised on 2026-04-25 in a session reviewing
-`persona-evaluator 0.3.0`. The original 8 dimensions
-(Problem-fit, Mode-architecture, Reproducibility, Adversarial-robustness,
-Explainability, Actionability, Ecosystem-fit, Evolvability) were collapsed to
-5 + a binary Spec gate, with type-aware weighting added to address the
-"a tool skill is judged by different criteria than a persona skill" gap.
-
-**Changelog**
-
-- **v0.1.3 (2026-04-26)** — folded in two P0 findings from Session 2's
-  multi-skill pass ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)):
-  - reclassified `secondme-skill` from `persona` to `framework` in the
-    Type-aware Weighting examples, on evidence from its SKILL.md L14–16
-    ("orchestration skill package... Foundation / Capability chain"); the
-    misclassification was **the rubric's failure**, not the skill's
-    (Reviewing Procedure step 1 read frontmatter only, not body) — see
-    Session 2 finding F4;
-  - added "Disclose disagreements with the declared type" to Hard Rules,
-    mirroring `persona-evaluator` SKILL.md L154's mature wording, so
-    future declared-vs-inferred conflicts are surfaced as cross-cutting
-    observations rather than silently re-scored;
-  - updated Reviewing Procedure step 1 prose (in the Hard Rules
-    cross-reference) to require reading the SKILL.md body in addition
-    to frontmatter for type classification;
-  - updated Open Issues 1 and Rollout Plan to reflect Session 2 done and
-    Session 3 = multi-LLM;
-  - added Self-eval Log row for the v0.1.2 → v0.1.3 multi-skill pass.
-  - **dogfooding regression noted:** the v0.1.3 changelog itself pushed
-    body length over the spec's 500-line warn ceiling (Open Issues 8
-    promoted from v0.2-track to v0.2.0-blocking).
-  - **deferred to v0.2.0:** 11 P1 changes from Session 2 (D3 split,
-    D2.3 graduated pressure, D2.2 position requirement, D2.4 binary
-    tool-usage check, calibration anchors, predicted-uncapped D3,
-    persona-D5 prose, D5.4 forward-looking marker, `spec`-type weighting
-    revisit, type-detector body reading codified, Self-eval Log lifted to
-    recommended SKILL.md section). All require design review, not patch.
-- **v0.1.2 (2026-04-26)** — folded in v0.1.1 self-eval findings (C1–C4):
-  - added `spec` as a 5th type for non-skill standards / rubrics / checklists
-    (closes self-eval cross-cutting #1);
-  - added explicit N/A path to the spec gate when subject is not in
-    `skills/` (closes #2);
-  - declared D3.1 calibration ladder is a *hard cap* on D3 overall, not a
-    sub-anchor (closes #3);
-  - elevated reviewer-LLM declaration to a required header field in the
-    Output Format (closes #4);
-  - added Self-eval Log section as evidence-of-use for D1.3;
-  - added Session 1.5 to Rollout Plan to record the self-eval pass.
-- **v0.1.1 (2026-04-25, same day as v0.1.0)** — folded in self-review
-  findings:
-  - removed Problem-fit-as-lenient on `tool` after a self-contradiction
-    surfaced (v0.1.0 review of `persona-evaluator` had already broken its
-    own rule);
-  - reclassified `persona-model-trainer` from `meta` to `tool` (it trains
-    models; it does not generate other skills);
-  - reclassified `persona`-type lenient axis from Architecture to
-    Lifecycle-fit (multiple persona skills in this repo are multi-mode);
-  - aligned D2.3's body-length anchor to the spec's 500-line ceiling
-    (250 retained as a softer "consider splitting" signal);
-  - added a calibration ladder to D3.1 to make Cross-LLM stability scorable;
-  - added a Reviewing Procedure section so the rubric is actually
-    executable;
-  - documented why the Spec gate zeroes (vs `persona-evaluator`'s cap-at-3);
-  - consolidated the four scattered "inter-rater variance" caveats into
-    Open Issues 1.
-- **v0.1.0** — initial collapse from 8 dimensions to 5 + Spec gate.
+`persona-evaluator 0.3.0`. The original 8 dimensions (Problem-fit,
+Mode-architecture, Reproducibility, Adversarial-robustness, Explainability,
+Actionability, Ecosystem-fit, Evolvability) were collapsed to 5 + a binary
+Spec gate, with type-aware weighting added to address the "a tool skill
+is judged by different criteria than a persona skill" gap.
 
 This was a **single-author, single-LLM derivation**. v0.1.x inherits the
 weaknesses of that origin and must not be treated as a community standard
 until Session 3 produces multi-LLM evidence (Session 2 was still
 single-LLM — see [SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)).
+
+**Recent changelog.** Full version history in
+[SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md#full-changelog).
+
+- **v0.1.4 (2026-04-26)** — Step 1 trust-chain integrity pass:
+  - fixed Hard-Rules anchor `#open-issues--known-limitations-v012` →
+    stable `#open-issues--known-limitations` (defect introduced by
+    v0.1.3's heading rename; previously broke every Output-Format-derived
+    report — finding C6);
+  - moved Self-eval Log narratives + full Changelog to
+    [SKILL-RUBRIC-HISTORY.md](./SKILL-RUBRIC-HISTORY.md), restoring
+    D2.3 body-length compliance (546 → ~480 lines);
+  - added v0.1.3 self-eval row to Self-eval Log + recorded the
+    wound-shift finding (D1 ↑ / D2 ↓, score 6.6/10 unchanged) as C5;
+  - updated Open Issues 8 to reflect the archival split done; the
+    structural Dimensions+Weighting split remains v0.2.0-scope.
+- **v0.1.3 (2026-04-26)** — folded in two P0 findings from Session 2's
+  multi-skill pass ([SKILL-RUBRIC-SESSION-2.md](./SKILL-RUBRIC-SESSION-2.md)):
+  reclassified `secondme-skill` from `persona` to `framework` (F4); added
+  "Disclose disagreements with the declared type" to Hard Rules,
+  mirroring `persona-evaluator` SKILL.md L154; updated Reviewing
+  Procedure step 1 to require reading SKILL.md body (not just
+  frontmatter); recorded the body-length regression (resolved in v0.1.4).
+  11 P1 changes from Session 2 deferred to v0.2.0.
