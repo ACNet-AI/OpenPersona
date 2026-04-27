@@ -8,6 +8,20 @@ The deeper rubric and review trail for the wound-fix passes lives in [docs/SKILL
 
 ---
 
+## [0.3.4] — 2026-04-27
+
+### Changed
+
+Docs-only patch — no functional change to scoring, CLI, rubric, or test surface. Three concurrent SKILL.md cleanups:
+
+- **Trim off-target comparisons.** Removed two references to `darwin-skill` (What/When intro + Relationship table). `darwin-skill` optimises SKILL.md design; persona-evaluator audits persona packs — different objects (analogous to "calculator vs Word" category mismatch). The skill now defines itself on its own terms instead of via a negative comparison to an unrelated tool.
+- **Refresh standalone-distributable note in Install section.** Previously read "will be published once a separate repository is created" — stale since the 2026-04-26 standalone publish. Now points to the shipped [`acnlabs/persona-evaluator`](https://github.com/acnlabs/persona-evaluator) repo and [openpersona.co/skill/persona-evaluator](https://openpersona.co/skill/persona-evaluator) listing.
+- **Tighten body.** Removed single-point Black-box → Choosing-a-mode backref (no other section uses backref style); folded "Re-evaluate after fixes" sub-section into one sentence at end of "Apply fixes via refine" (was 5 lines re-stating the Quick Start command).
+
+Net effect: SKILL.md 282 → 274 lines, 8 inserts / 15 deletions. CLI behaviour, scoring rubric, and test suite unchanged from v0.3.3. The companion [docs/SKILL-RUBRIC.md](https://github.com/acnlabs/OpenPersona/blob/main/docs/SKILL-RUBRIC.md) v0.1.5 captures the broader rubric-level cross-tool comparison work that surfaced the off-target comparisons.
+
+---
+
 ## [0.3.3] — 2026-04-26
 
 ### Fixed

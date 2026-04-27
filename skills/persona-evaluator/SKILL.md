@@ -6,7 +6,7 @@ compatibility: "Structural mode requires OpenPersona CLI (npx openpersona >= 0.2
 allowed-tools: "Bash(npx openpersona:*) Read"
 metadata:
   author: "acnlabs"
-  version: "0.3.3"
+  version: "0.3.4"
   repository: "https://github.com/acnlabs/OpenPersona"
   tags: "persona-evaluator, audit, quality, persona, openpersona, 4+5, self-evaluation, peer-evaluation, semantic, black-box, probe"
 ---
@@ -269,6 +269,6 @@ A standalone distributable is also available at [`acnlabs/persona-evaluator`](ht
 
 ## Versioning
 
-Current version: **0.3.3** (also in frontmatter `metadata.version`).
+Current version: **0.3.4** (also in frontmatter `metadata.version`).
 
 See [CHANGELOG.md](./CHANGELOG.md) for full version history, rationale, test surface, and re-validation evidence. The deeper rubric review trail lives in [docs/SKILL-RUBRIC.md](https://github.com/acnlabs/OpenPersona/blob/main/docs/SKILL-RUBRIC.md) and [docs/SKILL-RUBRIC-SESSION-2.md](https://github.com/acnlabs/OpenPersona/blob/main/docs/SKILL-RUBRIC-SESSION-2.md) in the main OpenPersona repo.
