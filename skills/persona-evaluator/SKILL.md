@@ -16,7 +16,7 @@ metadata:
 Score any OpenPersona persona pack against the **4+5 framework standard**:
 **4 Layers** (Soul · Body · Faculty · Skill) × **5 Systemic Concepts** (Evolution · Economy · Vitality · Social · Rhythm) + Constitution compliance gate.
 
-Unlike `darwin-skill` (a generic SKILL.md quality scorer), `persona-evaluator` targets the OpenPersona-specific quality standard — it reads `persona.json`, generated artifacts, and soul files to produce a structured 9-dimension report.
+`persona-evaluator` reads `persona.json`, generated artifacts, and soul files to produce a structured 9-dimension report — calibrated to the OpenPersona quality standard, with role-aware severity and three modes for self / peer / black-box review.
 
 ---
 
@@ -192,8 +192,6 @@ Full mechanics — handshake schema, probe table, identity-coherence dimension, 
 
 The black-box report format is in **[references/REPORT-FORMAT.md](references/REPORT-FORMAT.md)** (`## Black-box format`).
 
-(For the mode-selection decision table, see [Choosing a mode](#choosing-a-mode) at the top of this file.)
-
 ---
 
 ## Acting on Findings
@@ -223,11 +221,7 @@ Edit `persona.json` directly and regenerate:
 npx openpersona update <slug>           # regenerate from updated persona.json
 ```
 
-### Re-evaluate after fixes
-
-```bash
-npx openpersona evaluate <slug>
-```
+After applying any fix, re-run `npx openpersona evaluate <slug>` (see [Quick Start](#quick-start)) to verify the score improved and Constitution gate passes.
 
 ---
 
@@ -250,12 +244,11 @@ npx openpersona evaluate <slug>
 ## Relationship to Other Skills
 
 
-| Skill                 | Relationship                                                                             |
-| --------------------- | ---------------------------------------------------------------------------------------- |
-| `open-persona`        | Creates personas that persona-evaluator audits — the production/QA pair                  |
-| `darwin-skill`        | Evaluates generic SKILL.md quality; persona-evaluator evaluates OpenPersona pack quality |
-| `anyone-skill`        | Distills personas that can be evaluated with this skill after generation                 |
-| `open-persona refine` | The fix path after persona-evaluator identifies Soul-layer improvements                  |
+| Skill                 | Relationship                                                                |
+| --------------------- | --------------------------------------------------------------------------- |
+| `open-persona`        | Creates personas that persona-evaluator audits — the production/QA pair     |
+| `anyone-skill`        | Distills personas that can be evaluated with this skill after generation    |
+| `open-persona refine` | The fix path after persona-evaluator identifies Soul-layer improvements     |
 
 
 ---
@@ -270,7 +263,7 @@ npm install -g openpersona
 npx openpersona evaluate <slug>
 ```
 
-A standalone distributable (`acnlabs/persona-evaluator`) will be published to openpersona.co once a separate repository is created.
+A standalone distributable is also available at [`acnlabs/persona-evaluator`](https://github.com/acnlabs/persona-evaluator) on GitHub and listed on [openpersona.co/skill/persona-evaluator](https://openpersona.co/skill/persona-evaluator).
 
 ---
 
